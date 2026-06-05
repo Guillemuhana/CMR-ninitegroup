@@ -538,7 +538,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
 
       {/* ── Brand bar ── */}
       <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.red, borderBottom: `3px solid ${C.redDark}` }}>
-        <img src={LOGO_URL} alt="NINIT Group" style={{ height: 48, objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+        <img src={LOGO_URL} alt="NINIT Group" style={{ height: 48, objectFit: "contain" }} />
         <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }} />
       </div>
 

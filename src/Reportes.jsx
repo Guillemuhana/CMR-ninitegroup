@@ -6,6 +6,10 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
+  MessageSquare, Users, UserPlus, Target, Package, DollarSign,
+  Receipt, Clock, Bot, Pin, BarChart2,
+} from "lucide-react";
+import {
   supabase, C, FONT_DISPLAY, FONT_BODY, VENDEDORES, ESTADOS,
   rangoFechas, fmtFecha, fmtFechaLarga, fmtMoneda, exportarCSV,
 } from "./lib";
@@ -37,8 +41,8 @@ function Kpi({ icon, label, valor, sub, color = C.charcoal, chico, alerta }) {
     }}>
       <div style={{
         width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-        background: `${color}15`, display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 20,
+        background: `${color}18`, display: "flex", alignItems: "center", justifyContent: "center",
+        color,
       }}>
         {icon}
       </div>
@@ -713,30 +717,30 @@ export default function Reportes() {
 
           {/* ── KPIs — FILA 1 ── */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(175px,1fr))", gap: 14, marginBottom: 14 }}>
-            <Kpi icon="💬" label="Mensajes de clientes" valor={data.kpis.msgsIn}
+            <Kpi icon={<MessageSquare size={18} />} label="Mensajes de clientes" valor={data.kpis.msgsIn}
               sub={`${data.kpis.msgsTotal} mensajes totales`} color={C.red} />
-            <Kpi icon="👥" label="Contactos activos" valor={data.kpis.contactosActivos}
+            <Kpi icon={<Users size={18} />} label="Contactos activos" valor={data.kpis.contactosActivos}
               sub={`de ${data.kpis.totalContactos} totales`} color="#6366f1" />
-            <Kpi icon="🆕" label="Nuevos contactos" valor={data.kpis.nuevos}
+            <Kpi icon={<UserPlus size={18} />} label="Nuevos contactos" valor={data.kpis.nuevos}
               sub="creados en el período" color={C.gold} />
-            <Kpi icon="🎯" label="Tasa de conversión" valor={`${data.kpis.tasaConversion}%`}
+            <Kpi icon={<Target size={18} />} label="Tasa de conversión" valor={`${data.kpis.tasaConversion}%`}
               sub={`${data.kpis.cerradosTot} cerrados / ${data.kpis.totalContactos} contactos`} color={C.sage} />
           </div>
 
           {/* ── KPIs — FILA 2 ── */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(175px,1fr))", gap: 14, marginBottom: 24 }}>
-            <Kpi icon="📦" label="Pedidos" valor={data.kpis.totalPedidos}
+            <Kpi icon={<Package size={18} />} label="Pedidos" valor={data.kpis.totalPedidos}
               sub="del período" color="#0891b2" />
-            <Kpi icon="💰" label="Facturación" valor={fmtMoneda(data.kpis.facturacion)}
+            <Kpi icon={<DollarSign size={18} />} label="Facturación" valor={fmtMoneda(data.kpis.facturacion)}
               color="#16a34a" chico />
-            <Kpi icon="🧾" label="Ticket promedio" valor={fmtMoneda(data.kpis.ticket)}
+            <Kpi icon={<Receipt size={18} />} label="Ticket promedio" valor={fmtMoneda(data.kpis.ticket)}
               color="#ea580c" chico />
-            <Kpi icon="⏱️" label="T. resp. promedio" valor={fmtMin(data.kpis.tiempoPromMin)}
+            <Kpi icon={<Clock size={18} />} label="T. resp. promedio" valor={fmtMin(data.kpis.tiempoPromMin)}
               sub="tiempo hasta primera respuesta" color={C.charcoal} />
-            <Kpi icon="🤖" label="Mensajes bot" valor={`${data.kpis.botPct}%`}
+            <Kpi icon={<Bot size={18} />} label="Mensajes bot" valor={`${data.kpis.botPct}%`}
               sub={`${data.kpis.agenteCount} por agentes`} color="#8b5cf6" />
             {data.kpis.segVencidos > 0 && (
-              <Kpi icon="📌" label="Seg. vencidos" valor={data.kpis.segVencidos}
+              <Kpi icon={<Pin size={18} />} label="Seg. vencidos" valor={data.kpis.segVencidos}
                 sub="requieren atención" color={C.red} alerta />
             )}
           </div>
