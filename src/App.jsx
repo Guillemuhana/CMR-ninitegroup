@@ -570,17 +570,13 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
           </div>
 
           {/* ── Filtros estado ── */}
-          <div style={{ padding: "10px 14px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 5, flexWrap: "wrap" }}>
-            {["todos", ...Object.keys(ESTADOS)].map((f) => {
-              const on = filtro === f;
-              const label = f === "todos" ? "Todos" : ESTADOS[f].label;
-              return (
-                <button key={f} onClick={() => setFiltro(f)}
-                  style={{ fontSize: 11, padding: "4px 11px", borderRadius: 6, border: `1.5px solid ${on ? C.red : L.border}`, cursor: "pointer", fontFamily: FONT_BODY, fontWeight: 700, background: on ? C.red : L.white, color: on ? "#fff" : L.muted, transition: "all .15s", textTransform: "uppercase", letterSpacing: 0.3 }}>
-                  {label}
-                </button>
-              );
-            })}
+          <div style={{ padding: "8px 14px", borderBottom: `1px solid ${L.border}` }}>
+            <select value={filtro} onChange={(e) => setFiltro(e.target.value)}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${filtro !== "todos" ? C.red : L.border}`, fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, color: filtro !== "todos" ? C.red : L.muted, background: L.white, cursor: "pointer", outline: "none" }}>
+              {["todos", ...Object.keys(ESTADOS)].map((f) => (
+                <option key={f} value={f}>{f === "todos" ? "Todos los estados" : ESTADOS[f].label}</option>
+              ))}
+            </select>
           </div>
 
           {/* ── Lista contactos ── */}
