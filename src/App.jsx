@@ -474,6 +474,53 @@ function AIAsistente({ contactoActivo }) {
 }
 
 // ============================================================
+// NAV DROPDOWN
+// ============================================================
+const NAV_ITEMS = [
+  { k: "chat",     icon: <MessageSquare size={15} />, label: "Chats" },
+  { k: "pedidos",  icon: <Package size={15} />,       label: "Pedidos" },
+  { k: "reportes", icon: <BarChart2 size={15} />,     label: "Reportes" },
+  { k: "admin",    icon: <Shield size={15} />,        label: "Admin" },
+];
+
+function NavDropdown({ vista, setVista, rol }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const items = NAV_ITEMS.filter((i) => i.k !== "admin" || rol === "admin");
+  const actual = items.find((i) => i.k === vista) || items[0];
+
+  useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: "relative", borderBottom: `1px solid ${L.border}` }}>
+      <button onClick={() => setOpen((v) => !v)}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", border: "none", background: open ? L.soft : L.white, cursor: "pointer", fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 12, color: C.red, textTransform: "uppercase", letterSpacing: 0.5, transition: "background .15s" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {actual.icon} {actual.label}
+        </span>
+        <ChevronDown size={15} style={{ transition: "transform .2s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
+      </button>
+      {open && (
+        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: L.white, border: `1px solid ${L.border}`, borderTop: "none", zIndex: 50, boxShadow: "0 8px 24px rgba(0,0,0,.1)" }}>
+          {items.map(({ k, icon, label }) => (
+            <button key={k} onClick={() => { setVista(k); setOpen(false); }}
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", border: "none", background: vista === k ? "#FFF0F0" : L.white, cursor: "pointer", fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 12, color: vista === k ? C.red : L.muted, textTransform: "uppercase", letterSpacing: 0.5, borderLeft: vista === k ? `3px solid ${C.red}` : "3px solid transparent", transition: "all .12s" }}
+              onMouseEnter={(e) => { if (vista !== k) e.currentTarget.style.background = L.soft; }}
+              onMouseLeave={(e) => { if (vista !== k) e.currentTarget.style.background = L.white; }}>
+              {icon} {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // SIDEBAR
 // ============================================================
 function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, vista, setVista, alertas, isMobile, rol }) {
@@ -495,20 +542,8 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
         <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }} />
       </div>
 
-      {/* ── Tabs ── */}
-      <div className="strip" style={{ display: "flex", borderBottom: `1px solid ${L.border}`, overflowX: "auto" }}>
-        {[
-          ["chat",     <MessageSquare size={13} />, "Chats"],
-          ["pedidos",  <Package size={13} />,       "Pedidos"],
-          ["reportes", <BarChart2 size={13} />,     "Reportes"],
-          ...(rol === "admin" ? [["admin", <Shield size={13} />, "Admin"]] : []),
-        ].map(([k, icon, l]) => (
-          <button key={k} onClick={() => setVista(k)}
-            style={{ flex: 1, border: "none", cursor: "pointer", padding: "11px 0", fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 10.5, textTransform: "uppercase", letterSpacing: 0.4, transition: "all .15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, whiteSpace: "nowrap", minWidth: 60, color: vista === k ? C.red : L.muted, background: vista === k ? "#FFF5F5" : "transparent", borderBottom: vista === k ? `2px solid ${C.red}` : "2px solid transparent" }}>
-            {icon} {l}
-          </button>
-        ))}
-      </div>
+      {/* ── Nav dropdown ── */}
+      <NavDropdown vista={vista} setVista={setVista} rol={rol} />
 
       {vista === "chat" && (
         <>

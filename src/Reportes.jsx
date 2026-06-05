@@ -30,20 +30,27 @@ function fmtMin(min) {
 function Kpi({ icon, label, valor, sub, color = C.charcoal, chico, alerta }) {
   return (
     <div style={{
-      background: "#fff", borderRadius: 14, padding: "18px 20px",
-      border: `1px solid ${C.border}`, borderTop: `4px solid ${color}`,
-      boxShadow: alerta ? `0 0 0 3px ${C.red}25, 0 2px 8px rgba(0,0,0,.05)` : "0 2px 8px rgba(0,0,0,.04)",
+      background: "#fff", borderRadius: 12, padding: "14px 18px",
+      border: `1px solid ${C.border}`,
+      boxShadow: alerta ? `0 0 0 2px ${C.red}30` : "none",
+      display: "flex", alignItems: "center", gap: 14,
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div style={{ fontSize: 10.5, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, lineHeight: 1.4 }}>
+      <div style={{
+        width: 42, height: 42, borderRadius: 10, flexShrink: 0,
+        background: `${color}15`, display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 20,
+      }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 2 }}>
           {label}
         </div>
-        <span style={{ fontSize: 20 }}>{icon}</span>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: chico ? 20 : 24, fontWeight: 800, color, lineHeight: 1.1 }}>
+          {valor}
+        </div>
+        {sub && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{sub}</div>}
       </div>
-      <div style={{ fontFamily: FONT_DISPLAY, fontSize: chico ? 22 : 28, fontWeight: 700, color, marginTop: 10, lineHeight: 1.1 }}>
-        {valor}
-      </div>
-      {sub && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 5, lineHeight: 1.4 }}>{sub}</div>}
     </div>
   );
 }
