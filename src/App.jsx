@@ -542,8 +542,20 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
         <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }} />
       </div>
 
-      {/* ── Nav dropdown ── */}
-      <NavDropdown vista={vista} setVista={setVista} rol={rol} />
+      {/* ── Tabs ── */}
+      <div className="strip" style={{ display: "flex", borderBottom: `1px solid ${L.border}`, overflowX: "auto" }}>
+        {[
+          ["chat",     <MessageSquare size={13} />, "Chats"],
+          ["pedidos",  <Package size={13} />,       "Pedidos"],
+          ["reportes", <BarChart2 size={13} />,     "Reportes"],
+          ...(rol === "admin" ? [["admin", <Shield size={13} />, "Admin"]] : []),
+        ].map(([k, icon, l]) => (
+          <button key={k} onClick={() => setVista(k)}
+            style={{ flex: 1, border: "none", cursor: "pointer", padding: "11px 0", fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 10.5, textTransform: "uppercase", letterSpacing: 0.4, transition: "all .15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, whiteSpace: "nowrap", minWidth: 60, color: vista === k ? C.red : L.muted, background: vista === k ? "#EFF6FF" : "transparent", borderBottom: vista === k ? `2px solid ${C.red}` : "2px solid transparent" }}>
+            {icon} {l}
+          </button>
+        ))}
+      </div>
 
       {vista === "chat" && (
         <>

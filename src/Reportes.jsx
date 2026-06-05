@@ -557,40 +557,30 @@ export default function Reportes() {
               </div>
             )}
           </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            {/* Pestañas principales */}
-            <div style={{ display: "flex", gap: 3, background: "#f1f5f9", padding: 4, borderRadius: 10, border: `1px solid ${C.border}` }}>
-              <button onClick={() => setVista("stats")}
-                style={{ border: "none", borderRadius: 7, padding: "7px 18px", fontSize: 13, cursor: "pointer", fontWeight: 700, fontFamily: FONT_BODY, transition: "all .15s",
-                  background: vista === "stats" ? C.charcoal : "transparent", color: vista === "stats" ? "#fff" : C.muted }}>
-                Estadísticas
-              </button>
-              <button onClick={() => setVista("pedidos")}
-                style={{ border: "none", borderRadius: 7, padding: "7px 18px", fontSize: 13, cursor: "pointer", fontWeight: 700, fontFamily: FONT_BODY, transition: "all .15s",
-                  background: vista === "pedidos" ? C.red : "transparent", color: vista === "pedidos" ? "#fff" : C.muted }}>
-                📦 Pedidos
-              </button>
-            </div>
-            {/* Controles de estadísticas */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            {/* Vista dropdown */}
+            <select value={vista} onChange={(e) => setVista(e.target.value)}
+              style={{ border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, color: C.charcoal, background: "#fff", cursor: "pointer", outline: "none" }}>
+              <option value="stats">📊 Estadísticas</option>
+              <option value="pedidos">📦 Pedidos</option>
+            </select>
+            {/* Período dropdown */}
             {vista === "stats" && (
               <>
-                <div style={{ display: "flex", gap: 3, background: "#f1f5f9", padding: 4, borderRadius: 10, border: `1px solid ${C.border}` }}>
-                  {[["dia","Hoy"],["semana","Semana"],["mes","Mes"],["anio","Año"]].map(([k,l]) => (
-                    <button key={k} onClick={() => setPeriodo(k)}
-                      style={{ border: "none", borderRadius: 7, padding: "7px 14px", fontSize: 13, cursor: "pointer", fontWeight: 700, fontFamily: FONT_BODY, transition: "all .15s",
-                        background: periodo === k ? C.red : "transparent", color: periodo === k ? "#fff" : C.muted }}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-                <button onClick={exportarPDF}
-                  style={{ background: C.red, color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT_BODY }}>
-                  ↓ PDF
-                </button>
-                <button onClick={exportarCSVBtn}
-                  style={{ background: C.sage, color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT_BODY }}>
-                  ↓ CSV
-                </button>
+                <select value={periodo} onChange={(e) => setPeriodo(e.target.value)}
+                  style={{ border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, color: C.red, background: "#fff", cursor: "pointer", outline: "none" }}>
+                  <option value="dia">Hoy</option>
+                  <option value="semana">Últimos 7 días</option>
+                  <option value="mes">Últimos 30 días</option>
+                  <option value="anio">Este año</option>
+                </select>
+                {/* Exportar dropdown */}
+                <select defaultValue="" onChange={(e) => { if (e.target.value === "pdf") exportarPDF(); if (e.target.value === "csv") exportarCSVBtn(); e.target.value = ""; }}
+                  style={{ border: `1.5px solid ${C.red}`, borderRadius: 8, padding: "8px 12px", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, color: C.red, background: "#fff", cursor: "pointer", outline: "none" }}>
+                  <option value="" disabled>↓ Exportar</option>
+                  <option value="pdf">↓ PDF</option>
+                  <option value="csv">↓ CSV</option>
+                </select>
               </>
             )}
           </div>
