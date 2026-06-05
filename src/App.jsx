@@ -49,49 +49,29 @@ function useIsMobile(bp = 768) {
   return v;
 }
 
-// Base de conocimiento del asistente
-const IA_KB = [
-  {
-    tags: ["hola","ayuda","help","empezar","que podes","inicio","buen"],
-    r: `Soy el asistente de IA de **NINIT Group**.\n\nPuedo ayudarte con:\n• Asignar vendedores y cambiar estados del pipeline\n• Configurar seguimientos y recordatorios\n• Gestionar el bot de WhatsApp\n• Guardar datos completos de contactos\n• Entender los reportes y métricas\n\n¿Sobre qué necesitás ayuda?`,
-  },
-  {
-    tags: ["estado","mover","pipeline","cambiar estado","embudo","conversion"],
-    r: `**Cambiar estado de un contacto:**\n1. Abrí la conversación\n2. Usá el selector "Estado" en el encabezado\n3. Opciones: Nuevo → En conversación → Pedido → Cerrado\n\nFilterá la lista lateral por estado para ver grupos específicos.`,
-  },
-  {
-    tags: ["vendedor","asignar","asignacion","quien","responsable"],
-    r: `**Asignar un vendedor:**\n1. Abrí la conversación\n2. Usá el selector "Vendedor" en el encabezado\n3. Se guarda automáticamente\n\nVendedores disponibles: ${VENDEDORES.join(", ")}`,
-  },
-  {
-    tags: ["seguimiento","recordatorio","agendar","proxima llamada","cuando"],
-    r: `**Configurar seguimiento:**\n1. Clic en el botón de calendario 📅 en el chat\n2. Elegí fecha y hora del próximo contacto\n3. Agregá una nota opcional\n\nRecibirás una alerta 🔔 cuando venza el seguimiento.`,
-  },
-  {
-    tags: ["bot","automatico","pausar","activar","inteligencia"],
-    r: `**El bot de WhatsApp:**\n🤖 **Bot activo** = responde automáticamente\n✋ **Yo atiendo** = vos manejás la conversación\n\nCuando tomás el control, tus mensajes se envían con tu nombre: "*Nicolas · NINIT Group*"`,
-  },
-  {
-    tags: ["alerta","notificacion","campana","urgente","pendiente"],
-    r: `**Alertas 🔔** — te avisan sobre:\n\n⏰ Clientes esperando respuesta hace +1h (bot pausado)\n👤 Leads sin vendedor asignado hace +2h\n📌 Seguimientos vencidos\n\nHacé clic en la alerta para ir directamente al contacto.`,
-  },
-  {
-    tags: ["reporte","estadistica","grafico","metrica","analitica","factura"],
-    r: `**Reportes** — pestaña 📊 del panel.\n\nVer:\n• Mensajes de clientes por período\n• Contactos activos y nuevos\n• Tasa de conversión del pipeline\n• Horas pico de actividad\n• Performance de cada vendedor\n\nExportá a **PDF o CSV**.`,
-  },
-  {
-    tags: ["contacto","guardar","editar","datos","informacion","email","empresa"],
-    r: `**Guardar datos del contacto:**\n1. Abrí la conversación\n2. Clic en ✏️ "Editar"\n3. Completá: nombre, email, empresa, dirección, notas\n4. Guardá\n\nToda la información queda en el perfil del cliente.`,
-  },
-  {
-    tags: ["buscar","filtrar","encontrar","search","listar"],
-    r: `**Buscar y filtrar:**\n• Barra de búsqueda del sidebar → buscar por nombre o número\n• Botones de filtro → filtrar por estado (Nuevo, En conversación, Pedido...)\n\nCombinás búsqueda + filtro para encontrar contactos específicos.`,
-  },
-  {
-    tags: ["whatsapp","mensaje","enviar","comunicar","firma"],
-    r: `**Enviar mensajes:**\n1. Seleccioná un contacto\n2. Escribí en el campo de texto\n3. Enter o clic en "Enviar"\n\nEl mensaje va con tu firma: **"Nicolas · NINIT Group"** visible para el cliente. Shift+Enter = nueva línea sin enviar.`,
-  },
-];
+// Prompt del sistema para Grok
+const GROK_SYSTEM = `Eres el asistente de IA del CRM de NINIT Group, empresa de alquiler de baños químicos y remolques sanitarios de lujo. Ayudas a Nicolás (el vendedor) con cualquier tarea del CRM.
+
+CONTEXTO DEL CRM:
+- Pipeline de ventas con estados: Nuevo → Contactado → Interesado → Pendiente → Vendido / Perdido
+- Vendedor principal: Nicolás
+- Integración con WhatsApp vía n8n (bot automático o atención manual)
+- Base de datos Supabase con contactos, mensajes y pedidos
+- Reportes exportables en PDF y CSV
+
+CÓMO AYUDAR:
+- Cargar contactos: botón ✏️ Editar en cualquier conversación → completar nombre, email, empresa, dirección, notas
+- Cambiar estado del pipeline: selector "Estado" en el encabezado del chat
+- Asignar vendedor: selector "Vendedor" en el encabezado
+- Agendar seguimiento: botón calendario 📅 → elegir fecha y hora
+- Bot WhatsApp: alternar entre "Bot activo" (automático) y "Yo atiendo" (manual)
+- Nuevo pedido: botón "Nuevo Pedido" en el chat
+- Buscar contactos: barra de búsqueda en el panel izquierdo
+- Filtrar por estado: botones de filtro debajo de la búsqueda
+- Ver reportes: pestaña Reportes (ícono gráfico de barras)
+- Alertas: campana 🔔 muestra clientes sin respuesta, leads sin asignar, seguimientos vencidos
+
+Respondé siempre en español, de forma clara y concisa. Si el usuario pregunta algo que no es del CRM, igual ayudalo con esa tarea.`;
 
 // ============================================================
 // FONT LOADER
@@ -357,7 +337,7 @@ function AIAsistente({ contactoActivo }) {
   const isMobile = useIsMobile();
   const [open, setOpen]         = useState(false);
   const [msgs, setMsgs]         = useState([
-    { from: "ai", text: `¡Hola! Soy el asistente de IA de **NINIT Group**.\n\nEstoy aquí para ayudarte a gestionar contactos, conversaciones y ventas de forma más eficiente.\n\n¿En qué puedo ayudarte hoy?` },
+    { from: "ai", text: `¡Hola Nicolás! Soy tu asistente de IA con Grok.\n\nPuedo ayudarte con cualquier tarea del CRM: cargar contactos, cambiar estados, agendar seguimientos, entender reportes, gestionar pedidos y mucho más.\n\n¿En qué te ayudo hoy?` },
   ]);
   const [input, setInput]       = useState("");
   const [typing, setTyping]     = useState(false);
@@ -365,21 +345,47 @@ function AIAsistente({ contactoActivo }) {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, open]);
 
-  const enviar = () => {
+  const enviar = async () => {
     const q = input.trim();
     if (!q || typing) return;
+    const historial = [...msgs];
     setMsgs((p) => [...p, { from: "user", text: q }]);
     setInput(""); setTyping(true);
-    const qLow = q.toLowerCase();
-    let resp = "No tengo información sobre eso. Probá preguntarme sobre vendedores, estados, seguimientos, reportes, el bot de WhatsApp o cómo guardar datos de contactos.";
-    for (const item of IA_KB) {
-      if (item.tags.some((t) => qLow.includes(t))) { resp = item.r; break; }
+
+    const GROK_KEY = import.meta.env.VITE_GROK_API_KEY;
+    if (GROK_KEY) {
+      try {
+        // Contexto del contacto activo
+        let sysExtra = "";
+        if (contactoActivo) {
+          const est = ESTADOS[contactoActivo.estado];
+          sysExtra = `\n\nCONTACTO ABIERTO AHORA: ${contactoActivo.nombre || contactoActivo.telefono} | Estado: ${est?.label || contactoActivo.estado} | Vendedor: ${contactoActivo.vendedor || "sin asignar"} | Tel: ${contactoActivo.telefono}`;
+        }
+        const apiMsgs = [
+          { role: "system", content: GROK_SYSTEM + sysExtra },
+          ...historial.map((m) => ({ role: m.from === "user" ? "user" : "assistant", content: m.text })),
+          { role: "user", content: q },
+        ];
+        const res = await fetch("https://api.x.ai/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROK_KEY}` },
+          body: JSON.stringify({ model: "grok-3-mini", messages: apiMsgs, max_tokens: 600 }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMsgs((p) => [...p, { from: "ai", text: data.choices[0].message.content }]);
+          setTyping(false);
+          return;
+        }
+      } catch {
+        // si falla la API, cae al fallback
+      }
     }
-    if (contactoActivo && (qLow.includes("este") || qLow.includes("actual") || qLow.includes("cliente"))) {
-      const est = ESTADOS[contactoActivo.estado];
-      resp += `\n\n📋 **Contacto abierto:** ${contactoActivo.nombre || contactoActivo.telefono} — ${est?.label || contactoActivo.estado}${contactoActivo.vendedor ? ` · ${contactoActivo.vendedor}` : ""}`;
-    }
-    setTimeout(() => { setMsgs((p) => [...p, { from: "ai", text: resp }]); setTyping(false); }, 700);
+    // Fallback sin API key
+    setTimeout(() => {
+      setMsgs((p) => [...p, { from: "ai", text: "Para activar el asistente con IA real, configurá la variable VITE_GROK_API_KEY en Vercel con tu clave de xAI." }]);
+      setTyping(false);
+    }, 500);
   };
 
   const sugerencias = ["¿Cómo asigno un vendedor?", "¿Cómo funciona el bot?", "¿Cómo veo reportes?"];
