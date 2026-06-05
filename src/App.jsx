@@ -200,7 +200,7 @@ function AlertasBtn({ alertas, onSelect }) {
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button onClick={() => setOpen((v) => !v)}
-        style={{ position: "relative", background: open ? "#FEF2F2" : L.soft, border: `1px solid ${L.border}`, color: open ? C.red : L.muted, borderRadius: 10, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s" }}>
+        style={{ position: "relative", background: "rgba(255,255,255,.2)", border: "1px solid rgba(255,255,255,.35)", color: "#fff", borderRadius: 10, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s" }}>
         <Bell size={17} />
         {alertas.length > 0 && (
           <span style={{ position: "absolute", top: -5, right: -5, background: C.red, color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: 10, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: `2px solid ${L.white}` }}>
@@ -337,7 +337,7 @@ function AIAsistente({ contactoActivo }) {
   const isMobile = useIsMobile();
   const [open, setOpen]         = useState(false);
   const [msgs, setMsgs]         = useState([
-    { from: "ai", text: `¡Hola Nicolás! Soy tu asistente de IA con Grok.\n\nPuedo ayudarte con cualquier tarea del CRM: cargar contactos, cambiar estados, agendar seguimientos, entender reportes, gestionar pedidos y mucho más.\n\n¿En qué te ayudo hoy?` },
+    { from: "ai", text: `¡Hola Nicolás! Soy tu asistente de IA.\n\nPuedo ayudarte con cualquier tarea del CRM: cargar contactos, cambiar estados, agendar seguimientos, entender reportes, gestionar pedidos y mucho más.\n\n¿En qué te ayudo hoy?` },
   ]);
   const [input, setInput]       = useState("");
   const [typing, setTyping]     = useState(false);
@@ -537,8 +537,8 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
     <div style={{ width: "100%", height: "100%", background: L.white, borderRight: `1px solid ${L.border}`, display: "flex", flexDirection: "column" }}>
 
       {/* ── Brand bar ── */}
-      <div style={{ padding: "12px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `3px solid ${C.gold}`, background: L.white }}>
-        <img src={LOGO_URL} alt="NINIT Group" style={{ height: 140, objectFit: "contain" }} />
+      <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.red, borderBottom: `3px solid ${C.redDark}` }}>
+        <img src={LOGO_URL} alt="NINIT Group" style={{ height: 48, objectFit: "contain", filter: "brightness(0) invert(1)" }} />
         <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }} />
       </div>
 
