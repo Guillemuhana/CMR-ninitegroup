@@ -366,10 +366,10 @@ function AIAsistente({ contactoActivo }) {
           ...historial.map((m) => ({ role: m.from === "user" ? "user" : "assistant", content: m.text })),
           { role: "user", content: q },
         ];
-        const res = await fetch("https://api.x.ai/v1/chat/completions", {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROK_KEY}` },
-          body: JSON.stringify({ model: "grok-3-mini", messages: apiMsgs, max_tokens: 600 }),
+          body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: apiMsgs, max_tokens: 600 }),
         });
         if (res.ok) {
           const data = await res.json();
