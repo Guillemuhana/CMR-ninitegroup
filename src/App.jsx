@@ -154,7 +154,7 @@ function Login() {
           <img
             src={LOGO_URL}
             alt="NINIT Group"
-            style={{ width: "100%", maxWidth: 380, height: "auto", display: "block" }}
+            style={{ width: "100%", maxWidth: 160, height: "auto", display: "block" }}
           />
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
             <div style={{ height: 1, width: 28, background: L.border }} />
