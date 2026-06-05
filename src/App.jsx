@@ -122,8 +122,8 @@ function Login() {
 
   const handleLogin = async () => {
     setErr(""); setLoad(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pass });
-    if (error) setErr("Email o contraseña incorrectos.");
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pass.trim() });
+    if (error) setErr(error.message || "Email o contraseña incorrectos.");
     setLoad(false);
   };
 
