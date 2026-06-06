@@ -284,11 +284,13 @@ function ContactoDrawer({ contacto, onClose, onSave }) {
       <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: isMobile ? "100%" : 390, background: L.white, boxShadow: "-6px 0 40px rgba(0,0,0,.18)", zIndex: 201, display: "flex", flexDirection: "column", fontFamily: FONT_BODY }}>
         {/* Header */}
         <div style={{ padding: "20px 22px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 14 }}>
-          <Avatar nombre={contacto.nombre || contacto.telefono} foto={contacto.foto_url} size={52} border={`2px solid ${C.gold}`} />
+          <Avatar nombre={contacto.nombre || contacto.telefono || contacto.email} foto={contacto.foto_url} size={52} border={`2px solid ${C.gold}`} />
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 18, color: L.text }}>{contacto.nombre || "Nuevo contacto"}</div>
             <div style={{ fontSize: 12.5, color: L.muted, marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
-              <Phone size={12} /> {contacto.telefono}
+              {contacto.canal === "email"
+                ? <><Mail size={12} /> {contacto.email}</>
+                : <><Phone size={12} /> {contacto.telefono}</>}
             </div>
           </div>
           <button onClick={onClose} style={{ background: L.soft, border: `1px solid ${L.border}`, borderRadius: 9, width: 36, height: 36, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: L.muted }}>
@@ -313,8 +315,12 @@ function ContactoDrawer({ contacto, onClose, onSave }) {
               rows={4} style={{ ...inputSt, resize: "vertical", lineHeight: 1.55 }} />
           </div>
           <div style={{ padding: "13px 16px", background: "#EFF6FF", borderRadius: 10, border: "1px solid #BFDBFE" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#1D4ED8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>Teléfono WhatsApp</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: L.text }}>{contacto.telefono}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#1D4ED8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>
+              {contacto.canal === "email" ? "Email" : "Teléfono WhatsApp"}
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: L.text }}>
+              {contacto.canal === "email" ? contacto.email : contacto.telefono}
+            </div>
             <div style={{ fontSize: 11, color: L.muted, marginTop: 2 }}>No editable — identificador único</div>
           </div>
           {err && <div style={{ marginTop: 14, padding: "10px 14px", background: "#FEF2F2", borderRadius: 8, color: C.red, fontSize: 13, fontWeight: 500, display: "flex", gap: 8, alignItems: "center" }}>
@@ -533,7 +539,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
 
   const lista = contactos.filter((c) => {
     const porEstado = filtro === "todos" || c.estado === filtro;
-    const porBusq   = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || c.telefono.includes(busqueda);
+    const porBusq   = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
     return porEstado && porBusq;
   });
 
@@ -608,15 +614,16 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
                   onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = L.hover; }}
                   onMouseLeave={(e) => { if (!sel) e.currentTarget.style.background = "transparent"; }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
-                    <Avatar nombre={c.nombre || c.telefono} foto={c.foto_url} size={46} />
-                    {!c.bot_activo && (
-                      <div style={{ position: "absolute", bottom: 0, right: 0, width: 13, height: 13, borderRadius: "50%", background: "#F59E0B", border: `2px solid ${L.white}` }} title="Atendido por agente" />
-                    )}
+                    <Avatar nombre={c.nombre || c.telefono || c.email} foto={c.foto_url} size={46} />
+                    {c.canal === "email"
+                      ? <div style={{ position: "absolute", bottom: 0, right: 0, width: 13, height: 13, borderRadius: "50%", background: "#3B82F6", border: `2px solid ${L.white}` }} title="Canal Email" />
+                      : !c.bot_activo && <div style={{ position: "absolute", bottom: 0, right: 0, width: 13, height: 13, borderRadius: "50%", background: "#F59E0B", border: `2px solid ${L.white}` }} title="Atendido por agente" />
+                    }
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
                       <span style={{ fontWeight: 700, color: L.text, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "62%" }}>
-                        {c.nombre || c.telefono}
+                        {c.nombre || c.telefono || c.email}
                       </span>
                       <div style={{ display: "flex", gap: 5, alignItems: "center", flexShrink: 0 }}>
                         <span style={{ fontSize: 11, color: L.light }}>{hora}</span>
@@ -752,14 +759,17 @@ function ChatPanel({ contacto, onUpdateContacto, userName, onBack, isMobile }) {
               <ChevronLeft size={20} />
             </button>
           )}
-          <Avatar nombre={contacto.nombre || contacto.telefono} foto={contacto.foto_url} size={isMobile ? 38 : 48} border={`2px solid ${C.gold}`} />
+          <Avatar nombre={contacto.nombre || contacto.telefono || contacto.email} foto={contacto.foto_url} size={isMobile ? 38 : 48} border={`2px solid ${C.gold}`} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 15 : 18, fontWeight: 700, color: L.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: isMobile ? 160 : "none" }}>{contacto.nombre || contacto.telefono}</span>
+              <span style={{ fontFamily: FONT_DISPLAY, fontSize: isMobile ? 15 : 18, fontWeight: 700, color: L.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: isMobile ? 160 : "none" }}>{contacto.nombre || contacto.telefono || contacto.email}</span>
               <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 5, background: est.bg, color: est.color, fontWeight: 700, textTransform: "uppercase", flexShrink: 0 }}>{est.label}</span>
+              {contacto.canal === "email" && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 5, background: "#EFF6FF", color: "#3B82F6", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}><Mail size={9} /> Email</span>}
             </div>
             <div style={{ fontSize: 11.5, color: L.muted, marginTop: 2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Phone size={11} /> {contacto.telefono}</span>
+              {contacto.canal === "email"
+                ? <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Mail size={11} /> {contacto.email}</span>
+                : <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Phone size={11} /> {contacto.telefono}</span>}
               {contacto.empresa && !isMobile && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Building2 size={11} /> {contacto.empresa}</span>}
             </div>
           </div>
