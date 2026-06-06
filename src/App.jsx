@@ -363,39 +363,38 @@ function AIAsistente({ contactoActivo }) {
     setInput(""); setTyping(true);
 
     const GROK_KEY = import.meta.env.VITE_GROK_API_KEY;
-    if (GROK_KEY) {
-      try {
-        // Contexto del contacto activo
-        let sysExtra = "";
-        if (contactoActivo) {
-          const est = ESTADOS[contactoActivo.estado];
-          sysExtra = `\n\nCONTACTO ABIERTO AHORA: ${contactoActivo.nombre || contactoActivo.telefono} | Estado: ${est?.label || contactoActivo.estado} | Vendedor: ${contactoActivo.vendedor || "sin asignar"} | Tel: ${contactoActivo.telefono}`;
-        }
-        const apiMsgs = [
-          { role: "system", content: GROK_SYSTEM + sysExtra },
-          ...historial.map((m) => ({ role: m.from === "user" ? "user" : "assistant", content: m.text })),
-          { role: "user", content: q },
-        ];
-        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROK_KEY}` },
-          body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: apiMsgs, max_tokens: 600 }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setMsgs((p) => [...p, { from: "ai", text: data.choices[0].message.content }]);
-          setTyping(false);
-          return;
-        }
-      } catch {
-        // si falla la API, cae al fallback
-      }
-    }
-    // Fallback sin API key
-    setTimeout(() => {
-      setMsgs((p) => [...p, { from: "ai", text: "Para activar el asistente con IA real, configurá la variable VITE_GROK_API_KEY en Vercel con tu clave de xAI." }]);
+    if (!GROK_KEY) {
+      setMsgs((p) => [...p, { from: "ai", text: "⚠️ Clave de IA no configurada. Agregá VITE_GROK_API_KEY en Vercel." }]);
       setTyping(false);
-    }, 500);
+      return;
+    }
+    try {
+      let sysExtra = "";
+      if (contactoActivo) {
+        const est = ESTADOS[contactoActivo.estado];
+        sysExtra = `\n\nCONTACTO ABIERTO AHORA: ${contactoActivo.nombre || contactoActivo.telefono} | Estado: ${est?.label || contactoActivo.estado} | Vendedor: ${contactoActivo.vendedor || "sin asignar"} | Tel: ${contactoActivo.telefono}`;
+      }
+      const apiMsgs = [
+        { role: "system", content: GROK_SYSTEM + sysExtra },
+        ...historial.map((m) => ({ role: m.from === "user" ? "user" : "assistant", content: m.text })),
+        { role: "user", content: q },
+      ];
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROK_KEY}` },
+        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: apiMsgs, max_tokens: 600 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMsgs((p) => [...p, { from: "ai", text: data.choices[0].message.content }]);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setMsgs((p) => [...p, { from: "ai", text: `Error IA (${res.status}): ${err?.error?.message || "Verificá tu clave en console.groq.com"}` }]);
+      }
+    } catch (e) {
+      setMsgs((p) => [...p, { from: "ai", text: `Error de conexión con la IA: ${e.message}` }]);
+    }
+    setTyping(false);
   };
 
   const sugerencias = ["¿Cómo asigno un vendedor?", "¿Cómo funciona el bot?", "¿Cómo veo reportes?"];
