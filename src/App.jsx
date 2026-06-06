@@ -5,6 +5,8 @@ import {
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, Zap, ShoppingBag, Shield, Trash2,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+import { SiGmail, SiGoogleads } from "react-icons/si";
 import PedidosPanel, { NuevoPedidoModal, imprimirPedido } from "./Pedidos";
 import {
   supabase, N8N_SEND_WEBHOOK, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
@@ -584,9 +586,9 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
           {/* ── Canal buttons ── */}
           <div style={{ padding: "10px 12px 8px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 6 }}>
             {[
-              { key: "whatsapp",   label: "WhatsApp",  icon: <MessageSquare size={20} />, color: "#25D366", bg: "#F0FDF4" },
-              { key: "email",      label: "Gmail",      icon: <Mail size={20} />,          color: "#EA4335", bg: "#FFF5F5" },
-              { key: "google_ads", label: "Google Ads", icon: <Zap size={20} />,           color: "#4285F4", bg: "#EFF6FF" },
+              { key: "whatsapp",   label: "WhatsApp",  icon: <FaWhatsapp size={22} />,   color: "#25D366", bg: "#F0FDF4" },
+              { key: "email",      label: "Gmail",      icon: <SiGmail size={20} />,       color: "#EA4335", bg: "#FFF5F5" },
+              { key: "google_ads", label: "Google Ads", icon: <SiGoogleads size={20} />,   color: "#4285F4", bg: "#EFF6FF" },
             ].map(({ key, label, icon, color, bg }) => {
               const active = canal === key;
               return (
