@@ -582,17 +582,18 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
       {vista === "chat" && (
         <>
           {/* ── Canal buttons ── */}
-          <div style={{ padding: "10px 12px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 7 }}>
+          <div style={{ padding: "10px 12px 8px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 6 }}>
             {[
-              { key: "whatsapp",   label: "WhatsApp",   icon: <MessageSquare size={13} />, color: "#25D366", bg: "#F0FDF4", activeBg: "#25D366" },
-              { key: "email",      label: "Gmail",       icon: <Mail size={13} />,          color: "#3B82F6", bg: "#EFF6FF", activeBg: "#3B82F6" },
-              { key: "google_ads", label: "Google Ads",  icon: <Zap size={13} />,           color: "#EA4335", bg: "#FFF5F5", activeBg: "#EA4335" },
-            ].map(({ key, label, icon, color, bg, activeBg }) => {
+              { key: "whatsapp",   label: "WhatsApp",  icon: <MessageSquare size={20} />, color: "#25D366", bg: "#F0FDF4" },
+              { key: "email",      label: "Gmail",      icon: <Mail size={20} />,          color: "#EA4335", bg: "#FFF5F5" },
+              { key: "google_ads", label: "Google Ads", icon: <Zap size={20} />,           color: "#4285F4", bg: "#EFF6FF" },
+            ].map(({ key, label, icon, color, bg }) => {
               const active = canal === key;
               return (
                 <button key={key} onClick={() => setCanal(active ? "todos" : key)}
-                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", borderRadius: 10, border: `2px solid ${active ? activeBg : color}`, background: active ? activeBg : bg, color: active ? "#fff" : color, fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "all .15s", boxShadow: active ? `0 3px 10px ${color}55` : "none", letterSpacing: 0.2 }}>
-                  {icon} {label}
+                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, padding: "10px 4px 9px", borderRadius: 14, border: "none", background: active ? color : bg, cursor: "pointer", transition: "all .2s", boxShadow: active ? `0 4px 14px ${color}55` : "inset 0 0 0 1.5px ${L.border}", transform: active ? "translateY(-1px)" : "none" }}>
+                  <span style={{ color: active ? "#fff" : color, display: "flex", lineHeight: 1 }}>{icon}</span>
+                  <span style={{ fontSize: 9.5, fontWeight: 800, color: active ? "#fff" : color, fontFamily: FONT_DISPLAY, letterSpacing: 0.3, textTransform: "uppercase", whiteSpace: "nowrap" }}>{label}</span>
                 </button>
               );
             })}
