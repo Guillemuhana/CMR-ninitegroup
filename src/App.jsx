@@ -584,8 +584,9 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
           {/* ── Canal buttons ── */}
           <div style={{ padding: "10px 12px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 7 }}>
             {[
-              { key: "whatsapp", label: "WhatsApp", icon: <MessageSquare size={13} />, color: "#25D366", bg: "#F0FDF4", activeBg: "#25D366" },
-              { key: "email",    label: "Gmail",     icon: <Mail size={13} />,          color: "#3B82F6", bg: "#EFF6FF", activeBg: "#3B82F6" },
+              { key: "whatsapp",   label: "WhatsApp",   icon: <MessageSquare size={13} />, color: "#25D366", bg: "#F0FDF4", activeBg: "#25D366" },
+              { key: "email",      label: "Gmail",       icon: <Mail size={13} />,          color: "#3B82F6", bg: "#EFF6FF", activeBg: "#3B82F6" },
+              { key: "google_ads", label: "Google Ads",  icon: <Zap size={13} />,           color: "#EA4335", bg: "#FFF5F5", activeBg: "#EA4335" },
             ].map(({ key, label, icon, color, bg, activeBg }) => {
               const active = canal === key;
               return (
