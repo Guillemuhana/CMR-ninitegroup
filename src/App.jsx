@@ -537,6 +537,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
   const [busqueda, setBusqueda]   = useState("");
   const [canal, setCanal]         = useState("todos");
   const [quickFiltro, setQuick]   = useState(null);
+  const [tipoFiltro, setTipo]     = useState(null);
 
   const lista = contactos.filter((c) => {
     const porEstado = filtro === "todos" || c.estado === filtro;
@@ -545,11 +546,14 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
     const porQuick  = !quickFiltro
       || (quickFiltro === "noleidos"     && c.no_leidos > 0)
       || (quickFiltro === "sinresponder" && c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at)));
-    return porEstado && porBusq && porCanal && porQuick;
+    const porTipo   = !tipoFiltro || (c.tipo || "prospecto") === tipoFiltro;
+    return porEstado && porBusq && porCanal && porQuick && porTipo;
   });
 
   const cntNoLeidos     = contactos.filter((c) => c.no_leidos > 0).length;
   const cntSinResponder = contactos.filter((c) => c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at))).length;
+  const cntClientes     = contactos.filter((c) => c.tipo === "cliente").length;
+  const cntProspectos   = contactos.filter((c) => !c.tipo || c.tipo === "prospecto").length;
 
   return (
     <div style={{ width: "100%", height: "100%", background: L.white, borderRight: `1px solid ${L.border}`, display: "flex", flexDirection: "column" }}>
@@ -594,17 +598,33 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
           </div>
 
           {/* ── Quick filters ── */}
-          <div style={{ padding: "8px 12px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 6 }}>
+          <div style={{ padding: "8px 12px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 6, flexWrap: "wrap" }}>
             {[
-              { key: "noleidos",     label: "No leídos",    cnt: cntNoLeidos,     color: C.red },
-              { key: "sinresponder", label: "Sin responder", cnt: cntSinResponder, color: "#F59E0B" },
-            ].map(({ key, label, cnt, color }) => {
-              const active = quickFiltro === key;
+              { key: "noleidos",     label: "No leídos",    cnt: cntNoLeidos,     color: C.red,      set: setQuick, val: quickFiltro },
+              { key: "sinresponder", label: "Sin responder", cnt: cntSinResponder, color: "#F59E0B",  set: setQuick, val: quickFiltro },
+            ].map(({ key, label, cnt, color, set, val }) => {
+              const active = val === key;
               return (
-                <button key={key} onClick={() => setQuick(active ? null : key)}
+                <button key={key} onClick={() => set(active ? null : key)}
                   style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 20, border: `1.5px solid ${active ? color : L.border}`, background: active ? color : L.soft, color: active ? "#fff" : L.muted, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11.5, cursor: "pointer", transition: "all .15s", whiteSpace: "nowrap" }}>
                   {label}
-                  {cnt > 0 && <span style={{ background: active ? "rgba(255,255,255,.3)" : color, color: active ? "#fff" : "#fff", borderRadius: 10, padding: "1px 6px", fontSize: 10.5, fontWeight: 800 }}>{cnt}</span>}
+                  {cnt > 0 && <span style={{ background: active ? "rgba(255,255,255,.3)" : color, color: "#fff", borderRadius: 10, padding: "1px 6px", fontSize: 10.5, fontWeight: 800 }}>{cnt}</span>}
+                </button>
+              );
+            })}
+          </div>
+          {/* ── Tipo filtro ── */}
+          <div style={{ padding: "7px 12px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 6 }}>
+            {[
+              { key: "cliente",    label: "Clientes",    cnt: cntClientes,   color: "#16A34A", icon: "★" },
+              { key: "prospecto",  label: "Prospectos",  cnt: cntProspectos, color: "#6366F1", icon: "◎" },
+            ].map(({ key, label, cnt, color, icon }) => {
+              const active = tipoFiltro === key;
+              return (
+                <button key={key} onClick={() => setTipo(active ? null : key)}
+                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "5px 0", borderRadius: 20, border: `1.5px solid ${active ? color : L.border}`, background: active ? color : L.soft, color: active ? "#fff" : color, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11.5, cursor: "pointer", transition: "all .15s" }}>
+                  <span>{icon}</span> {label}
+                  {cnt > 0 && <span style={{ background: active ? "rgba(255,255,255,.25)" : color + "22", color: active ? "#fff" : color, borderRadius: 10, padding: "1px 6px", fontSize: 10, fontWeight: 800 }}>{cnt}</span>}
                 </button>
               );
             })}
@@ -678,6 +698,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
                     </div>
                     <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
                       <span style={{ fontSize: 9.5, padding: "2px 8px", borderRadius: 4, background: est.bg, color: est.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.3 }}>{est.label}</span>
+                      {c.tipo === "cliente" && <span style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 4, background: "#DCFCE7", color: "#16A34A", fontWeight: 700 }}>★ Cliente</span>}
                       {c.vendedor && <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>{c.vendedor}</span>}
                       {c.seguimiento_at && new Date(c.seguimiento_at) <= new Date() && <span title="Seguimiento vencido"><Clock size={12} color={C.red} /></span>}
                     </div>
@@ -845,6 +866,10 @@ function ChatPanel({ contacto, onUpdateContacto, userName, onBack, isMobile }) {
               </button>
             </>
           )}
+          <button onClick={() => upd({ tipo: (contacto.tipo || "prospecto") === "cliente" ? "prospecto" : "cliente" })}
+            style={{ ...btnSt, flexShrink: 0, fontSize: 12, background: contacto.tipo === "cliente" ? "#DCFCE7" : "#EEF2FF", color: contacto.tipo === "cliente" ? "#16A34A" : "#6366F1", borderColor: contacto.tipo === "cliente" ? "#86EFAC" : "#C7D2FE" }}>
+            {contacto.tipo === "cliente" ? "★ Cliente" : "◎ Prospecto"}
+          </button>
           <select value={contacto.vendedor || ""} onChange={(e) => upd({ vendedor: e.target.value })} style={{ ...selSt, flexShrink: 0, fontSize: 12 }}>
             <option value="">Sin vendedor</option>
             {VENDEDORES.map((v) => <option key={v} value={v}>{v}</option>)}
