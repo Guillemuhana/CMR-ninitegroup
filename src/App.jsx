@@ -38,6 +38,29 @@ const AVT = [
   ["#1E40AF","#fff"],
 ];
 
+// ── Tiempo de respuesta ─────────────────────────────────────
+function msToStr(ms) {
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "< 1 min";
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${m % 60 > 0 ? (m % 60) + "m" : ""}`.trim();
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
+}
+function tiempoClr(ms) {
+  const m = ms / 60000;
+  if (m < 10) return "#16A34A";
+  if (m < 30) return "#D97706";
+  if (m < 120) return "#EA580C";
+  return "#DC2626";
+}
+function calcEspera(c) {
+  if (!c.ultimo_in_at) return null;
+  const enEspera = !c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at);
+  if (!enEspera) return null;
+  return Date.now() - new Date(c.ultimo_in_at).getTime();
+}
+
 // ============================================================
 // MOBILE HOOK
 // ============================================================
@@ -538,6 +561,11 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
   const [canal, setCanal]         = useState("todos");
   const [quickFiltro, setQuick]   = useState(null);
   const [tipoFiltro, setTipo]     = useState(null);
+  const [now, setNow]             = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   const lista = contactos.filter((c) => {
     const porEstado = filtro === "todos" || c.estado === filtro;
@@ -690,6 +718,16 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
                       {c.tipo === "cliente" && <span style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 4, background: "#DCFCE7", color: "#16A34A", fontWeight: 700 }}>★ Cliente</span>}
                       {c.vendedor && <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>{c.vendedor}</span>}
                       {c.seguimiento_at && new Date(c.seguimiento_at) <= new Date() && <span title="Seguimiento vencido"><Clock size={12} color={C.red} /></span>}
+                      {(() => {
+                        const espera = calcEspera(c);
+                        if (!espera || espera < 60000) return null;
+                        const clr = tiempoClr(espera);
+                        return (
+                          <span title="Tiempo sin responder" style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 4, background: clr + "18", color: clr, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                            ⏱ {msToStr(espera)}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -900,6 +938,25 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
           </button>
         </div>
       </div>
+
+      {/* ── Alerta tiempo de respuesta ── */}
+      {(() => {
+        const espera = calcEspera(contacto);
+        if (!espera || espera < 120000) return null; // solo si > 2 min
+        const clr = tiempoClr(espera);
+        const urgente = espera > 7200000; // > 2 horas
+        return (
+          <div style={{ background: clr + "12", borderBottom: `2px solid ${clr}40`, padding: isMobile ? "7px 14px" : "7px 22px", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 14 }}>{urgente ? "🚨" : "⏱"}</span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: clr, flex: 1 }}>
+              {urgente ? "¡URGENTE! " : ""}Cliente esperando respuesta hace <strong>{msToStr(espera)}</strong>
+            </span>
+            <span style={{ fontSize: 11, color: clr, opacity: 0.7, fontWeight: 600 }}>
+              {espera < 600000 ? "Normal" : espera < 3600000 ? "Demorado" : "Muy demorado"}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* ── Panel seguimiento ── */}
       {panelSeg && (
