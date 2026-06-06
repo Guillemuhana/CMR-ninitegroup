@@ -16,7 +16,7 @@ export const supabase = createClient(
 export const N8N_SEND_WEBHOOK = import.meta.env.VITE_N8N_SEND_WEBHOOK;
 
 // Logo oficial de NINIT Group
-export const LOGO_URL = "/logo.png";
+export const LOGO_URL = "/cmrlogo.png";
 
 // Marca
 export const BRAND_NAME = "NINIT GROUP";
