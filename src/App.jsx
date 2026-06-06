@@ -598,34 +598,20 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
             })}
           </div>
 
-          {/* ── Quick filters ── */}
-          <div style={{ padding: "8px 12px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {/* ── Filtros rápidos ── */}
+          <div style={{ padding: "8px 12px", borderBottom: `1px solid ${L.border}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
             {[
-              { key: "noleidos",     label: "No leídos",    cnt: cntNoLeidos,     color: C.red,      set: setQuick, val: quickFiltro },
-              { key: "sinresponder", label: "Sin responder", cnt: cntSinResponder, color: "#F59E0B",  set: setQuick, val: quickFiltro },
+              { key: "noleidos",     label: "No leídos",     cnt: cntNoLeidos,     color: C.red,      set: setQuick, val: quickFiltro },
+              { key: "sinresponder", label: "Sin responder",  cnt: cntSinResponder, color: "#F59E0B",  set: setQuick, val: quickFiltro },
+              { key: "cliente",      label: "★ Clientes",     cnt: cntClientes,     color: "#16A34A",  set: setTipo,  val: tipoFiltro },
+              { key: "prospecto",    label: "◎ Prospectos",   cnt: cntProspectos,   color: "#6366F1",  set: setTipo,  val: tipoFiltro },
             ].map(({ key, label, cnt, color, set, val }) => {
               const active = val === key;
               return (
                 <button key={key} onClick={() => set(active ? null : key)}
-                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 20, border: `1.5px solid ${active ? color : L.border}`, background: active ? color : L.soft, color: active ? "#fff" : L.muted, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11.5, cursor: "pointer", transition: "all .15s", whiteSpace: "nowrap" }}>
-                  {label}
-                  {cnt > 0 && <span style={{ background: active ? "rgba(255,255,255,.3)" : color, color: "#fff", borderRadius: 10, padding: "1px 6px", fontSize: 10.5, fontWeight: 800 }}>{cnt}</span>}
-                </button>
-              );
-            })}
-          </div>
-          {/* ── Tipo filtro ── */}
-          <div style={{ padding: "7px 12px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 6 }}>
-            {[
-              { key: "cliente",    label: "Clientes",    cnt: cntClientes,   color: "#16A34A", icon: "★" },
-              { key: "prospecto",  label: "Prospectos",  cnt: cntProspectos, color: "#6366F1", icon: "◎" },
-            ].map(({ key, label, cnt, color, icon }) => {
-              const active = tipoFiltro === key;
-              return (
-                <button key={key} onClick={() => setTipo(active ? null : key)}
-                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "5px 0", borderRadius: 20, border: `1.5px solid ${active ? color : L.border}`, background: active ? color : L.soft, color: active ? "#fff" : color, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11.5, cursor: "pointer", transition: "all .15s" }}>
-                  <span>{icon}</span> {label}
-                  {cnt > 0 && <span style={{ background: active ? "rgba(255,255,255,.25)" : color + "22", color: active ? "#fff" : color, borderRadius: 10, padding: "1px 6px", fontSize: 10, fontWeight: 800 }}>{cnt}</span>}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, padding: "5px 9px", borderRadius: 8, border: `1.5px solid ${active ? color : L.border}`, background: active ? color : active ? L.soft : L.soft, color: active ? "#fff" : color, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11, cursor: "pointer", transition: "all .15s", boxShadow: active ? `0 2px 8px ${color}44` : "none" }}>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+                  <span style={{ background: active ? "rgba(255,255,255,.25)" : color + "20", color: active ? "#fff" : color, borderRadius: 6, padding: "1px 6px", fontSize: 10, fontWeight: 800, flexShrink: 0, minWidth: 18, textAlign: "center" }}>{cnt}</span>
                 </button>
               );
             })}
