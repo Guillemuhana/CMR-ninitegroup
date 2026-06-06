@@ -140,7 +140,7 @@ function Login() {
           <img
             src={LOGO_URL}
             alt="NINIT Group"
-            style={{ width: "100%", maxWidth: 380, height: "auto", display: "block", filter: "drop-shadow(0 2px 14px rgba(58,141,194,0.45))" }}
+            style={{ width: "100%", maxWidth: 360, height: 90, objectFit: "cover", objectPosition: "center", display: "block", filter: "drop-shadow(0 2px 14px rgba(58,141,194,0.45))" }}
           />
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
             <div style={{ height: 1, width: 28, background: L.border }} />
@@ -416,7 +416,7 @@ function AIAsistente({ contactoActivo }) {
         <div style={{ position: "fixed", bottom: isMobile ? "calc(132px + env(safe-area-inset-bottom))" : 150, right: 16, ...(isMobile ? { left: 16 } : { width: 350 }), height: isMobile ? "72dvh" : 490, maxHeight: isMobile ? "calc(100% - 120px)" : 490, background: L.white, borderRadius: isMobile ? "20px 20px 16px 16px" : 20, boxShadow: "0 16px 60px rgba(0,0,0,.22)", border: `1px solid ${L.border}`, zIndex: 299, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: FONT_BODY }}>
           {/* Header */}
           <div style={{ background: C.red, color: "#fff", padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `3px solid ${C.gold}` }}>
-            <img src={LOGO_URL} alt="NM" style={{ width: 180, height: "auto", filter: "brightness(0) invert(1)", opacity: 0.92 }} />
+            <img src={LOGO_URL} alt="NM" style={{ width: 180, height: 40, objectFit: "cover", objectPosition: "center", filter: "brightness(0) invert(1)", opacity: 0.92 }} />
             <div>
               <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 15, letterSpacing: 0.3, lineHeight: 1.2 }}>Asistente IA</div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,.65)", marginTop: 2 }}>NINIT Group · {typing ? "Escribiendo…" : "Online"}</div>
@@ -560,7 +560,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
 
       {/* ── Brand bar ── */}
       <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.red, borderBottom: `3px solid ${C.redDark}` }}>
-        <img src={LOGO_URL} alt="NINIT Group" style={{ width: 210, height: "auto", filter: "brightness(0) invert(1)", opacity: 0.95 }} />
+        <img src={LOGO_URL} alt="NINIT Group" style={{ width: 210, height: 46, objectFit: "cover", objectPosition: "center", filter: "brightness(0) invert(1)", opacity: 0.95 }} />
         <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }} />
       </div>
 
@@ -1145,7 +1145,7 @@ export default function App() {
             isMobile={isMobile} />
         ) : (
           <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: L.bg, flexDirection: "column", gap: 20 }}>
-            <img src={LOGO_URL} alt="NINIT Group" style={{ width: "min(500px, 85%)", height: "auto", filter: "drop-shadow(0 4px 20px rgba(58,141,194,0.5))" }} />
+            <img src={LOGO_URL} alt="NINIT Group" style={{ width: "min(480px, 82%)", height: 108, objectFit: "cover", objectPosition: "center", filter: "drop-shadow(0 4px 20px rgba(58,141,194,0.5))" }} />
             <div>
               <div style={{ color: L.text, fontSize: 20, fontFamily: FONT_DISPLAY, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700, textAlign: "center" }}>NINIT Group CRM</div>
               <div style={{ color: L.muted, fontSize: 14, textAlign: "center", marginTop: 8 }}>
