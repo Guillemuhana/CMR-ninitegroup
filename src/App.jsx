@@ -724,7 +724,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
 // ============================================================
 // CHAT PANEL
 // ============================================================
-function ChatPanel({ contacto, onUpdateContacto, userName, onBack, isMobile }) {
+function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onBack, isMobile }) {
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto]       = useState("");
   const [enviando, setEnviando]   = useState(false);
@@ -733,7 +733,21 @@ function ChatPanel({ contacto, onUpdateContacto, userName, onBack, isMobile }) {
   const [drawer, setDrawer]       = useState(false);
   const [pedidoModal, setPedido]  = useState(false);
   const [hoverMsg, setHoverMsg]   = useState(null);
+  const [confirmElim, setConfirmElim] = useState(false);
+  const [eliminando, setEliminando]   = useState(false);
   const endRef = useRef(null);
+
+  const eliminarContacto = async () => {
+    setEliminando(true);
+    const { error } = await supabase.from("contactos").delete().eq("id", contacto.id);
+    if (!error) {
+      onDeleteContacto(contacto.id);
+    } else {
+      setErr("Error al eliminar: " + error.message);
+      setEliminando(false);
+      setConfirmElim(false);
+    }
+  };
 
   const eliminarMensaje = async (id) => {
     if (!window.confirm("¿Eliminar este mensaje del CRM?")) return;
@@ -839,6 +853,12 @@ function ChatPanel({ contacto, onUpdateContacto, userName, onBack, isMobile }) {
                 onMouseLeave={(e) => { e.currentTarget.style.background = C.red; }}>
                 <ShoppingBag size={14} /> Nuevo Pedido
               </button>
+              <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
+                style={{ background: confirmElim ? "#FEE2E2" : L.soft, border: `1.5px solid ${confirmElim ? "#FECACA" : L.border}`, color: confirmElim ? C.red : L.muted, borderRadius: 9, width: 36, height: 36, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}
+                onMouseEnter={(e) => { if (!confirmElim) { e.currentTarget.style.borderColor = "#FECACA"; e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = C.red; } }}
+                onMouseLeave={(e) => { if (!confirmElim) { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.background = L.soft; e.currentTarget.style.color = L.muted; } }}>
+                <Trash2 size={15} />
+              </button>
             </>
           )}
         </div>
@@ -853,6 +873,10 @@ function ChatPanel({ contacto, onUpdateContacto, userName, onBack, isMobile }) {
               <button onClick={() => setPedido(true)}
                 style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 11px", background: C.red, color: "#fff", borderColor: C.red }}>
                 <ShoppingBag size={13} /> Pedido
+              </button>
+              <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
+                style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 10px", background: confirmElim ? "#FEF2F2" : L.soft, color: confirmElim ? C.red : L.muted, borderColor: confirmElim ? "#FECACA" : L.border }}>
+                <Trash2 size={13} />
               </button>
             </>
           )}
@@ -890,6 +914,26 @@ function ChatPanel({ contacto, onUpdateContacto, userName, onBack, isMobile }) {
           <div style={{ flex: 1, minWidth: 200 }}>
             <label style={lblSt}>Nota</label>
             <input style={inpSt} placeholder="Ej: confirmar pedido del finde" defaultValue={contacto.nota_seguimiento || ""} onBlur={(e) => upd({ nota_seguimiento: e.target.value })} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Banner confirmar eliminación ── */}
+      {confirmElim && (
+        <div style={{ background: "#FEF2F2", borderBottom: `1px solid #FECACA`, padding: isMobile ? "10px 14px" : "10px 22px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <Trash2 size={15} color={C.red} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.red, flex: 1 }}>
+            ¿Eliminar <strong>{contacto.nombre || contacto.telefono || contacto.email}</strong> y todos sus mensajes? Esta acción no se puede deshacer.
+          </span>
+          <div style={{ display: "flex", gap: 7 }}>
+            <button onClick={() => setConfirmElim(false)} disabled={eliminando}
+              style={{ padding: "6px 14px", borderRadius: 7, border: `1.5px solid ${L.border}`, background: L.white, color: L.muted, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY }}>
+              Cancelar
+            </button>
+            <button onClick={eliminarContacto} disabled={eliminando}
+              style={{ padding: "6px 16px", borderRadius: 7, border: "none", background: C.red, color: "#fff", fontSize: 13, fontWeight: 700, cursor: eliminando ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: eliminando ? 0.7 : 1, display: "flex", alignItems: "center", gap: 6 }}>
+              <Trash2 size={13} /> {eliminando ? "Eliminando…" : "Sí, eliminar"}
+            </button>
           </div>
         </div>
       )}
@@ -1043,6 +1087,11 @@ export default function App() {
     if (activo?.id === c.id) setActivo(c);
   };
 
+  const deleteContacto = (id) => {
+    setContactos((prev) => prev.filter((x) => x.id !== id));
+    setActivo(null);
+  };
+
   if (session) tuvoSesion.current = true;
   if (!ready) return null;
   // No mostrar login si tuvo sesión previa y solo está refrescando token
@@ -1092,7 +1141,7 @@ export default function App() {
             <div className="scroll-y" style={{ flex: 1, overflowY: "auto" }}><PedidosPanel /></div>
           </>
         ) : activo ? (
-          <ChatPanel contacto={activo} onUpdateContacto={updateContacto} userName={userName}
+          <ChatPanel contacto={activo} onUpdateContacto={updateContacto} onDeleteContacto={deleteContacto} userName={userName}
             onBack={isMobile ? () => setActivo(null) : undefined}
             isMobile={isMobile} />
         ) : (
