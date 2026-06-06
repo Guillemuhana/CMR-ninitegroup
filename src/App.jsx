@@ -533,16 +533,23 @@ function NavDropdown({ vista, setVista, rol }) {
 // SIDEBAR
 // ============================================================
 function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, vista, setVista, alertas, isMobile, rol }) {
-  const [filtro, setFiltro]     = useState("todos");
-  const [busqueda, setBusqueda] = useState("");
-  const [canal, setCanal]       = useState("todos");
+  const [filtro, setFiltro]       = useState("todos");
+  const [busqueda, setBusqueda]   = useState("");
+  const [canal, setCanal]         = useState("todos");
+  const [quickFiltro, setQuick]   = useState(null);
 
   const lista = contactos.filter((c) => {
     const porEstado = filtro === "todos" || c.estado === filtro;
     const porBusq   = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
     const porCanal  = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
-    return porEstado && porBusq && porCanal;
+    const porQuick  = !quickFiltro
+      || (quickFiltro === "noleidos"     && c.no_leidos > 0)
+      || (quickFiltro === "sinresponder" && c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at)));
+    return porEstado && porBusq && porCanal && porQuick;
   });
+
+  const cntNoLeidos     = contactos.filter((c) => c.no_leidos > 0).length;
+  const cntSinResponder = contactos.filter((c) => c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at))).length;
 
   return (
     <div style={{ width: "100%", height: "100%", background: L.white, borderRight: `1px solid ${L.border}`, display: "flex", flexDirection: "column" }}>
@@ -581,6 +588,23 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
                 <button key={key} onClick={() => setCanal(active ? "todos" : key)}
                   style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", borderRadius: 10, border: `2px solid ${active ? activeBg : color}`, background: active ? activeBg : bg, color: active ? "#fff" : color, fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "all .15s", boxShadow: active ? `0 3px 10px ${color}55` : "none", letterSpacing: 0.2 }}>
                   {icon} {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ── Quick filters ── */}
+          <div style={{ padding: "8px 12px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 6 }}>
+            {[
+              { key: "noleidos",     label: "No leídos",    cnt: cntNoLeidos,     color: C.red },
+              { key: "sinresponder", label: "Sin responder", cnt: cntSinResponder, color: "#F59E0B" },
+            ].map(({ key, label, cnt, color }) => {
+              const active = quickFiltro === key;
+              return (
+                <button key={key} onClick={() => setQuick(active ? null : key)}
+                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 20, border: `1.5px solid ${active ? color : L.border}`, background: active ? color : L.soft, color: active ? "#fff" : L.muted, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11.5, cursor: "pointer", transition: "all .15s", whiteSpace: "nowrap" }}>
+                  {label}
+                  {cnt > 0 && <span style={{ background: active ? "rgba(255,255,255,.3)" : color, color: active ? "#fff" : "#fff", borderRadius: 10, padding: "1px 6px", fontSize: 10.5, fontWeight: 800 }}>{cnt}</span>}
                 </button>
               );
             })}
