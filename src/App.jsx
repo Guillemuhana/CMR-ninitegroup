@@ -403,7 +403,7 @@ function AIAsistente({ contactoActivo }) {
     <>
       {/* Botón flotante */}
       <button onClick={() => setOpen((v) => !v)} title="Asistente IA"
-        style={{ position: "fixed", bottom: isMobile ? "calc(16px + env(safe-area-inset-bottom))" : 24, right: isMobile ? 16 : 24, width: isMobile ? 48 : 54, height: isMobile ? 48 : 54, borderRadius: "50%", background: open ? L.muted : C.red, border: "none", color: "#fff", cursor: "pointer", boxShadow: `0 4px 20px rgba(185,28,28,.45)`, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .25s, transform .2s" }}
+        style={{ position: "fixed", bottom: isMobile ? "calc(76px + env(safe-area-inset-bottom))" : 84, right: isMobile ? 16 : 24, width: isMobile ? 48 : 54, height: isMobile ? 48 : 54, borderRadius: "50%", background: open ? L.muted : C.red, border: "none", color: "#fff", cursor: "pointer", boxShadow: `0 4px 20px rgba(185,28,28,.45)`, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", transition: "background .25s, transform .2s" }}
         onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.08)"; }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>
         {open ? <X size={22} /> : <Sparkles size={22} />}
@@ -411,7 +411,7 @@ function AIAsistente({ contactoActivo }) {
 
       {/* Panel */}
       {open && (
-        <div style={{ position: "fixed", bottom: isMobile ? "calc(72px + env(safe-area-inset-bottom))" : 90, right: 16, ...(isMobile ? { left: 16 } : { width: 350 }), height: isMobile ? "72dvh" : 490, maxHeight: isMobile ? "calc(100% - 120px)" : 490, background: L.white, borderRadius: isMobile ? "20px 20px 16px 16px" : 20, boxShadow: "0 16px 60px rgba(0,0,0,.22)", border: `1px solid ${L.border}`, zIndex: 299, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: FONT_BODY }}>
+        <div style={{ position: "fixed", bottom: isMobile ? "calc(132px + env(safe-area-inset-bottom))" : 150, right: 16, ...(isMobile ? { left: 16 } : { width: 350 }), height: isMobile ? "72dvh" : 490, maxHeight: isMobile ? "calc(100% - 120px)" : 490, background: L.white, borderRadius: isMobile ? "20px 20px 16px 16px" : 20, boxShadow: "0 16px 60px rgba(0,0,0,.22)", border: `1px solid ${L.border}`, zIndex: 299, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: FONT_BODY }}>
           {/* Header */}
           <div style={{ background: C.red, color: "#fff", padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `3px solid ${C.gold}` }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
