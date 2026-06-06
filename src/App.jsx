@@ -535,11 +535,13 @@ function NavDropdown({ vista, setVista, rol }) {
 function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, vista, setVista, alertas, isMobile, rol }) {
   const [filtro, setFiltro]     = useState("todos");
   const [busqueda, setBusqueda] = useState("");
+  const [canal, setCanal]       = useState("todos");
 
   const lista = contactos.filter((c) => {
     const porEstado = filtro === "todos" || c.estado === filtro;
     const porBusq   = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
-    return porEstado && porBusq;
+    const porCanal  = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
+    return porEstado && porBusq && porCanal;
   });
 
   return (
@@ -568,6 +570,22 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
 
       {vista === "chat" && (
         <>
+          {/* ── Canal buttons ── */}
+          <div style={{ padding: "10px 12px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 7 }}>
+            {[
+              { key: "whatsapp", label: "WhatsApp", icon: <MessageSquare size={13} />, color: "#25D366", bg: "#F0FDF4", activeBg: "#25D366" },
+              { key: "email",    label: "Gmail",     icon: <Mail size={13} />,          color: "#3B82F6", bg: "#EFF6FF", activeBg: "#3B82F6" },
+            ].map(({ key, label, icon, color, bg, activeBg }) => {
+              const active = canal === key;
+              return (
+                <button key={key} onClick={() => setCanal(active ? "todos" : key)}
+                  style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", borderRadius: 10, border: `2px solid ${active ? activeBg : color}`, background: active ? activeBg : bg, color: active ? "#fff" : color, fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 12, cursor: "pointer", transition: "all .15s", boxShadow: active ? `0 3px 10px ${color}55` : "none", letterSpacing: 0.2 }}>
+                  {icon} {label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* ── Búsqueda ── */}
           <div style={{ padding: "12px 14px", borderBottom: `1px solid ${L.border}` }}>
             <div style={{ position: "relative" }}>
