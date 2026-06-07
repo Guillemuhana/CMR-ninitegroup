@@ -1202,7 +1202,7 @@ export default function App() {
             isMobile={isMobile} />
         ) : (
           <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: L.bg, flexDirection: "column", gap: 20 }}>
-            <img src={LOGO_URL} alt="NINIT Group" style={{ width: "min(380px, 68%)", height: 86, objectFit: "cover", objectPosition: "center", filter: "drop-shadow(0 4px 20px rgba(58,141,194,0.5))" }} />
+            <img src={LOGO_URL} alt="NINIT Group" style={{ width: "min(340px, 62%)", objectFit: "contain", filter: "drop-shadow(0 4px 20px rgba(58,141,194,0.5))" }} />
             <div>
               <div style={{ color: L.muted, fontSize: 14, textAlign: "center", marginTop: 8 }}>
                 {rol === "admin" ? `Bienvenido, ${userName} · Panel de administración disponible` : `Seleccioná una conversación para comenzar`}
