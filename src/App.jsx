@@ -602,25 +602,25 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
         <div style={{ position: "fixed", bottom: isMobile ? "calc(136px + env(safe-area-inset-bottom))" : 152, right: 16, ...(isMobile ? { left: 16 } : { width: 480 }), height: isMobile ? "72dvh" : 640, maxHeight: isMobile ? "calc(100% - 124px)" : 640, background: L.white, borderRadius: isMobile ? "20px 20px 16px 16px" : 20, boxShadow: "0 20px 70px rgba(0,0,0,.25)", border: `1px solid ${L.border}`, zIndex: 299, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: FONT_BODY }}>
 
           {/* Header */}
-          <div style={{ background: `linear-gradient(135deg, ${C.redDark} 0%, ${C.red} 100%)`, color: "#fff", padding: "13px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `2px solid ${C.redDark}`, flexShrink: 0 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 12, background: "rgba(255,255,255,.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "1.5px solid rgba(255,255,255,.35)" }}>
-              {hablando ? <Volume2 size={19} /> : <Sparkles size={19} />}
+          <div style={{ background: `linear-gradient(135deg, ${C.redDark} 0%, ${C.red} 100%)`, color: "#fff", padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, borderBottom: `2px solid ${C.redDark}`, flexShrink: 0 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, background: "rgba(255,255,255,.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "1.5px solid rgba(255,255,255,.35)" }}>
+              {hablando ? <Volume2 size={15} /> : <Sparkles size={15} />}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 14, letterSpacing: 0.2 }}>Asistente Ejecutivo IA</div>
-              <div style={{ fontSize: 10, color: grabando ? "#FEF08A" : hablando ? "#86EFAC" : "rgba(255,255,255,.6)", marginTop: 1, display: "flex", alignItems: "center", gap: 4 }}>
+              <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 13, letterSpacing: 0.2 }}>Asistente Ejecutivo IA</div>
+              <div style={{ fontSize: 9.5, color: grabando ? "#FEF08A" : hablando ? "#86EFAC" : "rgba(255,255,255,.6)", marginTop: 1, display: "flex", alignItems: "center", gap: 4 }}>
                 {(grabando || hablando) && <span style={{ width: 5, height: 5, borderRadius: "50%", background: grabando ? "#FEF08A" : "#86EFAC", flexShrink: 0, animation: "pulseDot 1s infinite" }} />}
                 {statusLabel}
               </div>
             </div>
             <button onClick={() => { setVozOn((v) => !v); audioRef.current?.pause(); window.speechSynthesis?.cancel(); setHablando(false); }}
               title={vozOn ? "Silenciar voz" : "Activar voz"}
-              style={{ background: vozOn ? "rgba(255,255,255,.22)" : "rgba(255,255,255,.08)", border: `1.5px solid ${vozOn ? "rgba(255,255,255,.45)" : "rgba(255,255,255,.15)"}`, color: "#fff", borderRadius: 9, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }}>
-              {vozOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
+              style={{ background: vozOn ? "rgba(255,255,255,.22)" : "rgba(255,255,255,.08)", border: `1.5px solid ${vozOn ? "rgba(255,255,255,.45)" : "rgba(255,255,255,.15)"}`, color: "#fff", borderRadius: 8, width: 29, height: 29, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }}>
+              {vozOn ? <Volume2 size={13} /> : <VolumeX size={13} />}
             </button>
             <button onClick={() => setOpen(false)}
-              style={{ background: "rgba(255,255,255,.12)", border: "none", color: "#fff", borderRadius: 9, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <X size={16} />
+              style={{ background: "rgba(255,255,255,.12)", border: "none", color: "#fff", borderRadius: 8, width: 29, height: 29, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <X size={14} />
             </button>
           </div>
 
