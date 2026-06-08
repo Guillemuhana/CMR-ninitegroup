@@ -79,27 +79,38 @@ function useIsMobile(bp = 768) {
 }
 
 // Prompt del sistema para el Asistente IA
-const GROK_SYSTEM = `Sos el Asistente Ejecutivo personal de Nicolás en NINIT Group. Sos como su empleado de confianza de más alto rendimiento — proactivo, inteligente, siempre un paso adelante.
+const GROK_SYSTEM = `Sos el Asistente Ejecutivo personal y especialista de Nicolás en NINI T-GROUP (NTG). Sos como su empleado de confianza de máximo rendimiento — proactivo, inteligente, especialista en el negocio, siempre un paso adelante.
 
-EMPRESA:
-NINIT Group alquila baños químicos y remolques sanitarios de lujo en Miami. Nicolás es el dueño y CEO.
+════ EMPRESA: NINI T-GROUP (NTG) ════
+NTG vende y alquila luxury restroom trailers (remolques sanitarios de lujo) para eventos premium en Miami y Florida. Nicolás es el dueño y CEO. El estilo de la empresa es ejecutivo, exclusivo, "Miami Business".
 
-TU ROL:
-- Ayudarlo a cerrar más ventas y no perder ningún lead
-- Recordarle seguimientos, alertas urgentes, leads sin atender
-- Analizar el pipeline y sugerir acciones concretas
-- Responder cualquier consulta de negocio o personal que te haga
-- Ser proactivo: si ves algo importante en el contexto, mencionalo sin que te lo pidan
-- Actuar como si fueras su mano derecha — no un chatbot, sino un empleado real
+CATÁLOGO Y MODELOS:
+- 2 Stalls │ $24,000 Ready to Ship / $21,500 Pre-sale
+- 3 Stalls │ $27,500 Ready to Ship / $25,000 Pre-sale
+- 4 Stalls │ $35,000 Ready to Ship / $32,500 Pre-sale
+- ADA + 2  │ $32,000 Ready to Ship / $29,500 Pre-sale
+Catálogo completo: https://ninitgroup.com/wp-content/uploads/2026/04/NINITGROUP_CATALOG.pdf
 
-ESTILO:
+VENTAJAS CLAVE DE VENTA:
+- Cliente en Florida → envío gratis (siempre mencionarlo si aplica)
+- Unidades Ready to Ship tienen stock limitado → urgencia real
+- Cierre: proponer separar unidad con depósito o llamada de 5 min
+- Destacar lujo, exclusividad y confianza — proyectar imagen premium siempre
+
+════ TU ROL EN EL CRM ════
+- Ayudar a Nico a cerrar más ventas y no perder ningún lead
+- Alertar sobre clientes sin respuesta, seguimientos vencidos, leads sin asignar
+- Analizar el pipeline y sugerir acciones concretas con nombres reales
+- Responder cualquier consulta de negocio, producto, cliente o estrategia de venta
+- Actuar como su mano derecha — no un chatbot, sino un especialista real del equipo
+- Ser proactivo: si ves algo importante en el contexto del CRM, mencionalo sin que te lo pidan
+
+════ ESTILO ════
 - Español rioplatense natural. Tutear siempre. Tono ejecutivo pero cercano.
 - NUNCA empieces con "¡Claro!", "¡Por supuesto!", "Entendido" — ir directo al punto.
-- MODO VOZ: respuestas de máximo 2 oraciones, conversacionales, sin listas ni markdown.
-- MODO TEXTO: podés extenderte, usar listas y negrita cuando ayude.
-- Si Nico pide algo que podés resolver con info del CRM, usá el contexto que te dan.
-- Si detectás una oportunidad o riesgo, mencionalo proactivamente.
-- Cuando termines una respuesta útil, ofrecé el siguiente paso lógico.`;
+- MODO VOZ: máximo 2 oraciones cortas, conversacionales, sin listas ni markdown, lenguaje hablado natural.
+- MODO TEXTO: podés extenderte, usar listas y negrita cuando ayude a la claridad.
+- Cuando termines una respuesta útil, ofrecé siempre el siguiente paso lógico.`;
 
 // ============================================================
 // FONT LOADER
@@ -599,7 +610,7 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
 
       {/* Panel */}
       {open && (
-        <div style={{ position: "fixed", bottom: isMobile ? "calc(136px + env(safe-area-inset-bottom))" : 152, right: 16, ...(isMobile ? { left: 16 } : { width: 480 }), height: isMobile ? "72dvh" : 640, maxHeight: isMobile ? "calc(100% - 124px)" : 640, background: L.white, borderRadius: isMobile ? "20px 20px 16px 16px" : 20, boxShadow: "0 20px 70px rgba(0,0,0,.25)", border: `1px solid ${L.border}`, zIndex: 299, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: FONT_BODY }}>
+        <div style={{ position: "fixed", bottom: isMobile ? "calc(136px + env(safe-area-inset-bottom))" : 148, right: 16, ...(isMobile ? { left: 16 } : { width: 530 }), height: isMobile ? "72dvh" : 680, maxHeight: isMobile ? "calc(100% - 124px)" : "calc(100vh - 160px)", background: L.white, borderRadius: isMobile ? "20px 20px 16px 16px" : 20, boxShadow: "0 20px 70px rgba(0,0,0,.25)", border: `1px solid ${L.border}`, zIndex: 299, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: FONT_BODY }}>
 
           {/* Header */}
           <div style={{ background: `linear-gradient(135deg, ${C.redDark} 0%, ${C.red} 100%)`, color: "#fff", padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, borderBottom: `2px solid ${C.redDark}`, flexShrink: 0 }}>
@@ -684,14 +695,13 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
           )}
 
           {/* Input */}
-          <div style={{ padding: "10px 12px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 7, background: L.white, alignItems: "center", flexShrink: 0 }}>
-            {sttOk && (
-              <button onClick={iniciarGrabacion} disabled={typing}
-                title={grabando ? "Detener" : "Hablar con el asistente"}
-                style={{ background: grabando ? "#FEF2F2" : L.soft, border: `1.5px solid ${grabando ? C.red : L.border}`, color: grabando ? C.red : L.muted, borderRadius: 10, width: 42, height: 42, cursor: typing ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s", boxShadow: grabando ? `0 0 0 4px rgba(220,38,38,.15)` : "none" }}>
-                {grabando ? <MicOff size={18} /> : <Mic size={18} />}
-              </button>
-            )}
+          <div style={{ padding: "10px 12px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 8, background: L.white, alignItems: "center", flexShrink: 0 }}>
+            {/* Botón micrófono — siempre visible, grande y claro */}
+            <button onClick={iniciarGrabacion} disabled={typing}
+              title={!sttOk ? "Tu navegador no soporta voz — usá Chrome" : grabando ? "Detener grabación" : "Hablar con el asistente (voz)"}
+              style={{ background: grabando ? C.red : sttOk ? "#EFF6FF" : L.light, border: `2px solid ${grabando ? C.red : sttOk ? C.red : L.border}`, color: grabando ? "#fff" : sttOk ? C.red : L.muted, borderRadius: 12, width: 46, height: 46, cursor: typing || !sttOk ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s", boxShadow: grabando ? `0 0 0 5px rgba(58,141,194,.25)` : sttOk ? `0 2px 8px rgba(58,141,194,.2)` : "none" }}>
+              {grabando ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
             <input value={transcrib || input}
               onChange={(e) => { if (!grabando) setInput(e.target.value); }}
               onKeyDown={(e) => { if (e.key === "Enter" && !grabando) enviar(); }}
