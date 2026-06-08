@@ -379,7 +379,41 @@ function ContactoDrawer({ contacto, onClose, onSave }) {
 // ============================================================
 // ASISTENTE IA  (ElevenLabs TTS + Web Speech STT + proactivo)
 // ============================================================
-function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuario = "" }) {
+// ── Ejecutor de acciones CEO ──────────────────────────────────
+const EJECUTAR_ACCION = {
+  agregar_vendedor: async ({ nombre, email, role = "vendedor" }) => {
+    const { error } = await supabase.from("vendedores")
+      .insert({ nombre, email: email?.toLowerCase().trim(), role });
+    return error ? `Error: ${error.message}` : `Vendedor **${nombre}** agregado.`;
+  },
+  actualizar_vendedor: async ({ email, ...cambios }) => {
+    const { error } = await supabase.from("vendedores")
+      .update(cambios).eq("email", email.toLowerCase().trim());
+    return error ? `Error: ${error.message}` : `Vendedor **${email}** actualizado.`;
+  },
+  eliminar_vendedor: async ({ email }) => {
+    const { error } = await supabase.from("vendedores")
+      .delete().eq("email", email.toLowerCase().trim());
+    return error ? `Error: ${error.message}` : `Vendedor **${email}** eliminado.`;
+  },
+  agregar_contacto: async ({ nombre, telefono, email, vendedor, estado = "nuevo", ...resto }) => {
+    const { error } = await supabase.from("contactos")
+      .insert({ nombre, telefono, email, vendedor, estado, ...resto });
+    return error ? `Error: ${error.message}` : `Contacto **${nombre || telefono}** creado.`;
+  },
+  actualizar_contacto: async ({ id, ...cambios }) => {
+    if (!id) return "Error: falta el id del contacto.";
+    const { error } = await supabase.from("contactos").update(cambios).eq("id", id);
+    return error ? `Error: ${error.message}` : `Contacto actualizado.`;
+  },
+  eliminar_contacto: async ({ id }) => {
+    if (!id) return "Error: falta el id del contacto.";
+    const { error } = await supabase.from("contactos").delete().eq("id", id);
+    return error ? `Error: ${error.message}` : `Contacto eliminado.`;
+  },
+};
+
+function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuario = "", rol = "vendedor", onRefrescar }) {
   const isMobile   = useIsMobile();
   const [open, setOpen]           = useState(false);
   const [msgs, setMsgs]           = useState([]);
@@ -557,9 +591,26 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
       let sysExtra = `\n\nESTADO ACTUAL DEL CRM: ${contactos.length} contactos totales | ${sinResp} sin respuesta | ${segVenc} seguimientos vencidos | ${alertas.length} alertas activas.`;
       if (contactoActivo) {
         const est = ESTADOS[contactoActivo.estado];
-        sysExtra += `\nCONTACTO ABIERTO: ${contactoActivo.nombre || contactoActivo.telefono} | ${est?.label || contactoActivo.estado} | vendedor: ${contactoActivo.vendedor || "sin asignar"}`;
+        sysExtra += `\nCONTACTO ABIERTO: ${contactoActivo.nombre || contactoActivo.telefono} (id: ${contactoActivo.id}) | ${est?.label || contactoActivo.estado} | vendedor: ${contactoActivo.vendedor || "sin asignar"}`;
       }
       if (vozOnRef.current) sysExtra += "\nMODO VOZ ACTIVO: máximo 2 oraciones, sin listas, sin markdown, lenguaje natural hablado.";
+      if (rol === "ceo") sysExtra += `\n\n════ ACCIONES DISPONIBLES (sos CEO) ════
+Podés ejecutar cambios reales en el CRM. Cuando el usuario te pida hacer algo, incluí AL FINAL de tu respuesta un bloque exactamente así:
+<ACCION>{"tipo":"nombre_accion","campo":"valor"}</ACCION>
+
+Acciones disponibles:
+- agregar_vendedor: { nombre, email, role? } — role puede ser "ceo" o "vendedor"
+- actualizar_vendedor: { email, nombre?, role? } — email identifica al vendedor a modificar
+- eliminar_vendedor: { email } — CONFIRMAR siempre antes de ejecutar
+- agregar_contacto: { nombre?, telefono?, email?, vendedor?, estado? }
+- actualizar_contacto: { id, estado?, vendedor?, nombre?, nota_seguimiento?, seguimiento_at? }
+- eliminar_contacto: { id } — CONFIRMAR siempre antes de ejecutar
+
+REGLAS:
+1. Solo incluí <ACCION> cuando el usuario pida explícitamente un cambio.
+2. Para eliminar algo, pedí confirmación en tu respuesta ANTES de incluir <ACCION>.
+3. Si te falta info (ej: email para agregar vendedor), preguntá antes de actuar.
+4. El bloque <ACCION> debe ser JSON válido y estar en la última línea.`;
 
       const apiMsgs = [
         { role: "system", content: GROK_SYSTEM + sysExtra },
@@ -573,9 +624,35 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
       });
       if (res.ok) {
         const data = await res.json();
-        const resp = data.choices[0].message.content;
-        setMsgs((p) => [...p, { from: "ai", text: resp }]);
-        hablar(resp);
+        let resp = data.choices[0].message.content;
+
+        // ── Detectar y ejecutar acciones CEO ──────────────────
+        const accionMatch = resp.match(/<ACCION>([\s\S]*?)<\/ACCION>/);
+        if (accionMatch && rol === "ceo") {
+          resp = resp.replace(/<ACCION>[\s\S]*?<\/ACCION>/, "").trim();
+          setMsgs((p) => [...p, { from: "ai", text: resp }]);
+          if (resp && !vozOnRef.current) {} else if (resp) hablar(resp);
+          try {
+            const accion = JSON.parse(accionMatch[1].trim());
+            const fn = EJECUTAR_ACCION[accion.tipo];
+            if (fn) {
+              setMsgs((p) => [...p, { from: "sistema", text: `⏳ Ejecutando: ${accion.tipo}…` }]);
+              const resultado = await fn(accion);
+              setMsgs((p) => [
+                ...p.filter((m) => !m.text?.startsWith("⏳ Ejecutando")),
+                { from: "sistema", text: `✅ ${resultado}` },
+              ]);
+              onRefrescar?.();
+            } else {
+              setMsgs((p) => [...p, { from: "sistema", text: `⚠️ Acción desconocida: ${accion.tipo}` }]);
+            }
+          } catch {
+            setMsgs((p) => [...p, { from: "sistema", text: "⚠️ Error al parsear la acción." }]);
+          }
+        } else {
+          setMsgs((p) => [...p, { from: "ai", text: resp }]);
+          hablar(resp);
+        }
       } else {
         const err = await res.json().catch(() => ({}));
         setMsgs((p) => [...p, { from: "ai", text: `Error (${res.status}): ${err?.error?.message || "Verificá la clave"}` }]);
@@ -647,26 +724,35 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
 
           {/* Mensajes */}
           <div className="scroll-y" style={{ flex: 1, overflowY: "auto", padding: "14px 14px", display: "flex", flexDirection: "column", gap: 11, background: "#F8FAFC" }}>
-            {msgs.map((m, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 7 }}>
-                {m.from === "ai" && (
-                  <div style={{ width: 28, height: 28, borderRadius: 9, background: hablando && i === msgs.length - 1 ? "#16A34A" : C.red, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .3s", boxShadow: hablando && i === msgs.length - 1 ? "0 0 0 4px rgba(22,163,74,.2)" : "none" }}>
-                    {hablando && i === msgs.length - 1 ? <Volume2 size={14} color="#fff" /> : <Sparkles size={14} color="#fff" />}
+            {msgs.map((m, i) => {
+              if (m.from === "sistema") return (
+                <div key={i} style={{ display: "flex", justifyContent: "center" }}>
+                  <div style={{ fontSize: 12, color: m.text?.startsWith("✅") ? "#15803D" : m.text?.startsWith("⚠️") ? "#92400E" : "#1D4ED8", background: m.text?.startsWith("✅") ? "#DCFCE7" : m.text?.startsWith("⚠️") ? "#FEF3C7" : "#DBEAFE", border: `1px solid ${m.text?.startsWith("✅") ? "#86EFAC" : m.text?.startsWith("⚠️") ? "#FDE68A" : "#BFDBFE"}`, borderRadius: 20, padding: "5px 14px", fontWeight: 600 }}>
+                    {m.text}
                   </div>
-                )}
-                <div style={{ maxWidth: "82%", padding: "10px 14px", borderRadius: m.from === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px", background: m.from === "user" ? C.red : L.white, color: m.from === "user" ? "#fff" : L.text, fontSize: 13.5, lineHeight: 1.6, whiteSpace: "pre-wrap", boxShadow: "0 1px 5px rgba(0,0,0,.08)", border: m.from === "user" ? "none" : `1px solid ${L.border}` }}>
-                  {m.text}
                 </div>
-                {m.from === "ai" && vozOn && i === msgs.length - 1 && !hablando && (
-                  <button onClick={() => hablar(m.text)} title="Escuchar respuesta"
-                    style={{ background: "none", border: `1.5px solid ${L.border}`, borderRadius: 7, padding: "4px 7px", cursor: "pointer", color: L.muted, display: "flex", alignItems: "center", flexShrink: 0, transition: "all .15s" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = C.red; e.currentTarget.style.borderColor = C.red; e.currentTarget.style.background = "#FEF2F2"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = L.muted; e.currentTarget.style.borderColor = L.border; e.currentTarget.style.background = "none"; }}>
-                    <Volume2 size={13} />
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+              return (
+                <div key={i} style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 7 }}>
+                  {m.from === "ai" && (
+                    <div style={{ width: 28, height: 28, borderRadius: 9, background: hablando && i === msgs.length - 1 ? "#16A34A" : C.red, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .3s", boxShadow: hablando && i === msgs.length - 1 ? "0 0 0 4px rgba(22,163,74,.2)" : "none" }}>
+                      {hablando && i === msgs.length - 1 ? <Volume2 size={14} color="#fff" /> : <Sparkles size={14} color="#fff" />}
+                    </div>
+                  )}
+                  <div style={{ maxWidth: "82%", padding: "10px 14px", borderRadius: m.from === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px", background: m.from === "user" ? C.red : L.white, color: m.from === "user" ? "#fff" : L.text, fontSize: 13.5, lineHeight: 1.6, whiteSpace: "pre-wrap", boxShadow: "0 1px 5px rgba(0,0,0,.08)", border: m.from === "user" ? "none" : `1px solid ${L.border}` }}>
+                    {m.text}
+                  </div>
+                  {m.from === "ai" && vozOn && i === msgs.length - 1 && !hablando && (
+                    <button onClick={() => hablar(m.text)} title="Escuchar respuesta"
+                      style={{ background: "none", border: `1.5px solid ${L.border}`, borderRadius: 7, padding: "4px 7px", cursor: "pointer", color: L.muted, display: "flex", alignItems: "center", flexShrink: 0, transition: "all .15s" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = C.red; e.currentTarget.style.borderColor = C.red; e.currentTarget.style.background = "#FEF2F2"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = L.muted; e.currentTarget.style.borderColor = L.border; e.currentTarget.style.background = "none"; }}>
+                      <Volume2 size={13} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
             {typing && (
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ width: 28, height: 28, borderRadius: 9, background: C.red, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1462,6 +1548,14 @@ export default function App() {
     setActivo(null);
   };
 
+  // Recarga contactos desde la DB (para que el asistente actualice tras cambios)
+  const recargarContactos = useCallback(async () => {
+    let query = supabase.from("contactos").select("*").order("updated_at", { ascending: false });
+    if (perfil?.role === "vendedor") query = query.eq("vendedor", perfil.nombre);
+    const { data } = await query;
+    if (data) setContactos(data);
+  }, [perfil]);
+
   if (session) tuvoSesion.current = true;
   if (!ready) return null;
   if (!session && !tuvoSesion.current) return (<><FontLoader /><Login /></>);
@@ -1554,7 +1648,7 @@ export default function App() {
         )}
       </div>
 
-      <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} nombreUsuario={userName} />
+      <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} nombreUsuario={userName} rol={rol} onRefrescar={recargarContactos} />
     </div>
   );
 }
