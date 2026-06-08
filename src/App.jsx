@@ -1,3 +1,4 @@
+// v2.1 — 2026-06-08
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Bell, Search, LogOut, MessageSquare, BarChart2, Package,
