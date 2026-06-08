@@ -10,7 +10,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads } from "react-icons/si";
 import PedidosPanel, { NuevoPedidoModal, imprimirPedido } from "./Pedidos";
 import {
-  supabase, N8N_SEND_WEBHOOK, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
+  supabase, N8N_SEND_WEBHOOK, N8N_EMAIL_REPLY_WEBHOOK, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
   VENDEDORES, ESTADOS, calcularAlertas, getRol, cargarPerfil,
 } from "./lib";
 import Reportes from "./Reportes";
@@ -830,17 +830,34 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
       return;
     }
 
-    // 2) Enviar por WhatsApp vía n8n (no bloquea si falla)
-    if (N8N_SEND_WEBHOOK) {
-      try {
-        const msgWA = `*${userName} · NINIT Group:*\n${cuerpo}`;
-        const res = await fetch(N8N_SEND_WEBHOOK, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ telefono: contacto.telefono, mensaje: msgWA, agente: userName }),
-        });
-        if (!res.ok) setErr("Mensaje guardado en CRM, pero falló el envío por WhatsApp.");
-      } catch {
-        setErr("Mensaje guardado en CRM, pero no se pudo conectar con WhatsApp.");
+    // 2) Enviar por el canal correspondiente vía n8n
+    const esEmail = contacto.canal === "email" || contacto.canal === "google_ads";
+    if (esEmail) {
+      // Respuesta por email
+      if (N8N_EMAIL_REPLY_WEBHOOK) {
+        try {
+          const res = await fetch(N8N_EMAIL_REPLY_WEBHOOK, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: contacto.email, nombre: contacto.nombre, mensaje: cuerpo, agente: userName }),
+          });
+          if (!res.ok) setErr("Mensaje guardado en CRM, pero falló el envío del email.");
+        } catch {
+          setErr("Mensaje guardado en CRM, pero no se pudo enviar el email.");
+        }
+      }
+    } else {
+      // Respuesta por WhatsApp
+      if (N8N_SEND_WEBHOOK) {
+        try {
+          const msgWA = `*${userName} · NINIT Group:*\n${cuerpo}`;
+          const res = await fetch(N8N_SEND_WEBHOOK, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telefono: contacto.telefono, mensaje: msgWA, agente: userName }),
+          });
+          if (!res.ok) setErr("Mensaje guardado en CRM, pero falló el envío por WhatsApp.");
+        } catch {
+          setErr("Mensaje guardado en CRM, pero no se pudo conectar con WhatsApp.");
+        }
       }
     }
 
