@@ -13,8 +13,10 @@ export const supabase = createClient(
   }
 );
 
-export const N8N_SEND_WEBHOOK       = import.meta.env.VITE_N8N_SEND_WEBHOOK;
+export const N8N_SEND_WEBHOOK        = import.meta.env.VITE_N8N_SEND_WEBHOOK;
 export const N8N_EMAIL_REPLY_WEBHOOK = import.meta.env.VITE_N8N_EMAIL_REPLY_WEBHOOK;
+export const ELEVENLABS_KEY          = import.meta.env.VITE_ELEVENLABS_API_KEY;
+export const ELEVENLABS_VOICE_ID     = import.meta.env.VITE_ELEVENLABS_VOICE_ID || "ErXwobaYiN019PkySvjV";
 
 // Logo oficial de NINIT Group
 export const LOGO_URL = "/cmrlogo.png";
