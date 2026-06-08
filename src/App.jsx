@@ -1375,7 +1375,13 @@ export default function App() {
 
     const init = async () => {
       const email = session.user.email;
-      const p = await cargarPerfil(email);
+      let p = await cargarPerfil(email);
+      // Si no está en vendedores pero es el dueño, darle acceso CEO completo
+      if (!p) {
+        p = { nombre: email.split("@")[0], email, role: email === "ninitgroup@gmail.com" ? "ceo" : "vendedor" };
+      }
+      // Asegurar que ninitgroup@gmail.com SIEMPRE sea CEO aunque la DB diga otra cosa
+      if (email === "ninitgroup@gmail.com") p = { ...p, role: "ceo" };
       setPerfil(p);
 
       const cargar = async () => {
