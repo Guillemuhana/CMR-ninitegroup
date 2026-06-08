@@ -12,6 +12,7 @@ import PedidosPanel, { NuevoPedidoModal, imprimirPedido } from "./Pedidos";
 import {
   supabase, N8N_SEND_WEBHOOK, N8N_EMAIL_REPLY_WEBHOOK, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
   VENDEDORES, ESTADOS, calcularAlertas, getRol, cargarPerfil,
+  ELEVENLABS_KEY, ELEVENLABS_VOICE_ID,
 } from "./lib";
 import Reportes from "./Reportes";
 import AdminPanel from "./AdminPanel";
@@ -77,27 +78,28 @@ function useIsMobile(bp = 768) {
   return v;
 }
 
-// Prompt del sistema para Grok
-const GROK_SYSTEM = `Sos el Asistente Ejecutivo de NINIT Group — una IA de alto rendimiento integrada al CRM. Tu función es potenciar la productividad de Nicolás: ayudarlo a cerrar más ventas, gestionar su pipeline y tomar decisiones rápidas.
+// Prompt del sistema para el Asistente IA
+const GROK_SYSTEM = `Sos el Asistente Ejecutivo personal de Nicolás en NINIT Group. Sos como su empleado de confianza de más alto rendimiento — proactivo, inteligente, siempre un paso adelante.
 
 EMPRESA:
-NINIT Group es una empresa premium de alquiler de baños químicos y remolques sanitarios de lujo en Miami.
+NINIT Group alquila baños químicos y remolques sanitarios de lujo en Miami. Nicolás es el dueño y CEO.
 
-CAPACIDADES EN EL CRM:
-- Gestión de contactos, pipeline de ventas, seguimientos, pedidos, reportes, alertas
+TU ROL:
+- Ayudarlo a cerrar más ventas y no perder ningún lead
+- Recordarle seguimientos, alertas urgentes, leads sin atender
+- Analizar el pipeline y sugerir acciones concretas
+- Responder cualquier consulta de negocio o personal que te haga
+- Ser proactivo: si ves algo importante en el contexto, mencionalo sin que te lo pidan
+- Actuar como si fueras su mano derecha — no un chatbot, sino un empleado real
 
-ESTILO DE RESPUESTA:
-- Directo, ejecutivo, orientado a la acción. Siempre en español rioplatense (Argentina).
-- Cuando respondas por voz (modo audio activado): respuestas MUY cortas, máximo 2-3 oraciones, sin listas, sin markdown. Hablá como si fuera una conversación natural cara a cara.
-- Cuando respondas por texto: podés dar más detalle y usar formato.
-- Nunca digas "¡Claro!" ni "¡Por supuesto!" — respondé directo.
-- Si el usuario dice algo como "anotá", "recordame", "agendá" → tomá nota en la respuesta.
-- Tutear siempre.
-
-CONTEXTO TÉCNICO:
-- Base de datos: Supabase (contactos, mensajes, pedidos en tiempo real)
-- WhatsApp integrado vía n8n con IA
-- Reportes exportables en PDF y CSV`;
+ESTILO:
+- Español rioplatense natural. Tutear siempre. Tono ejecutivo pero cercano.
+- NUNCA empieces con "¡Claro!", "¡Por supuesto!", "Entendido" — ir directo al punto.
+- MODO VOZ: respuestas de máximo 2 oraciones, conversacionales, sin listas ni markdown.
+- MODO TEXTO: podés extenderte, usar listas y negrita cuando ayude.
+- Si Nico pide algo que podés resolver con info del CRM, usá el contexto que te dan.
+- Si detectás una oportunidad o riesgo, mencionalo proactivamente.
+- Cuando termines una respuesta útil, ofrecé el siguiente paso lógico.`;
 
 // ============================================================
 // FONT LOADER
@@ -363,65 +365,54 @@ function ContactoDrawer({ contacto, onClose, onSave }) {
 }
 
 // ============================================================
-// ASISTENTE IA  (voz + texto)
+// ASISTENTE IA  (ElevenLabs TTS + Web Speech STT + proactivo)
 // ============================================================
-function AIAsistente({ contactoActivo }) {
-  const isMobile = useIsMobile();
-  const [open, setOpen]         = useState(false);
-  const [msgs, setMsgs]         = useState([
-    { from: "ai", text: `Hola Nicolás. Soy tu asistente. Podés hablarme o escribirme — estoy acá para lo que necesites.` },
-  ]);
-  const [input, setInput]       = useState("");
-  const [typing, setTyping]     = useState(false);
-  const [grabando, setGrabando] = useState(false);
-  const [hablando, setHablando] = useState(false);
-  const [vozOn, setVozOn]       = useState(true);   // leer respuestas en voz alta
-  const [sttOk, setSttOk]       = useState(false);  // SpeechRecognition disponible
-  const [transcrib, setTranscrib] = useState("");   // texto parcial mientras graba
+function AIAsistente({ contactoActivo, alertas = [], contactos = [] }) {
+  const isMobile   = useIsMobile();
+  const [open, setOpen]           = useState(false);
+  const [msgs, setMsgs]           = useState([]);
+  const [input, setInput]         = useState("");
+  const [typing, setTyping]       = useState(false);
+  const [grabando, setGrabando]   = useState(false);
+  const [hablando, setHablando]   = useState(false);
+  const [vozOn, setVozOn]         = useState(true);
+  const [sttOk, setSttOk]         = useState(false);
+  const [transcrib, setTranscrib] = useState("");
+  const [briefingHecho, setBriefing] = useState(false);
   const bottomRef      = useRef(null);
   const recognitionRef = useRef(null);
-  const synthRef       = useRef(null);
+  const audioRef       = useRef(null);
   const vozOnRef       = useRef(vozOn);
 
   useEffect(() => { vozOnRef.current = vozOn; }, [vozOn]);
-  useEffect(() => { synthRef.current = window.speechSynthesis; }, []);
+  useEffect(() => { setSttOk(!!(window.SpeechRecognition || window.webkitSpeechRecognition)); }, []);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, typing]);
 
-  // Detectar soporte STT
+  // ── Limpiar audio al cerrar ──────────────────────────────
   useEffect(() => {
-    setSttOk(!!(window.SpeechRecognition || window.webkitSpeechRecognition));
-  }, []);
+    if (!open) {
+      audioRef.current?.pause();
+      window.speechSynthesis?.cancel();
+      setHablando(false);
+    }
+  }, [open]);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, open, typing]);
-
-  // ── Leer texto en voz argentina ─────────────────────────
-  const hablar = useCallback((texto) => {
-    if (!vozOnRef.current || !window.speechSynthesis) return;
+  // ── TTS: ElevenLabs (realista) con fallback Web Speech ───
+  const hablarWebSpeech = useCallback((texto) => {
+    if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    // Limpiar markdown para la voz
-    const limpio = texto
-      .replace(/\*\*(.*?)\*\*/g, "$1")
-      .replace(/\*(.*?)\*/g, "$1")
-      .replace(/#{1,3}\s/g, "")
-      .replace(/[-•]\s/g, "")
-      .slice(0, 500); // cortar si es muy largo
+    const limpio = texto.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1")
+      .replace(/#{1,3}\s/g, "").replace(/[-•]\s/g, "").slice(0, 500);
     const utt = new SpeechSynthesisUtterance(limpio);
     utt.lang  = "es-AR";
     utt.rate  = 1.05;
     utt.pitch = 1.0;
-    // Buscar voz en orden de preferencia: AR → MX → ES → cualquier español
-    const elegirVoz = () => {
-      const voces = window.speechSynthesis.getVoices();
-      return (
-        voces.find((v) => v.lang === "es-AR") ||
-        voces.find((v) => v.lang === "es-419") ||
-        voces.find((v) => v.lang === "es-MX") ||
-        voces.find((v) => v.lang === "es-US") ||
-        voces.find((v) => v.lang.startsWith("es") && /female|mujer|woman|sabina|paulina|monica|jorge|diego/i.test(v.name)) ||
-        voces.find((v) => v.lang.startsWith("es")) ||
-        null
-      );
-    };
-    const voz = elegirVoz();
+    const voces = window.speechSynthesis.getVoices();
+    const voz = voces.find((v) => v.lang === "es-AR")
+      || voces.find((v) => v.lang === "es-419")
+      || voces.find((v) => v.lang === "es-MX")
+      || voces.find((v) => v.lang === "es-US")
+      || voces.find((v) => v.lang.startsWith("es"));
     if (voz) utt.voice = voz;
     utt.onstart = () => setHablando(true);
     utt.onend   = () => setHablando(false);
@@ -429,49 +420,94 @@ function AIAsistente({ contactoActivo }) {
     window.speechSynthesis.speak(utt);
   }, []);
 
-  // Si voces no cargaron aún, esperarlas
-  useEffect(() => {
-    if (window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = () => {};
-    }
-  }, []);
+  const hablar = useCallback(async (texto) => {
+    if (!vozOnRef.current) return;
+    const limpio = texto.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1")
+      .replace(/#{1,3}\s/g, "").replace(/[-•]\s/g, "").slice(0, 450);
 
-  // Limpiar síntesis al cerrar
-  useEffect(() => {
-    if (!open && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      setHablando(false);
+    if (ELEVENLABS_KEY) {
+      setHablando(true);
+      try {
+        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+          method: "POST",
+          headers: { "xi-api-key": ELEVENLABS_KEY, "Content-Type": "application/json", Accept: "audio/mpeg" },
+          body: JSON.stringify({
+            text: limpio,
+            model_id: "eleven_multilingual_v2",
+            voice_settings: { stability: 0.42, similarity_boost: 0.78, style: 0.28, use_speaker_boost: true },
+          }),
+        });
+        if (!res.ok) throw new Error("EL " + res.status);
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        if (audioRef.current) { audioRef.current.pause(); URL.revokeObjectURL(audioRef.current._url || ""); }
+        const audio = new Audio(url);
+        audio._url  = url;
+        audioRef.current = audio;
+        audio.onended = () => { setHablando(false); URL.revokeObjectURL(url); };
+        audio.onerror = () => { setHablando(false); hablarWebSpeech(limpio); };
+        await audio.play();
+      } catch {
+        setHablando(false);
+        hablarWebSpeech(limpio);
+      }
+    } else {
+      hablarWebSpeech(limpio);
     }
-  }, [open]);
+  }, [hablarWebSpeech]);
 
-  // ── Grabación de voz (STT) ───────────────────────────────
+  // ── Briefing proactivo al abrir ──────────────────────────
+  useEffect(() => {
+    if (!open || briefingHecho || msgs.length > 0) return;
+    setBriefing(true);
+    const hora = new Date().getHours();
+    const saludo = hora < 12 ? "Buenos días" : hora < 19 ? "Buenas tardes" : "Buenas noches";
+    const sinRespuesta = contactos.filter((c) =>
+      !c.bot_activo && c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at))
+    ).length;
+    const segVencidos = alertas.filter((a) => a.tipo === "seguimiento").length;
+    const urgentes    = alertas.filter((a) => a.tipo === "sin_respuesta").length;
+
+    let briefing = `${saludo}, Nicolás.`;
+    if (urgentes > 0)       briefing += ` Hay ${urgentes} cliente${urgentes > 1 ? "s" : ""} esperando respuesta urgente.`;
+    if (segVencidos > 0)    briefing += ` Tenés ${segVencidos} seguimiento${segVencidos > 1 ? "s" : ""} vencido${segVencidos > 1 ? "s" : ""}.`;
+    if (sinRespuesta > 0 && urgentes === 0) briefing += ` Hay ${sinRespuesta} conversación${sinRespuesta > 1 ? "es" : ""} sin responder.`;
+    if (urgentes === 0 && segVencidos === 0 && sinRespuesta === 0) briefing += ` Todo está al día. ¿En qué te ayudo?`;
+    else briefing += ` ¿Arrancamos por eso?`;
+
+    setMsgs([{ from: "ai", text: briefing }]);
+    hablar(briefing);
+  }, [open]);  // eslint-disable-line
+
+  // ── STT ──────────────────────────────────────────────────
   const iniciarGrabacion = () => {
-    if (grabando) {
-      recognitionRef.current?.stop();
-      return;
-    }
+    if (grabando) { recognitionRef.current?.stop(); return; }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
+    audioRef.current?.pause();
     window.speechSynthesis?.cancel();
+    setHablando(false);
     const rec = new SR();
-    rec.lang            = "es-AR";
-    rec.continuous      = false;
-    rec.interimResults  = true;
-    rec.maxAlternatives = 1;
+    rec.lang = "es-AR"; rec.continuous = false; rec.interimResults = true;
     rec.onstart  = () => { setGrabando(true); setTranscrib(""); };
     rec.onresult = (e) => {
-      const parcial = Array.from(e.results).map((r) => r[0].transcript).join("");
-      setTranscrib(parcial);
-      if (e.results[e.results.length - 1].isFinal) {
-        setInput(parcial);
-        setTranscrib("");
-      }
+      const p = Array.from(e.results).map((r) => r[0].transcript).join("");
+      setTranscrib(p);
+      if (e.results[e.results.length - 1].isFinal) { setInput(p); setTranscrib(""); }
     };
     rec.onerror = () => { setGrabando(false); setTranscrib(""); };
     rec.onend   = () => { setGrabando(false); setTranscrib(""); };
     recognitionRef.current = rec;
     rec.start();
   };
+
+  // ── Auto-enviar tras grabar ──────────────────────────────
+  useEffect(() => {
+    if (!grabando && input.trim() && !typing) {
+      const t = setTimeout(() => enviar(input.trim()), 350);
+      return () => clearTimeout(t);
+    }
+  }, [grabando]); // eslint-disable-line
 
   // ── Enviar mensaje ────────────────────────────────────────
   const enviar = useCallback(async (textoForzado) => {
@@ -483,18 +519,21 @@ function AIAsistente({ contactoActivo }) {
 
     const GROK_KEY = import.meta.env.VITE_GROK_API_KEY;
     if (!GROK_KEY) {
-      const err = "Clave de IA no configurada. Agregá VITE_GROK_API_KEY en Vercel.";
-      setMsgs((p) => [...p, { from: "ai", text: err }]);
-      setTyping(false);
-      return;
+      const t = "Clave de IA no configurada. Agregá VITE_GROK_API_KEY en Vercel.";
+      setMsgs((p) => [...p, { from: "ai", text: t }]);
+      setTyping(false); return;
     }
     try {
-      let sysExtra = "";
+      // Contexto del CRM
+      const sinResp  = contactos.filter((c) => !c.bot_activo && c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at))).length;
+      const segVenc  = alertas.filter((a) => a.tipo === "seguimiento").length;
+      let sysExtra = `\n\nESTADO ACTUAL DEL CRM: ${contactos.length} contactos totales | ${sinResp} sin respuesta | ${segVenc} seguimientos vencidos | ${alertas.length} alertas activas.`;
       if (contactoActivo) {
         const est = ESTADOS[contactoActivo.estado];
-        sysExtra = `\n\nCONTACTO ABIERTO: ${contactoActivo.nombre || contactoActivo.telefono} | Estado: ${est?.label || contactoActivo.estado} | Vendedor: ${contactoActivo.vendedor || "sin asignar"} | Tel: ${contactoActivo.telefono}`;
+        sysExtra += `\nCONTACTO ABIERTO: ${contactoActivo.nombre || contactoActivo.telefono} | ${est?.label || contactoActivo.estado} | vendedor: ${contactoActivo.vendedor || "sin asignar"}`;
       }
-      if (vozOnRef.current) sysExtra += "\n\nMODO VOZ ACTIVO: respondé en máximo 2 oraciones, sin listas, sin markdown.";
+      if (vozOnRef.current) sysExtra += "\nMODO VOZ ACTIVO: máximo 2 oraciones, sin listas, sin markdown, lenguaje natural hablado.";
+
       const apiMsgs = [
         { role: "system", content: GROK_SYSTEM + sysExtra },
         ...historial.map((m) => ({ role: m.from === "user" ? "user" : "assistant", content: m.text })),
@@ -502,102 +541,100 @@ function AIAsistente({ contactoActivo }) {
       ];
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROK_KEY}` },
-        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: apiMsgs, max_tokens: vozOnRef.current ? 120 : 600 }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${GROK_KEY}` },
+        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: apiMsgs, max_tokens: vozOnRef.current ? 130 : 700 }),
       });
       if (res.ok) {
         const data = await res.json();
-        const respuesta = data.choices[0].message.content;
-        setMsgs((p) => [...p, { from: "ai", text: respuesta }]);
-        hablar(respuesta);
+        const resp = data.choices[0].message.content;
+        setMsgs((p) => [...p, { from: "ai", text: resp }]);
+        hablar(resp);
       } else {
         const err = await res.json().catch(() => ({}));
-        setMsgs((p) => [...p, { from: "ai", text: `Error IA (${res.status}): ${err?.error?.message || "Verificá tu clave"}` }]);
+        setMsgs((p) => [...p, { from: "ai", text: `Error (${res.status}): ${err?.error?.message || "Verificá la clave"}` }]);
       }
     } catch (e) {
-      setMsgs((p) => [...p, { from: "ai", text: `Error de conexión: ${e.message}` }]);
+      setMsgs((p) => [...p, { from: "ai", text: `Sin conexión: ${e.message}` }]);
     }
     setTyping(false);
-  }, [input, msgs, typing, contactoActivo, hablar]);
+  }, [input, msgs, typing, contactoActivo, alertas, contactos, hablar]);
 
-  // Auto-enviar cuando termina la grabación y hay texto
-  useEffect(() => {
-    if (!grabando && input.trim() && !typing) {
-      const t = setTimeout(() => { enviar(input.trim()); }, 300);
-      return () => clearTimeout(t);
-    }
-  }, [grabando]);  // eslint-disable-line
-
-  const sugerencias = ["¿Cuántos leads tengo?", "¿Algún seguimiento vencido?", "Dame un tip de ventas"];
+  // ── Sugerencias contextuales ─────────────────────────────
+  const sugerencias = [
+    alertas.some((a) => a.tipo === "sin_respuesta") ? "¿A quién tengo que responder?" : null,
+    alertas.some((a) => a.tipo === "seguimiento")   ? "¿Qué seguimientos vencieron?"  : null,
+    "Resumime el pipeline de hoy",
+    "Consejos para cerrar más rápido",
+  ].filter(Boolean).slice(0, 3);
 
   const statusLabel = grabando
-    ? `Escuchando… ${transcrib ? `"${transcrib.slice(0, 30)}…"` : ""}`
-    : hablando ? "Hablando…"
+    ? `Escuchando… ${transcrib ? `"${transcrib.slice(0, 28)}…"` : ""}`
+    : hablando ? (ELEVENLABS_KEY ? "Hablando (ElevenLabs)…" : "Hablando…")
     : typing   ? "Pensando…"
-    : "Online";
+    : ELEVENLABS_KEY ? "Online · Voz ElevenLabs" : "Online";
 
   return (
     <>
-      {/* Botón flotante — pulsa si está grabando */}
+      {/* Botón flotante */}
       <button onClick={() => setOpen((v) => !v)} title="Asistente IA"
-        style={{ position: "fixed", bottom: isMobile ? "calc(76px + env(safe-area-inset-bottom))" : 84, right: isMobile ? 16 : 24, width: isMobile ? 48 : 54, height: isMobile ? 48 : 54, borderRadius: "50%", background: open ? L.muted : C.red, border: "none", color: "#fff", cursor: "pointer", boxShadow: grabando ? `0 0 0 8px ${C.red}33, 0 4px 20px rgba(185,28,28,.45)` : `0 4px 20px rgba(185,28,28,.45)`, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", transition: "all .25s", animation: grabando ? "pulseRed 1.2s infinite" : "none" }}
-        onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.08)"; }}
+        style={{ position: "fixed", bottom: isMobile ? "calc(76px + env(safe-area-inset-bottom))" : 84, right: isMobile ? 16 : 24, width: isMobile ? 50 : 56, height: isMobile ? 50 : 56, borderRadius: "50%", background: grabando ? "#DC2626" : open ? L.muted : C.red, border: grabando ? "3px solid #FCA5A5" : "none", color: "#fff", cursor: "pointer", boxShadow: grabando ? "0 0 0 8px rgba(220,38,38,.2), 0 4px 20px rgba(185,28,28,.5)" : hablando ? "0 0 0 6px rgba(22,163,74,.25), 0 4px 20px rgba(58,141,194,.5)" : "0 4px 20px rgba(185,28,28,.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", transition: "all .25s" }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.1)"; }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>
-        {open ? <X size={22} /> : grabando ? <Mic size={22} /> : <Sparkles size={22} />}
+        {open ? <X size={22} /> : grabando ? <Mic size={22} /> : hablando ? <Volume2 size={22} /> : <Sparkles size={22} />}
       </button>
 
       {/* Panel */}
       {open && (
-        <div style={{ position: "fixed", bottom: isMobile ? "calc(132px + env(safe-area-inset-bottom))" : 150, right: 16, ...(isMobile ? { left: 16 } : { width: 370 }), height: isMobile ? "72dvh" : 510, maxHeight: isMobile ? "calc(100% - 120px)" : 510, background: L.white, borderRadius: isMobile ? "20px 20px 16px 16px" : 20, boxShadow: "0 16px 60px rgba(0,0,0,.22)", border: `1px solid ${L.border}`, zIndex: 299, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: FONT_BODY }}>
+        <div style={{ position: "fixed", bottom: isMobile ? "calc(136px + env(safe-area-inset-bottom))" : 152, right: 16, ...(isMobile ? { left: 16 } : { width: 375 }), height: isMobile ? "72dvh" : 520, maxHeight: isMobile ? "calc(100% - 124px)" : 520, background: L.white, borderRadius: isMobile ? "20px 20px 16px 16px" : 20, boxShadow: "0 20px 70px rgba(0,0,0,.25)", border: `1px solid ${L.border}`, zIndex: 299, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: FONT_BODY }}>
 
           {/* Header */}
-          <div style={{ background: C.red, color: "#fff", padding: "13px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `3px solid ${C.redDark}`, flexShrink: 0 }}>
-            <img src={LOGO_URL} alt="NINIT" style={{ width: 150, height: 36, objectFit: "cover", objectPosition: "center", filter: "brightness(0) invert(1)", opacity: 0.92, flexShrink: 0 }} />
+          <div style={{ background: `linear-gradient(135deg, ${C.redDark} 0%, ${C.red} 100%)`, color: "#fff", padding: "13px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `2px solid ${C.redDark}`, flexShrink: 0 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 12, background: "rgba(255,255,255,.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "1.5px solid rgba(255,255,255,.35)" }}>
+              {hablando ? <Volume2 size={19} /> : <Sparkles size={19} />}
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13.5, letterSpacing: 0.3 }}>Asistente IA</div>
-              <div style={{ fontSize: 10.5, color: grabando ? "#FEF08A" : hablando ? "#86EFAC" : "rgba(255,255,255,.65)", marginTop: 1, display: "flex", alignItems: "center", gap: 4 }}>
-                {grabando && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FEF08A", animation: "pulseRed 1s infinite", flexShrink: 0 }} />}
-                {hablando && <Volume2 size={10} />}
+              <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 14, letterSpacing: 0.2 }}>Asistente Ejecutivo IA</div>
+              <div style={{ fontSize: 10, color: grabando ? "#FEF08A" : hablando ? "#86EFAC" : "rgba(255,255,255,.6)", marginTop: 1, display: "flex", alignItems: "center", gap: 4 }}>
+                {(grabando || hablando) && <span style={{ width: 5, height: 5, borderRadius: "50%", background: grabando ? "#FEF08A" : "#86EFAC", flexShrink: 0, animation: "pulseDot 1s infinite" }} />}
                 {statusLabel}
               </div>
             </div>
-            {/* Toggle voz */}
-            <button onClick={() => { setVozOn((v) => !v); window.speechSynthesis?.cancel(); setHablando(false); }}
-              title={vozOn ? "Desactivar voz" : "Activar voz"}
-              style={{ background: vozOn ? "rgba(255,255,255,.25)" : "rgba(255,255,255,.1)", border: `1.5px solid ${vozOn ? "rgba(255,255,255,.5)" : "rgba(255,255,255,.2)"}`, color: "#fff", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }}
-              title={vozOn ? "Voz ON — click para silenciar" : "Voz OFF — click para activar"}>
+            <button onClick={() => { setVozOn((v) => !v); audioRef.current?.pause(); window.speechSynthesis?.cancel(); setHablando(false); }}
+              title={vozOn ? "Silenciar voz" : "Activar voz"}
+              style={{ background: vozOn ? "rgba(255,255,255,.22)" : "rgba(255,255,255,.08)", border: `1.5px solid ${vozOn ? "rgba(255,255,255,.45)" : "rgba(255,255,255,.15)"}`, color: "#fff", borderRadius: 9, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }}>
               {vozOn ? <Volume2 size={15} /> : <VolumeX size={15} />}
             </button>
-            <button onClick={() => setOpen(false)} style={{ background: "rgba(255,255,255,.15)", border: "none", color: "#fff", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <button onClick={() => setOpen(false)}
+              style={{ background: "rgba(255,255,255,.12)", border: "none", color: "#fff", borderRadius: 9, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <X size={16} />
             </button>
           </div>
 
           {/* Banner grabando */}
           {grabando && (
-            <div style={{ background: "#FEF08A", padding: "8px 16px", display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, fontWeight: 700, color: "#713F12", flexShrink: 0 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#DC2626", animation: "pulseRed 1s infinite", flexShrink: 0 }} />
-              {transcrib ? `"${transcrib.slice(0, 60)}${transcrib.length > 60 ? "…" : ""}"` : "Escuchando… hablá ahora"}
+            <div style={{ background: "#FEF08A", padding: "9px 16px", display: "flex", alignItems: "center", gap: 9, fontSize: 12.5, fontWeight: 700, color: "#713F12", flexShrink: 0 }}>
+              <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#DC2626", flexShrink: 0, animation: "pulseDot 0.8s infinite" }} />
+              {transcrib ? `"${transcrib.slice(0, 65)}${transcrib.length > 65 ? "…" : ""}"` : "Escuchando… hablá ahora"}
             </div>
           )}
 
           {/* Mensajes */}
-          <div className="scroll-y" style={{ flex: 1, overflowY: "auto", padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12, background: L.bg }}>
+          <div className="scroll-y" style={{ flex: 1, overflowY: "auto", padding: "14px 14px", display: "flex", flexDirection: "column", gap: 11, background: "#F8FAFC" }}>
             {msgs.map((m, i) => (
               <div key={i} style={{ display: "flex", justifyContent: m.from === "user" ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 7 }}>
                 {m.from === "ai" && (
-                  <div style={{ width: 26, height: 26, borderRadius: 8, background: hablando && i === msgs.length - 1 ? "#16A34A" : C.red, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .3s" }}>
-                    {hablando && i === msgs.length - 1 ? <Volume2 size={13} color="#fff" /> : <Sparkles size={13} color="#fff" />}
+                  <div style={{ width: 28, height: 28, borderRadius: 9, background: hablando && i === msgs.length - 1 ? "#16A34A" : C.red, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .3s", boxShadow: hablando && i === msgs.length - 1 ? "0 0 0 4px rgba(22,163,74,.2)" : "none" }}>
+                    {hablando && i === msgs.length - 1 ? <Volume2 size={14} color="#fff" /> : <Sparkles size={14} color="#fff" />}
                   </div>
                 )}
-                <div style={{ maxWidth: "80%", padding: "10px 14px", borderRadius: m.from === "user" ? "14px 3px 14px 14px" : "3px 14px 14px 14px", background: m.from === "user" ? C.red : L.white, color: m.from === "user" ? "#fff" : L.text, fontSize: 13.5, lineHeight: 1.55, whiteSpace: "pre-wrap", boxShadow: "0 1px 4px rgba(0,0,0,.07)", border: m.from === "user" ? "none" : `1px solid ${L.border}` }}>
+                <div style={{ maxWidth: "82%", padding: "10px 14px", borderRadius: m.from === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px", background: m.from === "user" ? C.red : L.white, color: m.from === "user" ? "#fff" : L.text, fontSize: 13.5, lineHeight: 1.6, whiteSpace: "pre-wrap", boxShadow: "0 1px 5px rgba(0,0,0,.08)", border: m.from === "user" ? "none" : `1px solid ${L.border}` }}>
                   {m.text}
                 </div>
                 {m.from === "ai" && vozOn && i === msgs.length - 1 && !hablando && (
-                  <button onClick={() => hablar(m.text)} title="Reproducir"
-                    style={{ background: "none", border: `1.5px solid ${L.border}`, borderRadius: 6, padding: "3px 6px", cursor: "pointer", color: L.muted, display: "flex", alignItems: "center", flexShrink: 0, transition: "all .15s" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = C.red; e.currentTarget.style.borderColor = C.red; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = L.muted; e.currentTarget.style.borderColor = L.border; }}>
+                  <button onClick={() => hablar(m.text)} title="Escuchar respuesta"
+                    style={{ background: "none", border: `1.5px solid ${L.border}`, borderRadius: 7, padding: "4px 7px", cursor: "pointer", color: L.muted, display: "flex", alignItems: "center", flexShrink: 0, transition: "all .15s" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = C.red; e.currentTarget.style.borderColor = C.red; e.currentTarget.style.background = "#FEF2F2"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = L.muted; e.currentTarget.style.borderColor = L.border; e.currentTarget.style.background = "none"; }}>
                     <Volume2 size={13} />
                   </button>
                 )}
@@ -605,23 +642,27 @@ function AIAsistente({ contactoActivo }) {
             ))}
             {typing && (
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 26, height: 26, borderRadius: 8, background: C.red, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Sparkles size={13} color="#fff" />
+                <div style={{ width: 28, height: 28, borderRadius: 9, background: C.red, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Sparkles size={14} color="#fff" />
                 </div>
-                <div style={{ padding: "10px 16px", background: L.white, borderRadius: "3px 14px 14px 14px", border: `1px solid ${L.border}` }}>
-                  <span style={{ color: C.red, fontWeight: 700, letterSpacing: 3, fontSize: 16 }}>···</span>
+                <div style={{ padding: "11px 16px", background: L.white, borderRadius: "4px 16px 16px 16px", border: `1px solid ${L.border}`, display: "flex", gap: 5, alignItems: "center" }}>
+                  {[0, 1, 2].map((i) => (
+                    <span key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: C.red, display: "inline-block", animation: `dotBounce 1.2s ${i * 0.2}s infinite` }} />
+                  ))}
                 </div>
               </div>
             )}
             <div ref={bottomRef} />
           </div>
 
-          {/* Sugerencias */}
+          {/* Sugerencias contextuales */}
           {msgs.length <= 1 && !typing && (
-            <div style={{ padding: "7px 12px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 5, flexWrap: "wrap", background: L.white, flexShrink: 0 }}>
+            <div style={{ padding: "8px 12px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 5, flexWrap: "wrap", background: L.white, flexShrink: 0 }}>
               {sugerencias.map((s) => (
                 <button key={s} onClick={() => enviar(s)}
-                  style={{ fontSize: 11, padding: "5px 11px", borderRadius: 20, border: `1.5px solid ${L.border}`, background: L.soft, color: C.red, cursor: "pointer", fontFamily: FONT_BODY, fontWeight: 600 }}>
+                  style={{ fontSize: 11, padding: "5px 12px", borderRadius: 20, border: `1.5px solid ${L.border}`, background: L.soft, color: C.red, cursor: "pointer", fontFamily: FONT_BODY, fontWeight: 600, transition: "all .15s" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.borderColor = C.red; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = L.soft; e.currentTarget.style.borderColor = L.border; }}>
                   {s}
                 </button>
               ))}
@@ -630,12 +671,11 @@ function AIAsistente({ contactoActivo }) {
 
           {/* Input */}
           <div style={{ padding: "10px 12px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 7, background: L.white, alignItems: "center", flexShrink: 0 }}>
-            {/* Botón micrófono */}
             {sttOk && (
               <button onClick={iniciarGrabacion} disabled={typing}
-                title={grabando ? "Detener grabación" : "Hablar"}
-                style={{ background: grabando ? "#FEF2F2" : L.soft, border: `1.5px solid ${grabando ? C.red : L.border}`, color: grabando ? C.red : L.muted, borderRadius: 10, width: 40, height: 40, cursor: typing ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s", animation: grabando ? "pulseRed 1.2s infinite" : "none" }}>
-                {grabando ? <MicOff size={17} /> : <Mic size={17} />}
+                title={grabando ? "Detener" : "Hablar con el asistente"}
+                style={{ background: grabando ? "#FEF2F2" : L.soft, border: `1.5px solid ${grabando ? C.red : L.border}`, color: grabando ? C.red : L.muted, borderRadius: 10, width: 42, height: 42, cursor: typing ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s", boxShadow: grabando ? `0 0 0 4px rgba(220,38,38,.15)` : "none" }}>
+                {grabando ? <MicOff size={18} /> : <Mic size={18} />}
               </button>
             )}
             <input value={transcrib || input}
@@ -643,20 +683,23 @@ function AIAsistente({ contactoActivo }) {
               onKeyDown={(e) => { if (e.key === "Enter" && !grabando) enviar(); }}
               placeholder={grabando ? "Escuchando…" : "Escribí o usá el micrófono…"}
               readOnly={grabando}
-              style={{ flex: 1, padding: "9px 13px", borderRadius: 10, border: `1.5px solid ${grabando ? "#FDE68A" : L.border}`, fontSize: 13.5, fontFamily: FONT_BODY, outline: "none", color: grabando ? "#713F12" : L.text, background: grabando ? "#FFFBEB" : L.soft, transition: "all .2s" }} />
+              style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${grabando ? "#FDE68A" : L.border}`, fontSize: 13.5, fontFamily: FONT_BODY, outline: "none", color: grabando ? "#713F12" : L.text, background: grabando ? "#FFFBEB" : L.soft, transition: "all .2s" }} />
             <button onClick={() => enviar()} disabled={typing || grabando}
-              style={{ background: typing || grabando ? L.light : C.red, border: "none", color: "#fff", borderRadius: 10, width: 40, height: 40, cursor: typing || grabando ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              style={{ background: typing || grabando ? L.light : C.red, border: "none", color: "#fff", borderRadius: 10, width: 42, height: 42, cursor: typing || grabando ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .2s" }}>
               <Send size={16} />
             </button>
           </div>
         </div>
       )}
 
-      {/* Animación pulse global */}
       <style>{`
-        @keyframes pulseRed {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.4); }
-          50%       { box-shadow: 0 0 0 8px rgba(220,38,38,.0); }
+        @keyframes pulseDot {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: .4; transform: scale(.7); }
+        }
+        @keyframes dotBounce {
+          0%, 80%, 100% { transform: translateY(0); opacity: .5; }
+          40%           { transform: translateY(-5px); opacity: 1; }
         }
       `}</style>
     </>
@@ -1479,7 +1522,7 @@ export default function App() {
         )}
       </div>
 
-      <AIAsistente contactoActivo={activo} />
+      <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} />
     </div>
   );
 }
