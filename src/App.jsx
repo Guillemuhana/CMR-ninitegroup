@@ -599,7 +599,7 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
 
       {/* Panel */}
       {open && (
-        <div style={{ position: "fixed", bottom: isMobile ? "calc(136px + env(safe-area-inset-bottom))" : 152, right: 16, ...(isMobile ? { left: 16 } : { width: 375 }), height: isMobile ? "72dvh" : 520, maxHeight: isMobile ? "calc(100% - 124px)" : 520, background: L.white, borderRadius: isMobile ? "20px 20px 16px 16px" : 20, boxShadow: "0 20px 70px rgba(0,0,0,.25)", border: `1px solid ${L.border}`, zIndex: 299, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: FONT_BODY }}>
+        <div style={{ position: "fixed", bottom: isMobile ? "calc(136px + env(safe-area-inset-bottom))" : 152, right: 16, ...(isMobile ? { left: 16 } : { width: 480 }), height: isMobile ? "72dvh" : 640, maxHeight: isMobile ? "calc(100% - 124px)" : 640, background: L.white, borderRadius: isMobile ? "20px 20px 16px 16px" : 20, boxShadow: "0 20px 70px rgba(0,0,0,.25)", border: `1px solid ${L.border}`, zIndex: 299, display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: FONT_BODY }}>
 
           {/* Header */}
           <div style={{ background: `linear-gradient(135deg, ${C.redDark} 0%, ${C.red} 100%)`, color: "#fff", padding: "13px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `2px solid ${C.redDark}`, flexShrink: 0 }}>
