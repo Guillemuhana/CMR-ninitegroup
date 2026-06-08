@@ -22,13 +22,36 @@ export const LOGO_URL = "/cmrlogo.png";
 export const BRAND_NAME = "NINIT GROUP";
 export const BRAND_TAGLINE = "Luxury Restroom Trailers";
 
-// Equipo de ventas (NINIT). Editar según corresponda.
+// Equipo de ventas — se carga dinámicamente desde la DB.
+// Este array se usa como fallback y como lista para selects.
 export const VENDEDORES = ["Nicolas"];
 
 // ─── Roles ──────────────────────────────────────────────────
-// NINIT lo maneja Nicolás: todos los usuarios autenticados ven todo.
-export function getRol() {
-  return "admin";
+// Roles posibles: 'ceo' | 'vendedor'
+// El perfil se carga desde la tabla vendedores por email tras login.
+export function getRol(perfil) {
+  return perfil?.role || "vendedor";
+}
+
+// Carga el perfil del vendedor logueado desde la DB
+export async function cargarPerfil(email) {
+  if (!email) return null;
+  const { data } = await supabase
+    .from("vendedores")
+    .select("*")
+    .eq("email", email.trim().toLowerCase())
+    .single();
+  return data || null;
+}
+
+// Formatea segundos en texto legible
+export function fmtDuracion(seg) {
+  if (!seg || seg < 60) return "< 1 min";
+  const m = Math.floor(seg / 60);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${m % 60 > 0 ? (m % 60) + "m" : ""}`.trim();
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
 }
 
 // ─── Estados del pipeline CRM ───────────────────────────────

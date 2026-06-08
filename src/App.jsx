@@ -4,16 +4,19 @@ import {
   Pencil, Bot, User, Calendar, Send, X, Check,
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, Zap, ShoppingBag, Shield, Trash2,
+  BookOpen, Activity,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads } from "react-icons/si";
 import PedidosPanel, { NuevoPedidoModal, imprimirPedido } from "./Pedidos";
 import {
   supabase, N8N_SEND_WEBHOOK, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
-  VENDEDORES, ESTADOS, calcularAlertas, getRol,
+  VENDEDORES, ESTADOS, calcularAlertas, getRol, cargarPerfil,
 } from "./lib";
 import Reportes from "./Reportes";
 import AdminPanel from "./AdminPanel";
+import DiarioVendedor from "./DiarioVendedor";
+import CEODashboard from "./CEODashboard";
 
 // ============================================================
 // PALETA LIGHT — tema claro profesional
@@ -555,7 +558,7 @@ function NavDropdown({ vista, setVista, rol }) {
 // ============================================================
 // SIDEBAR
 // ============================================================
-function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, vista, setVista, alertas, isMobile, rol }) {
+function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, vista, setVista, alertas, isMobile, rol, perfil }) {
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
   const [canal, setCanal]         = useState("todos");
@@ -598,8 +601,10 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
         {[
           ["chat",     <MessageSquare size={13} />, "Chats"],
           ["pedidos",  <Package size={13} />,       "Pedidos"],
-          ["reportes", <BarChart2 size={13} />,     "Reportes"],
-          ...(rol === "admin" ? [["admin", <Shield size={13} />, "Admin"]] : []),
+          ...(rol === "ceo" ? [["reportes", <BarChart2 size={13} />, "Reportes"]] : []),
+          ...(rol === "ceo" ? [["admin",    <Shield size={13} />,    "Admin"   ]] : []),
+          ...(rol === "ceo" ? [["control",  <Activity size={13} />,  "Control" ]] : []),
+          ...(rol === "vendedor" ? [["diario", <BookOpen size={13} />, "Mi Día"]] : []),
         ].map(([k, icon, l]) => (
           <button key={k} onClick={() => setVista(k)}
             style={{ flex: 1, border: "none", cursor: "pointer", padding: "11px 0", fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 10.5, textTransform: "uppercase", letterSpacing: 0.4, transition: "all .15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, whiteSpace: "nowrap", minWidth: 60, color: vista === k ? C.red : L.muted, background: vista === k ? "#EFF6FF" : "transparent", borderBottom: vista === k ? `2px solid ${C.red}` : "2px solid transparent" }}>
@@ -1101,17 +1106,20 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
 export default function App() {
   const isMobile = useIsMobile();
   const [session,   setSession]   = useState(null);
+  const [perfil,    setPerfil]    = useState(null);
   const [contactos, setContactos] = useState([]);
   const [activo,    setActivo]    = useState(null);
   const [vista,     setVista]     = useState("chat");
   const [ready,     setReady]     = useState(false);
-  // Ref para evitar mostrar login si hubo sesión previa y solo es un refresh
-  const tuvoSesion = useRef(false);
+  const tuvoSesion   = useRef(false);
+  const sesionDBId   = useRef(null);
+  const heartbeatRef = useRef(null);
+  const sesInicioRef = useRef(null);
 
+  // ── Auth ─────────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true); });
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-      // Solo actualizar sesión en eventos explícitos, evitar flashes durante refresh
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
         setSession(s);
       }
@@ -1119,24 +1127,83 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // ── Perfil + contactos + tracking al iniciar sesión ──────
   useEffect(() => {
-    if (!session) return;
-    const rolActual  = getRol(session.user.email);
-    const userNombre = session.user.email.split("@")[0].replace(/^\w/, m => m.toUpperCase());
-    const cargar = async () => {
-      let query = supabase.from("contactos").select("*").order("updated_at", { ascending: false });
-      // Vendedor solo ve los contactos que tiene asignados
-      if (rolActual === "vendedor") {
-        query = query.eq("vendedor", userNombre);
+    if (!session) { setPerfil(null); return; }
+    let cleanup = () => {};
+
+    const init = async () => {
+      const email = session.user.email;
+      const p = await cargarPerfil(email);
+      setPerfil(p);
+
+      const cargar = async () => {
+        let query = supabase.from("contactos").select("*").order("updated_at", { ascending: false });
+        if (p?.role === "vendedor") query = query.eq("vendedor", p.nombre);
+        const { data } = await query;
+        setContactos(data || []);
+      };
+      await cargar();
+
+      // Registrar inicio de sesión
+      if (p?.id) {
+        const ahora = new Date().toISOString();
+        sesInicioRef.current = ahora;
+        const { data: sesData } = await supabase.from("sesiones_vendedor").insert({
+          vendedor_id: p.id,
+          vendedor_nombre: p.nombre,
+          inicio_sesion: ahora,
+          fecha: ahora.slice(0, 10),
+        }).select().single();
+        if (sesData) sesionDBId.current = sesData.id;
+
+        // Heartbeat cada 2 min
+        heartbeatRef.current = setInterval(async () => {
+          if (sesionDBId.current && sesInicioRef.current) {
+            const durSeg = Math.round((Date.now() - new Date(sesInicioRef.current).getTime()) / 1000);
+            await supabase.from("sesiones_vendedor").update({ duracion_seg: durSeg }).eq("id", sesionDBId.current);
+          }
+        }, 120000);
       }
-      const { data } = await query;
-      setContactos(data || []);
+
+      const ch = supabase.channel("contactos-feed")
+        .on("postgres_changes", { event: "*", schema: "public", table: "contactos" }, cargar).subscribe();
+
+      cleanup = () => {
+        supabase.removeChannel(ch);
+        if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      };
     };
-    cargar();
-    const ch = supabase.channel("contactos-feed")
-      .on("postgres_changes", { event: "*", schema: "public", table: "contactos" }, cargar).subscribe();
-    return () => supabase.removeChannel(ch);
+
+    init();
+    return () => cleanup();
   }, [session]);
+
+  // ── Cerrar sesión + tracking ─────────────────────────────
+  const handleLogout = useCallback(async () => {
+    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    if (sesionDBId.current && sesInicioRef.current) {
+      const durSeg = Math.round((Date.now() - new Date(sesInicioRef.current).getTime()) / 1000);
+      await supabase.from("sesiones_vendedor")
+        .update({ fin_sesion: new Date().toISOString(), duracion_seg: durSeg })
+        .eq("id", sesionDBId.current);
+    }
+    await supabase.auth.signOut();
+  }, []);
+
+  // ── Guardar sesión al cerrar pestaña ─────────────────────
+  useEffect(() => {
+    const onUnload = () => {
+      if (sesionDBId.current && sesInicioRef.current) {
+        const durSeg = Math.round((Date.now() - new Date(sesInicioRef.current).getTime()) / 1000);
+        supabase.from("sesiones_vendedor")
+          .update({ fin_sesion: new Date().toISOString(), duracion_seg: durSeg })
+          .eq("id", sesionDBId.current);
+      }
+    };
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, []);
 
   const updateContacto = (c) => {
     setContactos((prev) => prev.map((x) => (x.id === c.id ? c : x)));
@@ -1150,46 +1217,58 @@ export default function App() {
 
   if (session) tuvoSesion.current = true;
   if (!ready) return null;
-  // No mostrar login si tuvo sesión previa y solo está refrescando token
   if (!session && !tuvoSesion.current) return (<><FontLoader /><Login /></>);
-  if (!session) return null; // espera silenciosa si tuvo sesión (evita flash de login)
+  if (!session) return null;
 
   const userEmail = session.user.email;
-  const userName  = userEmail.split("@")[0].replace(/^\w/, (m) => m.toUpperCase());
-  const rol       = getRol(userEmail); // "admin" solo para cristian, "vendedor" para el resto
+  const userName  = perfil?.nombre || userEmail.split("@")[0].replace(/^\w/, (m) => m.toUpperCase());
+  const rol       = getRol(perfil);
   const alertas   = calcularAlertas(contactos);
 
-  // En mobile: mostramos sidebar O panel, no ambos a la vez
-  const mobileInPanel = isMobile && (activo !== null || vista === "pedidos" || vista === "reportes" || vista === "admin");
+  const mobileInPanel = isMobile && (
+    activo !== null ||
+    vista === "pedidos" || vista === "reportes" || vista === "admin" ||
+    vista === "control" || vista === "diario"
+  );
 
   return (
-    // CSS media queries en index.html controlan qué panel es visible en mobile
-    // .in-panel = hay panel activo → ocultar sidebar, mostrar app-main
     <div className={`app-layout${mobileInPanel ? " in-panel" : ""}`}
       style={{ fontFamily: FONT_BODY, background: L.bg }}>
       <FontLoader />
 
-      {/* Sidebar — CSS lo oculta en mobile cuando hay .in-panel */}
       <div className="app-sidebar">
         <Sidebar contactos={contactos} activo={activo}
           onSelect={(c) => setActivo(c)}
-          onLogout={() => supabase.auth.signOut()}
+          onLogout={handleLogout}
           userEmail={userEmail} userName={userName}
           vista={vista} setVista={setVista} alertas={alertas}
-          isMobile={isMobile} rol={rol} />
+          isMobile={isMobile} rol={rol} perfil={perfil} />
       </div>
 
-      {/* Panel principal — CSS lo muestra en mobile sólo con .in-panel */}
       <div className="app-main">
-        {vista === "admin" && rol === "admin" ? (
+        {vista === "admin" && rol === "ceo" ? (
           <>
             {isMobile && <MobileBack title="Admin" onBack={() => setVista("chat")} />}
             <AdminPanel userName={userName} isMobile={isMobile} />
           </>
-        ) : vista === "reportes" ? (
+        ) : vista === "reportes" && rol === "ceo" ? (
           <>
             {isMobile && <MobileBack title="Reportes" onBack={() => setVista("chat")} />}
             <div className="scroll-y" style={{ flex: 1, overflowY: "auto" }}><Reportes /></div>
+          </>
+        ) : vista === "control" && rol === "ceo" ? (
+          <>
+            {isMobile && <MobileBack title="Control" onBack={() => setVista("chat")} />}
+            <div style={{ flex: 1, overflowY: "auto", height: "100%" }}>
+              <CEODashboard isMobile={isMobile} />
+            </div>
+          </>
+        ) : vista === "diario" && rol === "vendedor" ? (
+          <>
+            {isMobile && <MobileBack title="Mi Día" onBack={() => setVista("chat")} />}
+            <div style={{ flex: 1, overflowY: "auto", height: "100%" }}>
+              <DiarioVendedor perfil={perfil} isMobile={isMobile} />
+            </div>
           </>
         ) : vista === "pedidos" ? (
           <>
@@ -1205,15 +1284,24 @@ export default function App() {
             <img src={LOGO_URL} alt="NINIT Group" style={{ width: "min(340px, 62%)", objectFit: "contain", filter: "drop-shadow(0 4px 20px rgba(58,141,194,0.5))" }} />
             <div>
               <div style={{ color: L.muted, fontSize: 14, textAlign: "center", marginTop: 8 }}>
-                {rol === "admin" ? `Bienvenido, ${userName} · Panel de administración disponible` : `Seleccioná una conversación para comenzar`}
+                {rol === "ceo"
+                  ? `Bienvenido, ${userName} · Panel CEO activo`
+                  : `Hola ${userName} · Seleccioná una conversación para comenzar`}
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap", justifyContent: "center", padding: "0 20px" }}>
-              {[[<MessageSquare size={16} />, "Chats en tiempo real"], [<Bot size={16} />, "Bot WhatsApp integrado"], [<BarChart2 size={16} />, "Reportes y métricas"]].map(([icon, txt]) => (
-                <div key={txt} style={{ padding: "10px 18px", background: L.white, border: `1px solid ${L.border}`, borderRadius: 12, fontSize: 13, color: L.muted, display: "flex", alignItems: "center", gap: 8, fontWeight: 500, boxShadow: "0 1px 4px rgba(0,0,0,.05)" }}>
-                  <span style={{ color: C.red }}>{icon}</span> {txt}
-                </div>
-              ))}
+              {rol === "ceo"
+                ? [[<MessageSquare size={16} />, "Chats en tiempo real"], [<Bot size={16} />, "Bot WhatsApp integrado"], [<Activity size={16} />, "Control de vendedores"]].map(([icon, txt]) => (
+                    <div key={txt} style={{ padding: "10px 18px", background: L.white, border: `1px solid ${L.border}`, borderRadius: 12, fontSize: 13, color: L.muted, display: "flex", alignItems: "center", gap: 8, fontWeight: 500, boxShadow: "0 1px 4px rgba(0,0,0,.05)" }}>
+                      <span style={{ color: C.red }}>{icon}</span> {txt}
+                    </div>
+                  ))
+                : [[<MessageSquare size={16} />, "Tus conversaciones"], [<Bot size={16} />, "Bot WhatsApp integrado"], [<BookOpen size={16} />, "Mi Día — diario personal"]].map(([icon, txt]) => (
+                    <div key={txt} style={{ padding: "10px 18px", background: L.white, border: `1px solid ${L.border}`, borderRadius: 12, fontSize: 13, color: L.muted, display: "flex", alignItems: "center", gap: 8, fontWeight: 500, boxShadow: "0 1px 4px rgba(0,0,0,.05)" }}>
+                      <span style={{ color: C.red }}>{icon}</span> {txt}
+                    </div>
+                  ))
+              }
             </div>
           </div>
         )}
