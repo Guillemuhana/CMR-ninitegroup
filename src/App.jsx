@@ -160,15 +160,15 @@ function Login() {
   };
 
   return (
-    <div className="login-scroll" style={{ height: "100%", overflowY: "auto", WebkitOverflowScrolling: "touch", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", background: "#fff", fontFamily: FONT_BODY, padding: "56px 20px 48px" }}>
+    <div className="login-scroll" style={{ minHeight: "100%", overflowY: "auto", WebkitOverflowScrolling: "touch", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#fff", fontFamily: FONT_BODY, padding: "40px 20px" }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 32 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 36 }}>
           <img
             src={LOGO_URL}
             alt="NINIT Group"
-            style={{ width: "100%", maxWidth: 360, height: 90, objectFit: "cover", objectPosition: "center", display: "block", filter: "drop-shadow(0 2px 14px rgba(58,141,194,0.45))" }}
+            style={{ width: "100%", maxWidth: 320, height: "auto", objectFit: "contain", display: "block", filter: "drop-shadow(0 2px 14px rgba(58,141,194,0.45))" }}
           />
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
             <div style={{ height: 1, width: 28, background: L.border }} />
             <span style={{ fontFamily: FONT_DISPLAY, fontSize: 11, fontWeight: 700, letterSpacing: 4, color: L.light, textTransform: "uppercase" }}>CRM</span>
             <div style={{ height: 1, width: 28, background: L.border }} />
