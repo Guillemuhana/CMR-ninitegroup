@@ -634,17 +634,18 @@ REGLAS:
           if (resp && !vozOnRef.current) {} else if (resp) hablar(resp);
           try {
             const accion = JSON.parse(accionMatch[1].trim());
-            const fn = EJECUTAR_ACCION[accion.tipo];
+            const { tipo, ...params } = accion;
+            const fn = EJECUTAR_ACCION[tipo];
             if (fn) {
-              setMsgs((p) => [...p, { from: "sistema", text: `⏳ Ejecutando: ${accion.tipo}…` }]);
-              const resultado = await fn(accion);
+              setMsgs((p) => [...p, { from: "sistema", text: `⏳ Ejecutando: ${tipo}…` }]);
+              const resultado = await fn(params);
               setMsgs((p) => [
                 ...p.filter((m) => !m.text?.startsWith("⏳ Ejecutando")),
                 { from: "sistema", text: `✅ ${resultado}` },
               ]);
               onRefrescar?.();
             } else {
-              setMsgs((p) => [...p, { from: "sistema", text: `⚠️ Acción desconocida: ${accion.tipo}` }]);
+              setMsgs((p) => [...p, { from: "sistema", text: `⚠️ Acción desconocida: ${tipo}` }]);
             }
           } catch {
             setMsgs((p) => [...p, { from: "sistema", text: "⚠️ Error al parsear la acción." }]);
