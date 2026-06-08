@@ -367,7 +367,7 @@ function ContactoDrawer({ contacto, onClose, onSave }) {
 // ============================================================
 // ASISTENTE IA  (ElevenLabs TTS + Web Speech STT + proactivo)
 // ============================================================
-function AIAsistente({ contactoActivo, alertas = [], contactos = [] }) {
+function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuario = "" }) {
   const isMobile   = useIsMobile();
   const [open, setOpen]           = useState(false);
   const [msgs, setMsgs]           = useState([]);
@@ -383,6 +383,7 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [] }) {
   const recognitionRef = useRef(null);
   const audioRef       = useRef(null);
   const vozOnRef       = useRef(vozOn);
+  const saludadoRef    = useRef(false);
 
   useEffect(() => { vozOnRef.current = vozOn; }, [vozOn]);
   useEffect(() => { setSttOk(!!(window.SpeechRecognition || window.webkitSpeechRecognition)); }, []);
@@ -396,6 +397,19 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [] }) {
       setHablando(false);
     }
   }, [open]);
+
+  // ── Saludo de bienvenida al ingresar al CRM ───────────────
+  useEffect(() => {
+    if (!nombreUsuario || saludadoRef.current) return;
+    saludadoRef.current = true;
+    const hora   = new Date().getHours();
+    const saludo = hora < 12 ? "Buenos días" : hora < 19 ? "Buenas tardes" : "Buenas noches";
+    const nombre = nombreUsuario.split(" ")[0]; // solo primer nombre
+    const t = setTimeout(() => {
+      hablar(`${saludo} ${nombre}. ¿Cómo estás? ¿Puedo ayudarte en algo?`);
+    }, 1800);
+    return () => clearTimeout(t);
+  }, [nombreUsuario, hablar]);
 
   // ── TTS: ElevenLabs (realista) con fallback Web Speech ───
   const hablarWebSpeech = useCallback((texto) => {
@@ -1522,7 +1536,7 @@ export default function App() {
         )}
       </div>
 
-      <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} />
+      <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} nombreUsuario={userName} />
     </div>
   );
 }
