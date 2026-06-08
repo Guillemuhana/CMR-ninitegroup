@@ -401,29 +401,8 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
   useEffect(() => { setSttOk(!!(window.SpeechRecognition || window.webkitSpeechRecognition)); }, []);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, typing]);
 
-  // ── Limpiar audio al cerrar ──────────────────────────────
-  useEffect(() => {
-    if (!open) {
-      audioRef.current?.pause();
-      window.speechSynthesis?.cancel();
-      setHablando(false);
-    }
-  }, [open]);
-
-  // ── Saludo de bienvenida al ingresar al CRM ───────────────
-  useEffect(() => {
-    if (!nombreUsuario || saludadoRef.current) return;
-    saludadoRef.current = true;
-    const hora   = new Date().getHours();
-    const saludo = hora < 12 ? "Buenos días" : hora < 19 ? "Buenas tardes" : "Buenas noches";
-    const nombre = nombreUsuario.split(" ")[0]; // solo primer nombre
-    const t = setTimeout(() => {
-      hablar(`${saludo} ${nombre}. ¿Cómo estás? ¿Puedo ayudarte en algo?`);
-    }, 1800);
-    return () => clearTimeout(t);
-  }, [nombreUsuario, hablar]);
-
   // ── TTS: ElevenLabs (realista) con fallback Web Speech ───
+  // IMPORTANTE: definidos antes de los useEffects que los usan
   const hablarWebSpeech = useCallback((texto) => {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
@@ -481,6 +460,28 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
       hablarWebSpeech(limpio);
     }
   }, [hablarWebSpeech]);
+
+  // ── Limpiar audio al cerrar ──────────────────────────────
+  useEffect(() => {
+    if (!open) {
+      audioRef.current?.pause();
+      window.speechSynthesis?.cancel();
+      setHablando(false);
+    }
+  }, [open]);
+
+  // ── Saludo de bienvenida al ingresar al CRM ───────────────
+  useEffect(() => {
+    if (!nombreUsuario || saludadoRef.current) return;
+    saludadoRef.current = true;
+    const hora   = new Date().getHours();
+    const saludo = hora < 12 ? "Buenos días" : hora < 19 ? "Buenas tardes" : "Buenas noches";
+    const nombre = nombreUsuario.split(" ")[0];
+    const t = setTimeout(() => {
+      hablar(`${saludo} ${nombre}. ¿Cómo estás? ¿Puedo ayudarte en algo?`);
+    }, 1800);
+    return () => clearTimeout(t);
+  }, [nombreUsuario, hablar]);
 
   // ── Briefing proactivo al abrir ──────────────────────────
   useEffect(() => {
