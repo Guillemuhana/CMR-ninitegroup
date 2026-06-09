@@ -29,6 +29,10 @@ export default async function handler(req, res) {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const body = req.body;
+
+  // Log every incoming POST for debugging
+  await supabase.from("webhook_logs").insert({ body: body || null, headers: { "x-hub-signature": req.headers["x-hub-signature-256"] || null, "user-agent": req.headers["user-agent"] || null } });
+
   if (!body || body.object !== "page") {
     return res.status(400).json({ error: "Invalid webhook payload" });
   }
