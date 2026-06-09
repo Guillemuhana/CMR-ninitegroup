@@ -8,7 +8,7 @@ import {
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
-import { SiGmail, SiGoogleads } from "react-icons/si";
+import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
 import PedidosPanel, { NuevoPedidoModal, imprimirPedido } from "./Pedidos";
 import {
   supabase, N8N_SEND_WEBHOOK, N8N_EMAIL_REPLY_WEBHOOK, MESSENGER_SEND_ENDPOINT, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
@@ -1014,7 +1014,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
           <div style={{ padding: "10px 12px 8px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 6 }}>
             {[
               { key: "whatsapp",   label: "WhatsApp",  icon: <FaWhatsapp size={22} />,   color: "#25D366", bg: "#F0FDF4" },
-              { key: "messenger",  label: "Messenger", icon: <MessageSquare size={20} />, color: "#0084FF", bg: "#EFF6FF" },
+              { key: "messenger",  label: "Messenger", icon: <SiMessenger size={20} />, color: "#0084FF", bg: "#D8EAFF" },
               { key: "email",      label: "Gmail",      icon: <SiGmail size={20} />,       color: "#EA4335", bg: "#FFF5F5" },
               { key: "google_ads", label: "Google Ads", icon: <SiGoogleads size={20} />,   color: "#4285F4", bg: "#EFF6FF" },
             ].map(({ key, label, icon, color, bg }) => {
