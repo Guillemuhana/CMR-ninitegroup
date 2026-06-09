@@ -4,7 +4,7 @@ CRM propio estilo Chatwoot, a medida para **Nuevo Munich** (Artesanos del Sabor 
 El equipo ve los mensajes del cliente y del bot en tiempo real, toma la conversación cuando hace falta,
 hace seguimiento de clientes, recibe alertas y analiza el negocio con reportes diarios/semanales/mensuales.
 
-**Stack:** React + Vite → Vercel · Supabase (DB + Auth + Realtime) · n8n (envío WhatsApp) · recharts + jsPDF.
+**Stack:** React + Vite → Vercel · Supabase (DB + Auth + Realtime) · n8n (envío WhatsApp) · Vercel serverless (Messenger directo) · recharts + jsPDF.
 
 ## Funcionalidades
 - **Conversaciones**: bandeja en tiempo real, filtros por estado, no leídos, asignación de vendedor.

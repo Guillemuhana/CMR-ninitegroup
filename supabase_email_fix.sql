@@ -7,10 +7,11 @@
 ALTER TABLE public.contactos
   ADD COLUMN IF NOT EXISTS canal TEXT DEFAULT 'whatsapp';
 
--- 2. Agregar empresa, direccion, tipo por si no existen
+-- 2. Agregar empresa, direccion, tipo, messenger_id por si no existen
 ALTER TABLE public.contactos ADD COLUMN IF NOT EXISTS empresa   TEXT;
 ALTER TABLE public.contactos ADD COLUMN IF NOT EXISTS direccion TEXT;
 ALTER TABLE public.contactos ADD COLUMN IF NOT EXISTS tipo      TEXT DEFAULT 'prospecto';
+ALTER TABLE public.contactos ADD COLUMN IF NOT EXISTS messenger_id TEXT;
 
 -- 3. Hacer telefono nullable (email contacts no tienen teléfono)
 --    Primero quitamos el NOT NULL
@@ -71,8 +72,9 @@ GRANT EXECUTE ON FUNCTION ingest_mensaje(text,text,text,text,text) TO service_ro
 -- 6. Actualizar contactos WhatsApp existentes para que tengan canal = 'whatsapp'
 UPDATE public.contactos SET canal = 'whatsapp' WHERE canal IS NULL AND telefono IS NOT NULL;
 
--- 7. Índice para búsquedas por canal
+-- 7. Índices para búsqueda
 CREATE INDEX IF NOT EXISTS idx_contactos_canal ON public.contactos (canal);
+CREATE INDEX IF NOT EXISTS idx_contactos_messenger_id ON public.contactos (messenger_id);
 
 -- ── VERIFICACIÓN ─────────────────────────────────────────────
 SELECT canal, count(*) FROM public.contactos GROUP BY canal ORDER BY canal;

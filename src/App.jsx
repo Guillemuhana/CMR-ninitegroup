@@ -11,7 +11,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads } from "react-icons/si";
 import PedidosPanel, { NuevoPedidoModal, imprimirPedido } from "./Pedidos";
 import {
-  supabase, N8N_SEND_WEBHOOK, N8N_EMAIL_REPLY_WEBHOOK, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
+  supabase, N8N_SEND_WEBHOOK, N8N_EMAIL_REPLY_WEBHOOK, MESSENGER_SEND_ENDPOINT, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
   VENDEDORES, ESTADOS, calcularAlertas, getRol, cargarPerfil,
   ELEVENLABS_KEY, ELEVENLABS_VOICE_ID,
 } from "./lib";
@@ -281,6 +281,7 @@ function ContactoDrawer({ contacto, onClose, onSave }) {
   const [form, setForm] = useState({
     nombre: contacto.nombre || "", email: contacto.email || "",
     empresa: contacto.empresa || "", direccion: contacto.direccion || "",
+    canal: contacto.canal || "whatsapp", messenger_id: contacto.messenger_id || "",
     nota_seguimiento: contacto.nota_seguimiento || "",
   });
   const [saving, setSaving] = useState(false);
@@ -291,7 +292,12 @@ function ContactoDrawer({ contacto, onClose, onSave }) {
 
   const handleSave = async () => {
     setSaving(true); setErr("");
-    const { error } = await supabase.from("contactos").update(form).eq("id", contacto.id);
+    const updateData = { ...form };
+    // For existing schema compatibility, keep telefono if messenger contact doesn't have a phone
+    if (updateData.canal === "messenger" && !updateData.telefono && updateData.messenger_id) {
+      updateData.telefono = updateData.messenger_id;
+    }
+    const { error } = await supabase.from("contactos").update(updateData).eq("id", contacto.id);
     if (error) {
       if (error.code === "PGRST204" || (error.message && error.message.includes("column"))) {
         const { error: e2 } = await supabase.from("contactos")
@@ -310,6 +316,13 @@ function ContactoDrawer({ contacto, onClose, onSave }) {
   const fields = [
     { label: "Nombre completo", key: "nombre", icon: <User size={14} />, type: "text", ph: "Ej: Juan García" },
     { label: "Email", key: "email", icon: <Mail size={14} />, type: "email", ph: "juan@empresa.com" },
+    { label: "Canal", key: "canal", icon: <MessageSquare size={14} />, type: "select", options: [
+      { value: "whatsapp", label: "WhatsApp" },
+      { value: "messenger", label: "Messenger" },
+      { value: "email", label: "Email" },
+      { value: "google_ads", label: "Google Ads" },
+    ] },
+    { label: "Messenger ID", key: "messenger_id", icon: <MessageSquare size={14} />, type: "text", ph: "123456789012345" },
     { label: "Empresa", key: "empresa", icon: <Building2 size={14} />, type: "text", ph: "Nombre de la empresa" },
     { label: "Dirección", key: "direccion", icon: <MapPin size={14} />, type: "text", ph: "Calle, Ciudad, Provincia" },
   ];
@@ -338,10 +351,18 @@ function ContactoDrawer({ contacto, onClose, onSave }) {
           <div style={{ fontSize: 11, color: L.light, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 18, paddingBottom: 10, borderBottom: `1px solid ${L.border}` }}>
             Datos del contacto
           </div>
-          {fields.map(({ label, key, icon, type, ph }) => (
+          {fields.map(({ label, key, icon, type, ph, options }) => (
             <div key={key} style={{ marginBottom: 18 }}>
               <label style={labelSt}><span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>{icon} {label}</span></label>
-              <input type={type} value={form[key]} onChange={set(key)} placeholder={ph} style={inputSt} />
+              {type === "select" ? (
+                <select value={form[key]} onChange={set(key)} style={inputSt}>
+                  {options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <input type={type} value={form[key]} onChange={set(key)} placeholder={ph} style={inputSt} />
+              )}
             </div>
           ))}
           <div style={{ marginBottom: 14 }}>
@@ -352,10 +373,10 @@ function ContactoDrawer({ contacto, onClose, onSave }) {
           </div>
           <div style={{ padding: "13px 16px", background: "#EFF6FF", borderRadius: 10, border: "1px solid #BFDBFE" }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: "#1D4ED8", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>
-              {contacto.canal === "email" ? "Email" : "Teléfono WhatsApp"}
+              {contacto.canal === "email" ? "Email" : contacto.canal === "messenger" ? "Messenger ID" : "Teléfono WhatsApp"}
             </div>
             <div style={{ fontSize: 15, fontWeight: 700, color: L.text }}>
-              {contacto.canal === "email" ? contacto.email : contacto.telefono}
+              {contacto.canal === "email" ? contacto.email : contacto.canal === "messenger" ? (contacto.messenger_id || contacto.telefono) : contacto.telefono}
             </div>
             <div style={{ fontSize: 11, color: L.muted, marginTop: 2 }}>No editable — identificador único</div>
           </div>
@@ -427,16 +448,18 @@ const EJECUTAR_ACCION = {
     return error ? `Error: ${error.message}` : `✅ Vendedor **${nombre}** eliminado.`;
   },
 
-  agregar_contacto: async ({ nombre, telefono, email, vendedor, estado = "nuevo" }) => {
-    if (!nombre?.trim() && !telefono?.trim() && !email?.trim())
-      return "⚠️ Necesito al menos nombre, teléfono o email.";
-    const insert = { estado };
-    if (nombre)   insert.nombre   = nombre.trim();
-    if (telefono) insert.telefono = telefono.trim();
-    if (email)    insert.email    = email.toLowerCase().trim();
-    if (vendedor) insert.vendedor = vendedor.trim();
+  agregar_contacto: async ({ nombre, telefono, email, vendedor, estado = "nuevo", canal = "whatsapp", messenger_id }) => {
+    if (!nombre?.trim() && !telefono?.trim() && !email?.trim() && !messenger_id?.trim())
+      return "⚠️ Necesito al menos nombre, teléfono, email o Messenger ID.";
+    const insert = { estado, canal };
+    if (nombre)       insert.nombre       = nombre.trim();
+    if (telefono)     insert.telefono     = telefono.trim();
+    if (email)        insert.email        = email.toLowerCase().trim();
+    if (vendedor)     insert.vendedor     = vendedor.trim();
+    if (messenger_id) insert.messenger_id = messenger_id.trim();
+    if (canal === "messenger" && !insert.telefono && messenger_id) insert.telefono = messenger_id.trim();
     const { error } = await supabase.from("contactos").insert(insert);
-    return error ? `Error: ${error.message}` : `✅ Contacto **${nombre || telefono || email}** creado.`;
+    return error ? `Error: ${error.message}` : `✅ Contacto **${nombre || telefono || email || messenger_id}** creado.`;
   },
 
   actualizar_contacto: async ({ id, ...cambios }) => {
@@ -991,6 +1014,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
           <div style={{ padding: "10px 12px 8px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 6 }}>
             {[
               { key: "whatsapp",   label: "WhatsApp",  icon: <FaWhatsapp size={22} />,   color: "#25D366", bg: "#F0FDF4" },
+              { key: "messenger",  label: "Messenger", icon: <MessageSquare size={20} />, color: "#0084FF", bg: "#EFF6FF" },
               { key: "email",      label: "Gmail",      icon: <SiGmail size={20} />,       color: "#EA4335", bg: "#FFF5F5" },
               { key: "google_ads", label: "Google Ads", icon: <SiGoogleads size={20} />,   color: "#4285F4", bg: "#EFF6FF" },
             ].map(({ key, label, icon, color, bg }) => {
@@ -1070,10 +1094,13 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
                   onMouseLeave={(e) => { if (!sel) e.currentTarget.style.background = "transparent"; }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <Avatar nombre={c.nombre || c.telefono || c.email} foto={c.foto_url} size={46} />
-                    {c.canal === "email"
-                      ? <div style={{ position: "absolute", bottom: 0, right: 0, width: 13, height: 13, borderRadius: "50%", background: "#3B82F6", border: `2px solid ${L.white}` }} title="Canal Email" />
-                      : !c.bot_activo && <div style={{ position: "absolute", bottom: 0, right: 0, width: 13, height: 13, borderRadius: "50%", background: "#F59E0B", border: `2px solid ${L.white}` }} title="Atendido por agente" />
-                    }
+                    {c.canal === "email" ? (
+                      <div style={{ position: "absolute", bottom: 0, right: 0, width: 13, height: 13, borderRadius: "50%", background: "#3B82F6", border: `2px solid ${L.white}` }} title="Canal Email" />
+                    ) : c.canal === "messenger" ? (
+                      <div style={{ position: "absolute", bottom: 0, right: 0, width: 13, height: 13, borderRadius: "50%", background: "#0084FF", border: `2px solid ${L.white}` }} title="Canal Messenger" />
+                    ) : !c.bot_activo ? (
+                      <div style={{ position: "absolute", bottom: 0, right: 0, width: 13, height: 13, borderRadius: "50%", background: "#F59E0B", border: `2px solid ${L.white}` }} title="Atendido por agente" />
+                    ) : null}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
@@ -1202,8 +1229,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
       return;
     }
 
-    // 2) Enviar por el canal correspondiente vía n8n
+    // 2) Enviar por el canal correspondiente (email, Messenger o WhatsApp)
     const esEmail = contacto.canal === "email" || contacto.canal === "google_ads";
+    const esMessenger = contacto.canal === "messenger";
     if (esEmail) {
       // Respuesta por email
       if (N8N_EMAIL_REPLY_WEBHOOK) {
@@ -1215,6 +1243,23 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
           if (!res.ok) setErr("Mensaje guardado en CRM, pero falló el envío del email.");
         } catch {
           setErr("Mensaje guardado en CRM, pero no se pudo enviar el email.");
+        }
+      }
+    } else if (esMessenger) {
+      const messengerId = contacto.messenger_id || contacto.telefono;
+      if (!MESSENGER_SEND_ENDPOINT) {
+        setErr("Mensaje guardado en CRM, pero falta configurar el endpoint de Messenger.");
+      } else if (!messengerId) {
+        setErr("Mensaje guardado en CRM, pero falta el identificador de Messenger del contacto.");
+      } else {
+        try {
+          const res = await fetch(MESSENGER_SEND_ENDPOINT, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contacto_id: contacto.id, messenger_id: messengerId, mensaje: cuerpo, agente: userName, nombre: contacto.nombre || "" }),
+          });
+          if (!res.ok) setErr("Mensaje guardado en CRM, pero falló el envío por Messenger.");
+        } catch {
+          setErr("Mensaje guardado en CRM, pero no se pudo conectar con Messenger.");
         }
       }
     } else {

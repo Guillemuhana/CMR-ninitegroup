@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.contactos (
   estado        TEXT NOT NULL DEFAULT 'nuevo',
   bot_activo    BOOLEAN NOT NULL DEFAULT TRUE,
   ultimo_msg    TEXT,
+  messenger_id  TEXT UNIQUE,
   no_leidos     INT NOT NULL DEFAULT 0,
   seguimiento_at TIMESTAMPTZ,
   nota_seguimiento TEXT,
@@ -71,6 +72,7 @@ CREATE TABLE IF NOT EXISTS public.historial_clientes (
 CREATE INDEX IF NOT EXISTS idx_mensajes_contacto ON public.mensajes (contacto_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_mensajes_fecha    ON public.mensajes (created_at);
 CREATE INDEX IF NOT EXISTS idx_contactos_updated ON public.contactos (updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_contactos_messenger_id ON public.contactos (messenger_id);
 CREATE INDEX IF NOT EXISTS idx_contactos_creado  ON public.contactos (created_at);
 CREATE INDEX IF NOT EXISTS idx_pedidos_fecha      ON public.pedidos (created_at);
 CREATE INDEX IF NOT EXISTS idx_historial_contacto ON public.historial_clientes (contacto_id, created_at);

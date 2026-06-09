@@ -24,9 +24,16 @@ Espera a que termine (~1 min).
 
 ### 4. Cargar tus claves
 Abrí el archivo  .env  (ya está en la carpeta) y reemplazá:
-- VITE_SUPABASE_URL        → la URL de tu proyecto Supabase
-- VITE_SUPABASE_ANON_KEY   → tu "anon public key" de Supabase
-- VITE_N8N_SEND_WEBHOOK    → la URL del webhook de n8n
+- VITE_SUPABASE_URL             → la URL de tu proyecto Supabase
+- VITE_SUPABASE_ANON_KEY        → tu "anon public key" de Supabase
+- VITE_N8N_SEND_WEBHOOK         → la URL del webhook de n8n
+- VITE_MESSENGER_SEND_ENDPOINT  → la URL de tu endpoint de envío de Messenger (por defecto /api/messenger-send)
+
+Si querés usar Messenger directo, además configuras en Vercel:
+- MESSENGER_PAGE_TOKEN
+- MESSENGER_VERIFY_TOKEN
+- SUPABASE_URL
+- SUPABASE_SERVICE_ROLE_KEY
 
 (Las dos de Supabase están en: Supabase → Settings → API)
 
