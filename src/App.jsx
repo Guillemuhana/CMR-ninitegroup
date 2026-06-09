@@ -380,36 +380,75 @@ function ContactoDrawer({ contacto, onClose, onSave }) {
 // ASISTENTE IA  (ElevenLabs TTS + Web Speech STT + proactivo)
 // ============================================================
 // ── Ejecutor de acciones CEO ──────────────────────────────────
+// Cada función intenta la operación completa; si falla por columna faltante,
+// hace fallback a los campos mínimos garantizados.
+const esErrorColumna = (msg) => msg && (
+  msg.includes("column") || msg.includes("schema cache") ||
+  msg.includes("Could not find") || msg.includes("does not exist")
+);
+
 const EJECUTAR_ACCION = {
-  agregar_vendedor: async ({ nombre, email, role = "vendedor" }) => {
+  agregar_vendedor: async ({ nombre, email, role }) => {
+    if (!nombre?.trim()) return "⚠️ Necesito el nombre del vendedor.";
+    const insertCompleto = { nombre: nombre.trim() };
+    if (email) insertCompleto.email = email.toLowerCase().trim();
+    if (role)  insertCompleto.role  = role;
+    const { error } = await supabase.from("vendedores").insert(insertCompleto);
+    if (error && esErrorColumna(error.message)) {
+      // Fallback: solo nombre (tabla sin columnas email/role aún)
+      const { error: e2 } = await supabase.from("vendedores").insert({ nombre: nombre.trim() });
+      return e2 ? `Error: ${e2.message}` : `✅ Vendedor **${nombre}** agregado.`;
+    }
+    return error ? `Error: ${error.message}` : `✅ Vendedor **${nombre}** agregado.`;
+  },
+
+  actualizar_vendedor: async ({ nombre_actual, nombre, email, role }) => {
+    if (!nombre_actual?.trim()) return "⚠️ Necesito el nombre actual del vendedor.";
+    const cambios = {};
+    if (nombre) cambios.nombre = nombre.trim();
+    if (email)  cambios.email  = email.toLowerCase().trim();
+    if (role)   cambios.role   = role;
+    if (!Object.keys(cambios).length) return "⚠️ No especificaste qué cambiar.";
     const { error } = await supabase.from("vendedores")
-      .insert({ nombre, email: email?.toLowerCase().trim(), role });
-    return error ? `Error: ${error.message}` : `Vendedor **${nombre}** agregado.`;
+      .update(cambios).eq("nombre", nombre_actual.trim());
+    if (error && esErrorColumna(error.message)) {
+      const camposBasicos = {};
+      if (nombre) camposBasicos.nombre = nombre.trim();
+      const { error: e2 } = await supabase.from("vendedores")
+        .update(camposBasicos).eq("nombre", nombre_actual.trim());
+      return e2 ? `Error: ${e2.message}` : `✅ Vendedor **${nombre_actual}** actualizado.`;
+    }
+    return error ? `Error: ${error.message}` : `✅ Vendedor **${nombre_actual}** actualizado.`;
   },
-  actualizar_vendedor: async ({ email, ...cambios }) => {
-    const { error } = await supabase.from("vendedores")
-      .update(cambios).eq("email", email.toLowerCase().trim());
-    return error ? `Error: ${error.message}` : `Vendedor **${email}** actualizado.`;
+
+  eliminar_vendedor: async ({ nombre }) => {
+    if (!nombre?.trim()) return "⚠️ Necesito el nombre del vendedor a eliminar.";
+    const { error } = await supabase.from("vendedores").delete().eq("nombre", nombre.trim());
+    return error ? `Error: ${error.message}` : `✅ Vendedor **${nombre}** eliminado.`;
   },
-  eliminar_vendedor: async ({ email }) => {
-    const { error } = await supabase.from("vendedores")
-      .delete().eq("email", email.toLowerCase().trim());
-    return error ? `Error: ${error.message}` : `Vendedor **${email}** eliminado.`;
+
+  agregar_contacto: async ({ nombre, telefono, email, vendedor, estado = "nuevo" }) => {
+    if (!nombre?.trim() && !telefono?.trim() && !email?.trim())
+      return "⚠️ Necesito al menos nombre, teléfono o email.";
+    const insert = { estado };
+    if (nombre)   insert.nombre   = nombre.trim();
+    if (telefono) insert.telefono = telefono.trim();
+    if (email)    insert.email    = email.toLowerCase().trim();
+    if (vendedor) insert.vendedor = vendedor.trim();
+    const { error } = await supabase.from("contactos").insert(insert);
+    return error ? `Error: ${error.message}` : `✅ Contacto **${nombre || telefono || email}** creado.`;
   },
-  agregar_contacto: async ({ nombre, telefono, email, vendedor, estado = "nuevo", ...resto }) => {
-    const { error } = await supabase.from("contactos")
-      .insert({ nombre, telefono, email, vendedor, estado, ...resto });
-    return error ? `Error: ${error.message}` : `Contacto **${nombre || telefono}** creado.`;
-  },
+
   actualizar_contacto: async ({ id, ...cambios }) => {
-    if (!id) return "Error: falta el id del contacto.";
+    if (!id) return "⚠️ Falta el id del contacto.";
     const { error } = await supabase.from("contactos").update(cambios).eq("id", id);
-    return error ? `Error: ${error.message}` : `Contacto actualizado.`;
+    return error ? `Error: ${error.message}` : `✅ Contacto actualizado.`;
   },
+
   eliminar_contacto: async ({ id }) => {
-    if (!id) return "Error: falta el id del contacto.";
+    if (!id) return "⚠️ Falta el id del contacto.";
     const { error } = await supabase.from("contactos").delete().eq("id", id);
-    return error ? `Error: ${error.message}` : `Contacto eliminado.`;
+    return error ? `Error: ${error.message}` : `✅ Contacto eliminado.`;
   },
 };
 
@@ -595,22 +634,23 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
       }
       if (vozOnRef.current) sysExtra += "\nMODO VOZ ACTIVO: máximo 2 oraciones, sin listas, sin markdown, lenguaje natural hablado.";
       if (rol === "ceo") sysExtra += `\n\n════ ACCIONES DISPONIBLES (sos CEO) ════
-Podés ejecutar cambios reales en el CRM. Cuando el usuario te pida hacer algo, incluí AL FINAL de tu respuesta un bloque exactamente así:
+Podés ejecutar cambios REALES en la base de datos del CRM. Cuando el usuario pida hacer algo, incluí AL FINAL de tu respuesta un bloque exactamente así (JSON válido, una sola línea):
 <ACCION>{"tipo":"nombre_accion","campo":"valor"}</ACCION>
 
-Acciones disponibles:
-- agregar_vendedor: { nombre, email, role? } — role puede ser "ceo" o "vendedor"
-- actualizar_vendedor: { email, nombre?, role? } — email identifica al vendedor a modificar
-- eliminar_vendedor: { email } — CONFIRMAR siempre antes de ejecutar
-- agregar_contacto: { nombre?, telefono?, email?, vendedor?, estado? }
-- actualizar_contacto: { id, estado?, vendedor?, nombre?, nota_seguimiento?, seguimiento_at? }
-- eliminar_contacto: { id } — CONFIRMAR siempre antes de ejecutar
+ACCIONES Y CAMPOS REQUERIDOS:
+- agregar_vendedor: { "nombre": "...", "email": "...(opcional)", "role": "vendedor|ceo (opcional)" }
+- actualizar_vendedor: { "nombre_actual": "nombre existente", "nombre": "nuevo nombre (opcional)", "role": "nuevo rol (opcional)" }
+- eliminar_vendedor: { "nombre": "nombre exacto" }
+- agregar_contacto: { "nombre": "...", "telefono": "...(opcional)", "email": "...(opcional)", "vendedor": "...(opcional)", "estado": "nuevo|contactado|interesado|pendiente|vendido|perdido" }
+- actualizar_contacto: { "id": "uuid del contacto", "estado": "...(opcional)", "vendedor": "...(opcional)", "nombre": "...(opcional)" }
+- eliminar_contacto: { "id": "uuid del contacto" }
 
-REGLAS:
-1. Solo incluí <ACCION> cuando el usuario pida explícitamente un cambio.
-2. Para eliminar algo, pedí confirmación en tu respuesta ANTES de incluir <ACCION>.
-3. Si te falta info (ej: email para agregar vendedor), preguntá antes de actuar.
-4. El bloque <ACCION> debe ser JSON válido y estar en la última línea.`;
+REGLAS ESTRICTAS:
+1. Incluí <ACCION> SIEMPRE que el usuario pida un cambio concreto, aunque te falte algún dato opcional.
+2. Si el dato es REQUERIDO y falta, preguntá PRIMERO y ejecutá cuando lo tengas.
+3. Para ELIMINAR: confirmá en la respuesta antes de incluir <ACCION>.
+4. El bloque <ACCION> va SOLO en la última línea, sin texto después.
+5. Solo un <ACCION> por respuesta.`;
 
       const apiMsgs = [
         { role: "system", content: GROK_SYSTEM + sysExtra },
