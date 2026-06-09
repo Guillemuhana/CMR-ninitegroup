@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "crypto";
 
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const VERIFY_TOKEN = process.env.MESSENGER_VERIFY_TOKEN;
 
 export default async function handler(req, res) {
@@ -46,24 +47,22 @@ export default async function handler(req, res) {
           .or(`messenger_id.eq.${senderId},telefono.eq.${senderId}`)
           .single();
 
-        if (selectError && selectError.message !== "No rows found") {
-          console.error("Supabase select error", selectError);
+        if (selectError && selectError.code !== "PGRST116") {
+          console.error("Supabase select error", JSON.stringify(selectError));
         }
 
         let contactoId = existingContact?.id;
         const previousNoLeidos = existingContact?.no_leidos || 0;
         if (!contactoId) {
-          const { data: insertedContact, error: insertError } = await supabase
+          contactoId = randomUUID();
+          const { error: insertError } = await supabase
             .from("contactos")
-            .insert({ telefono: senderId, messenger_id: senderId, canal: "messenger", no_leidos: 1, ultimo_in_at: new Date().toISOString() })
-            .select("id")
-            .single();
+            .insert({ id: contactoId, telefono: senderId, messenger_id: senderId, canal: "messenger", no_leidos: 1, ultimo_in_at: new Date().toISOString() });
 
           if (insertError) {
-            console.error("Supabase insert contacto error", insertError);
+            console.error("Supabase insert contacto error", JSON.stringify(insertError));
             continue;
           }
-          contactoId = insertedContact?.id;
         }
 
         if (!contactoId) continue;
