@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
         const { data: existingContact, error: selectError } = await supabase
           .from("contactos")
-          .select("id")
+          .select("id,no_leidos")
           .or(`messenger_id.eq.${senderId},telefono.eq.${senderId}`)
           .single();
 
@@ -51,10 +51,11 @@ export default async function handler(req, res) {
         }
 
         let contactoId = existingContact?.id;
+        const previousNoLeidos = existingContact?.no_leidos || 0;
         if (!contactoId) {
           const { data: insertedContact, error: insertError } = await supabase
             .from("contactos")
-            .insert({ telefono: senderId, messenger_id: senderId, canal: "messenger" })
+            .insert({ telefono: senderId, messenger_id: senderId, canal: "messenger", no_leidos: 1, ultimo_in_at: new Date().toISOString() })
             .select("id")
             .single();
 
@@ -76,6 +77,20 @@ export default async function handler(req, res) {
 
         if (msgError) {
           console.error("Supabase insert mensaje error", msgError);
+          continue;
+        }
+
+        if (existingContact?.id) {
+          const { error: updateError } = await supabase
+            .from("contactos")
+            .update({
+              no_leidos: previousNoLeidos + 1,
+              ultimo_in_at: new Date().toISOString(),
+            })
+            .eq("id", contactoId);
+          if (updateError) {
+            console.error("Supabase update contacto error", updateError);
+          }
         }
       }
     }
