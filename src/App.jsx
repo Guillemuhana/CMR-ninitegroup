@@ -987,7 +987,13 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
       {/* ── Brand bar ── */}
       <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.red, borderBottom: `3px solid ${C.redDark}` }}>
         <img src={LOGO_URL} alt="NINIT Group" style={{ width: 210, height: 52, objectFit: "cover", objectPosition: "center 38%", filter: "brightness(0) invert(1)", opacity: 0.95 }} />
-        <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }} />
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button onClick={() => { setVista("chat"); setCanal("messenger"); }}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 999, border: "none", background: "#FFFFFF", color: "#0084FF", fontWeight: 700, cursor: "pointer", fontSize: 12, boxShadow: "0 4px 16px rgba(0, 132, 255, .16)" }}>
+            <SiMessenger size={16} /> Messenger
+          </button>
+          <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }} />
+        </div>
       </div>
 
 
