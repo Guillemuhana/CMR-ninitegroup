@@ -466,7 +466,8 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
   const [briefingHecho, setBriefing] = useState(false);
   const bottomRef      = useRef(null);
   const recognitionRef = useRef(null);
-  const audioRef       = useRef(null);
+  const audioCtxRef    = useRef(null);  // AudioContext — desbloqueado por gesto del usuario
+  const audioSrcRef    = useRef(null);  // AudioBufferSourceNode activo
   const vozOnRef       = useRef(vozOn);
   const saludadoRef    = useRef(false);
 
@@ -474,17 +475,29 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
   useEffect(() => { setSttOk(!!(window.SpeechRecognition || window.webkitSpeechRecognition)); }, []);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, typing]);
 
-  // ── TTS: ElevenLabs (realista) con fallback Web Speech ───
-  // IMPORTANTE: definidos antes de los useEffects que los usan
+  // ── Desbloquear AudioContext (iOS/Android requieren gesto) ──
+  const unlockAudio = useCallback(() => {
+    if (audioCtxRef.current) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
+    // Buffer silencioso para desbloquear el contexto
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+    audioCtxRef.current = ctx;
+  }, []);
+
+  // ── Fallback: Web Speech API ─────────────────────────────
   const hablarWebSpeech = useCallback((texto) => {
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const limpio = texto.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1")
       .replace(/#{1,3}\s/g, "").replace(/[-•]\s/g, "").slice(0, 500);
     const utt = new SpeechSynthesisUtterance(limpio);
-    utt.lang  = "es-AR";
-    utt.rate  = 1.05;
-    utt.pitch = 1.0;
+    utt.lang  = "es-AR"; utt.rate = 1.05; utt.pitch = 1.0;
     const voces = window.speechSynthesis.getVoices();
     const voz = voces.find((v) => v.lang === "es-AR")
       || voces.find((v) => v.lang === "es-419")
@@ -498,56 +511,71 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
     window.speechSynthesis.speak(utt);
   }, []);
 
+  // ── TTS principal: Google Cloud TTS via /api/tts ─────────
+  // Usa AudioContext (funciona en móvil) con fallback a Web Speech
   const hablar = useCallback(async (texto) => {
     if (!vozOnRef.current) return;
     const limpio = texto.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1")
       .replace(/#{1,3}\s/g, "").replace(/[-•]\s/g, "").slice(0, 480);
 
+    // Detener audio anterior
+    try { audioSrcRef.current?.stop(); } catch {}
+    window.speechSynthesis?.cancel();
+
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = audioCtxRef.current || (AC ? new AC() : null);
+    if (ctx && !audioCtxRef.current) audioCtxRef.current = ctx;
+
+    if (!ctx) { hablarWebSpeech(limpio); return; }
+
     setHablando(true);
     try {
-      // Google Cloud TTS via serverless proxy /api/tts
+      if (ctx.state === "suspended") await ctx.resume();
+
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: limpio }),
       });
       if (!res.ok) throw new Error("TTS " + res.status);
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      if (audioRef.current) { audioRef.current.pause(); URL.revokeObjectURL(audioRef.current._url || ""); }
-      const audio = new Audio(url);
-      audio._url  = url;
-      audioRef.current = audio;
-      audio.onended = () => { setHablando(false); URL.revokeObjectURL(url); };
-      audio.onerror = () => { setHablando(false); hablarWebSpeech(limpio); };
-      await audio.play();
+
+      const arrayBuffer = await res.arrayBuffer();
+      const decoded     = await ctx.decodeAudioData(arrayBuffer);
+
+      const source = ctx.createBufferSource();
+      source.buffer = decoded;
+      source.connect(ctx.destination);
+      source.onended = () => setHablando(false);
+      audioSrcRef.current = source;
+      source.start(0);
     } catch {
       setHablando(false);
       hablarWebSpeech(limpio);
     }
   }, [hablarWebSpeech]);
 
-  // ── Limpiar audio al cerrar ──────────────────────────────
+  // ── Limpiar audio al cerrar panel ────────────────────────
   useEffect(() => {
     if (!open) {
-      audioRef.current?.pause();
+      try { audioSrcRef.current?.stop(); } catch {}
       window.speechSynthesis?.cancel();
       setHablando(false);
     }
   }, [open]);
 
-  // ── Saludo de bienvenida al ingresar al CRM ───────────────
+  // ── Saludo al abrir el panel por primera vez (gesto → OK en móvil) ──
   useEffect(() => {
-    if (!nombreUsuario || saludadoRef.current) return;
+    if (!open || saludadoRef.current || !nombreUsuario) return;
     saludadoRef.current = true;
     const hora   = new Date().getHours();
     const saludo = hora < 12 ? "Buenos días" : hora < 19 ? "Buenas tardes" : "Buenas noches";
     const nombre = nombreUsuario.split(" ")[0];
+    // Pequeño delay para que el AudioContext esté desbloqueado
     const t = setTimeout(() => {
       hablar(`${saludo} ${nombre}. ¿Cómo estás? ¿Puedo ayudarte en algo?`);
-    }, 1800);
+    }, 400);
     return () => clearTimeout(t);
-  }, [nombreUsuario, hablar]);
+  }, [open, nombreUsuario, hablar]);
 
   // ── Briefing proactivo al abrir ──────────────────────────
   useEffect(() => {
@@ -714,7 +742,7 @@ REGLAS ESTRICTAS:
   return (
     <>
       {/* Botón flotante */}
-      <button onClick={() => setOpen((v) => !v)} title="Asistente IA"
+      <button onClick={() => { unlockAudio(); setOpen((v) => !v); }} title="Asistente IA"
         style={{ position: "fixed", bottom: isMobile ? "calc(76px + env(safe-area-inset-bottom))" : 84, right: isMobile ? 16 : 24, width: isMobile ? 50 : 56, height: isMobile ? 50 : 56, borderRadius: "50%", background: grabando ? "#DC2626" : open ? L.muted : C.red, border: grabando ? "3px solid #FCA5A5" : "none", color: "#fff", cursor: "pointer", boxShadow: grabando ? "0 0 0 8px rgba(220,38,38,.2), 0 4px 20px rgba(185,28,28,.5)" : hablando ? "0 0 0 6px rgba(22,163,74,.25), 0 4px 20px rgba(58,141,194,.5)" : "0 4px 20px rgba(185,28,28,.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", transition: "all .25s" }}
         onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.1)"; }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>
@@ -819,7 +847,7 @@ REGLAS ESTRICTAS:
           {/* Input */}
           <div style={{ padding: "10px 12px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 8, background: L.white, alignItems: "center", flexShrink: 0 }}>
             {/* Botón micrófono — siempre visible, grande y claro */}
-            <button onClick={iniciarGrabacion} disabled={typing}
+            <button onClick={() => { unlockAudio(); iniciarGrabacion(); }} disabled={typing}
               title={!sttOk ? "Tu navegador no soporta voz — usá Chrome" : grabando ? "Detener grabación" : "Hablar con el asistente (voz)"}
               style={{ background: grabando ? C.red : sttOk ? "#EFF6FF" : L.light, border: `2px solid ${grabando ? C.red : sttOk ? C.red : L.border}`, color: grabando ? "#fff" : sttOk ? C.red : L.muted, borderRadius: 12, width: 46, height: 46, cursor: typing || !sttOk ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s", boxShadow: grabando ? `0 0 0 5px rgba(58,141,194,.25)` : sttOk ? `0 2px 8px rgba(58,141,194,.2)` : "none" }}>
               {grabando ? <MicOff size={20} /> : <Mic size={20} />}
@@ -830,7 +858,7 @@ REGLAS ESTRICTAS:
               placeholder={grabando ? "Escuchando…" : "Escribí o usá el micrófono…"}
               readOnly={grabando}
               style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${grabando ? "#FDE68A" : L.border}`, fontSize: 13.5, fontFamily: FONT_BODY, outline: "none", color: grabando ? "#713F12" : L.text, background: grabando ? "#FFFBEB" : L.soft, transition: "all .2s" }} />
-            <button onClick={() => enviar()} disabled={typing || grabando}
+            <button onClick={() => { unlockAudio(); enviar(); }} disabled={typing || grabando}
               style={{ background: typing || grabando ? L.light : C.red, border: "none", color: "#fff", borderRadius: 10, width: 42, height: 42, cursor: typing || grabando ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .2s" }}>
               <Send size={16} />
             </button>
