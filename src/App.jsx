@@ -501,35 +501,28 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
   const hablar = useCallback(async (texto) => {
     if (!vozOnRef.current) return;
     const limpio = texto.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1")
-      .replace(/#{1,3}\s/g, "").replace(/[-•]\s/g, "").slice(0, 450);
+      .replace(/#{1,3}\s/g, "").replace(/[-•]\s/g, "").slice(0, 480);
 
-    if (ELEVENLABS_KEY) {
-      setHablando(true);
-      try {
-        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
-          method: "POST",
-          headers: { "xi-api-key": ELEVENLABS_KEY, "Content-Type": "application/json", Accept: "audio/mpeg" },
-          body: JSON.stringify({
-            text: limpio,
-            model_id: "eleven_multilingual_v2",
-            voice_settings: { stability: 0.42, similarity_boost: 0.78, style: 0.28, use_speaker_boost: true },
-          }),
-        });
-        if (!res.ok) throw new Error("EL " + res.status);
-        const blob = await res.blob();
-        const url  = URL.createObjectURL(blob);
-        if (audioRef.current) { audioRef.current.pause(); URL.revokeObjectURL(audioRef.current._url || ""); }
-        const audio = new Audio(url);
-        audio._url  = url;
-        audioRef.current = audio;
-        audio.onended = () => { setHablando(false); URL.revokeObjectURL(url); };
-        audio.onerror = () => { setHablando(false); hablarWebSpeech(limpio); };
-        await audio.play();
-      } catch {
-        setHablando(false);
-        hablarWebSpeech(limpio);
-      }
-    } else {
+    setHablando(true);
+    try {
+      // Google Cloud TTS via serverless proxy /api/tts
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: limpio }),
+      });
+      if (!res.ok) throw new Error("TTS " + res.status);
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      if (audioRef.current) { audioRef.current.pause(); URL.revokeObjectURL(audioRef.current._url || ""); }
+      const audio = new Audio(url);
+      audio._url  = url;
+      audioRef.current = audio;
+      audio.onended = () => { setHablando(false); URL.revokeObjectURL(url); };
+      audio.onerror = () => { setHablando(false); hablarWebSpeech(limpio); };
+      await audio.play();
+    } catch {
+      setHablando(false);
       hablarWebSpeech(limpio);
     }
   }, [hablarWebSpeech]);
@@ -714,9 +707,9 @@ REGLAS ESTRICTAS:
 
   const statusLabel = grabando
     ? `Escuchando… ${transcrib ? `"${transcrib.slice(0, 28)}…"` : ""}`
-    : hablando ? (ELEVENLABS_KEY ? "Hablando (ElevenLabs)…" : "Hablando…")
+    : hablando ? "Hablando (Google TTS)…"
     : typing   ? "Pensando…"
-    : ELEVENLABS_KEY ? "Online · Voz ElevenLabs" : "Online";
+    : "Online · Voz Google es-AR";
 
   return (
     <>
