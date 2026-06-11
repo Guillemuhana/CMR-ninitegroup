@@ -5,7 +5,7 @@ import {
   Pencil, Bot, User, Calendar, Send, X, Check,
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, Zap, ShoppingBag, Shield, Trash2,
-  BookOpen, Activity, Mic, MicOff, Volume2, VolumeX,
+  BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
@@ -964,6 +964,97 @@ function NavDropdown({ vista, setVista, rol }) {
 }
 
 // ============================================================
+// NAV TABS (con hamburguesa para secciones secundarias)
+// ============================================================
+function NavTabs({ vista, setVista, rol }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  const primary = [
+    ["chat",    <MessageSquare size={13} />, "Chats"],
+    ["pedidos", <Package size={13} />,       "Pedidos"],
+  ];
+  const secondary = rol === "ceo"
+    ? [
+        ["reportes", <BarChart2 size={14} />, "Reportes"],
+        ["admin",    <Shield size={14} />,    "Admin"],
+        ["control",  <Activity size={14} />,  "Control"],
+      ]
+    : [["diario", <BookOpen size={14} />, "Mi Día"]];
+
+  const secActivo = secondary.some(([k]) => k === vista);
+  const secLabel  = secondary.find(([k]) => k === vista)?.[2];
+
+  const tabSt = (k) => ({
+    flex: 1, border: "none", cursor: "pointer", padding: "11px 0",
+    fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 10.5,
+    textTransform: "uppercase", letterSpacing: 0.4, transition: "all .15s",
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+    whiteSpace: "nowrap", minWidth: 60,
+    color: vista === k ? C.red : L.muted,
+    background: vista === k ? "#EFF6FF" : "transparent",
+    borderBottom: vista === k ? `2px solid ${C.red}` : "2px solid transparent",
+  });
+
+  return (
+    <div className="strip" style={{ display: "flex", borderBottom: `1px solid ${L.border}` }}>
+      {primary.map(([k, icon, l]) => (
+        <button key={k} onClick={() => setVista(k)} style={tabSt(k)}>
+          {icon} {l}
+        </button>
+      ))}
+
+      <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
+        <button onClick={() => setOpen((v) => !v)}
+          style={{
+            border: "none", cursor: "pointer", padding: "11px 14px", height: "100%",
+            fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 10.5, letterSpacing: 0.4,
+            display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
+            color: secActivo ? C.red : L.muted,
+            background: secActivo ? "#EFF6FF" : "transparent",
+            borderBottom: secActivo ? `2px solid ${C.red}` : "2px solid transparent",
+            transition: "all .15s",
+          }}>
+          <Menu size={14} />
+          {secActivo && <span style={{ fontSize: 10.5, textTransform: "uppercase" }}>{secLabel}</span>}
+        </button>
+        {open && (
+          <div style={{
+            position: "absolute", top: "100%", right: 0, minWidth: 180,
+            background: L.white, border: `1px solid ${L.border}`,
+            borderRadius: "0 0 10px 10px", boxShadow: "0 8px 24px rgba(0,0,0,.12)", zIndex: 100,
+          }}>
+            {secondary.map(([k, icon, l]) => (
+              <button key={k} onClick={() => { setVista(k); setOpen(false); }}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", gap: 10,
+                  padding: "11px 18px", border: "none", cursor: "pointer",
+                  fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 13,
+                  color: vista === k ? C.red : L.text,
+                  background: vista === k ? "#EFF6FF" : L.white,
+                  borderLeft: vista === k ? `3px solid ${C.red}` : "3px solid transparent",
+                  transition: "all .12s",
+                }}
+                onMouseEnter={(e) => { if (vista !== k) e.currentTarget.style.background = L.soft; }}
+                onMouseLeave={(e) => { if (vista !== k) e.currentTarget.style.background = L.white; }}>
+                {icon} {l}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // SIDEBAR
 // ============================================================
 function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, vista, setVista, alertas, isMobile, rol, perfil }) {
@@ -1007,21 +1098,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
 
 
       {/* ── Tabs ── */}
-      <div className="strip" style={{ display: "flex", borderBottom: `1px solid ${L.border}`, overflowX: "auto" }}>
-        {[
-          ["chat",     <MessageSquare size={13} />, "Chats"],
-          ["pedidos",  <Package size={13} />,       "Pedidos"],
-          ...(rol === "ceo" ? [["reportes", <BarChart2 size={13} />, "Reportes"]] : []),
-          ...(rol === "ceo" ? [["admin",    <Shield size={13} />,    "Admin"   ]] : []),
-          ...(rol === "ceo" ? [["control",  <Activity size={13} />,  "Control" ]] : []),
-          ...(rol === "vendedor" ? [["diario", <BookOpen size={13} />, "Mi Día"]] : []),
-        ].map(([k, icon, l]) => (
-          <button key={k} onClick={() => setVista(k)}
-            style={{ flex: 1, border: "none", cursor: "pointer", padding: "11px 0", fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 10.5, textTransform: "uppercase", letterSpacing: 0.4, transition: "all .15s", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, whiteSpace: "nowrap", minWidth: 60, color: vista === k ? C.red : L.muted, background: vista === k ? "#EFF6FF" : "transparent", borderBottom: vista === k ? `2px solid ${C.red}` : "2px solid transparent" }}>
-            {icon} {l}
-          </button>
-        ))}
-      </div>
+      <NavTabs vista={vista} setVista={setVista} rol={rol} />
 
       {vista === "chat" && (
         <>
