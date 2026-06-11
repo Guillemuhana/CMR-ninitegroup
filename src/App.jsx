@@ -80,29 +80,42 @@ function useIsMobile(bp = 768) {
 }
 
 // Prompt del sistema para el Asistente IA
-const GROK_SYSTEM = `Sos el Asistente Ejecutivo personal y especialista de Nicolás en NINI T-GROUP (NTG). Sos como su empleado de confianza de máximo rendimiento — proactivo, inteligente, especialista en el negocio, siempre un paso adelante.
+const GROK_SYSTEM = `Sos el Asistente Ejecutivo personal y especialista de Nicolás en NINIT GROUP. Sos como su empleado de confianza de máximo rendimiento — proactivo, inteligente, especialista en el negocio, siempre un paso adelante.
 
-════ EMPRESA: NINI T-GROUP (NTG) ════
-NTG vende y alquila luxury restroom trailers (remolques sanitarios de lujo) para eventos premium en Miami y Florida. Nicolás es el dueño y CEO. El estilo de la empresa es ejecutivo, exclusivo, "Miami Business".
+════ EMPRESA: NINIT GROUP ════
+NINIT GROUP vende Y alquila luxury restroom trailers (remolques sanitarios de lujo) para eventos premium en Miami, Florida y todo USA. Nicolás es el dueño y CEO. Estilo: ejecutivo, exclusivo, "Miami Business". Web: ninitgroup.com · Email: sales@ninitgroup.com · WhatsApp: +1 786 385 9402.
 
-CATÁLOGO Y MODELOS:
-- 2 Stalls │ $24,000 Ready to Ship / $21,500 Pre-sale
-- 3 Stalls │ $27,500 Ready to Ship / $25,000 Pre-sale
-- 4 Stalls │ $35,000 Ready to Ship / $32,500 Pre-sale
-- ADA + 2  │ $32,000 Ready to Ship / $29,500 Pre-sale
-Catálogo completo: https://ninitgroup.com/wp-content/uploads/2026/04/NINITGROUP_CATALOG.pdf
+CATÁLOGO Y MODELOS (venta):
+- 2 Stalls White Marble │ $24,000 Ready to Ship / $21,500 Pre-sale  → eventos boutique, pequeños
+- 3 Stalls              │ $27,500 Ready to Ship / $25,000 Pre-sale  → EL MÁS POPULAR, balance perfecto
+- 4 Stalls              │ $35,000 Ready to Ship / $32,500 Pre-sale  → festivales grandes, alto flujo
+- ADA + 2 Accesible     │ $32,000 Ready to Ship / $29,500 Pre-sale  → cumplimiento federal ADA
+Catálogo: https://ninitgroup.com/wp-content/uploads/2026/04/NINITGROUP_CATALOG.pdf
+
+ALQUILER: También disponible. Precios por consulta según fecha, modelo y duración del evento.
+
+PIPELINE DE VENTAS (estados del CRM):
+Lead Nuevo → Contactado → Interesado → Cotización Enviada → Negociando → Cerrado ✓ / Perdido
 
 VENTAJAS CLAVE DE VENTA:
-- Cliente en Florida → envío gratis (siempre mencionarlo si aplica)
-- Unidades Ready to Ship tienen stock limitado → urgencia real
+- Entrega a todo USA — envío GRATIS a clientes en Florida (¡siempre mencionarlo!)
+- Units Ready to Ship = stock limitado → crear urgencia real
+- Personalización: layouts, terminaciones y branding exterior a medida
+- Climatización y accesorios de acero inoxidable — lujo real, no básico
+- Proceso simple: consulta → revisar opciones → aprobar cotización → entrega
 - Cierre: proponer separar unidad con depósito o llamada de 5 min
-- Destacar lujo, exclusividad y confianza — proyectar imagen premium siempre
+
+LEADS DE META ADS:
+- Son prospectos calientes — ya vieron el anuncio y se interesaron
+- Responder RÁPIDO (dentro de 5 min idealmente) aumenta la tasa de cierre x3
+- Preguntar siempre: ¿compra o alquiler? · fecha del evento · ciudad · cant. de personas
+- Si no responden → follow-up a las 24h y a las 72h
 
 ════ TU ROL EN EL CRM ════
 - Ayudar a Nico a cerrar más ventas y no perder ningún lead
-- Alertar sobre clientes sin respuesta, seguimientos vencidos, leads sin asignar
+- Alertar sobre leads sin respuesta, seguimientos vencidos, leads sin asignar
 - Analizar el pipeline y sugerir acciones concretas con nombres reales
-- Responder cualquier consulta de negocio, producto, cliente o estrategia de venta
+- Redactar mensajes en inglés para clientes cuando Nico lo pida
 - Actuar como su mano derecha — no un chatbot, sino un especialista real del equipo
 - Ser proactivo: si ves algo importante en el contexto del CRM, mencionalo sin que te lo pidan
 
@@ -1165,6 +1178,60 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
 }
 
 // ============================================================
+// PLANTILLAS DE RESPUESTA RÁPIDA
+// ============================================================
+const PLANTILLAS = [
+  {
+    grupo: "🟢 Primer contacto",
+    items: [
+      {
+        label: "Bienvenida Meta Ads",
+        texto: `Hi! Thanks for reaching out to NINIT Group 🚐✨ I'm here to help! I saw you were interested in our luxury restroom trailers. Could you tell me a bit more about your needs?\n\n• Are you looking to buy or rent?\n• What's the event date and location?\n• How many guests are you expecting?\n\nWe'll put together a custom quote for you right away!`,
+      },
+      {
+        label: "Saludo + catálogo",
+        texto: `Hi! Thanks for your interest in NINIT Group 🙌\n\nHere's our full catalog with all models and specs:\n👉 https://ninitgroup.com/wp-content/uploads/2026/04/NINITGROUP_CATALOG.pdf\n\nWe have 4 models available:\n• 2-Stall White Marble — boutique events\n• 3-Stall — our most popular unit ⭐\n• 4-Stall — large festivals & high traffic\n• ADA+2 — fully accessible option\n\nWhich one fits your event best?`,
+      },
+    ],
+  },
+  {
+    grupo: "💰 Precios y modelos",
+    items: [
+      {
+        label: "Precios de venta",
+        texto: `Here's a quick overview of our pricing:\n\n🏆 2-Stall White Marble: $21,500 (pre-sale) / $24,000 (ready to ship)\n⭐ 3-Stall (most popular): $25,000 (pre-sale) / $27,500 (ready to ship)\n🔥 4-Stall: $32,500 (pre-sale) / $35,000 (ready to ship)\n♿ ADA+2 Accessible: $29,500 (pre-sale) / $32,000 (ready to ship)\n\n📦 FREE shipping for Florida clients!\n\nReady-to-ship units have limited stock. Want to reserve yours with a deposit?`,
+      },
+      {
+        label: "Solicitar cotización alquiler",
+        texto: `For rental pricing, it depends on the event date, duration, and model. Could you share:\n\n1️⃣ Event date?\n2️⃣ City / location?\n3️⃣ How many hours/days?\n4️⃣ Estimated number of guests?\n\nI'll get you a custom rental quote ASAP 🙌`,
+      },
+    ],
+  },
+  {
+    grupo: "📋 Calificar lead",
+    items: [
+      {
+        label: "Pedir datos del evento",
+        texto: `To prepare your custom quote, I just need a few details:\n\n1. Buy or rent?\n2. Event date?\n3. Event location (city)?\n4. Estimated number of guests?\n5. Any specific model in mind?\n\nWe'll get back to you with a tailored proposal right away! 🚐`,
+      },
+    ],
+  },
+  {
+    grupo: "🔔 Seguimiento",
+    items: [
+      {
+        label: "Follow-up 24h",
+        texto: `Hi! Just following up on your inquiry about our luxury restroom trailers 😊 We still have units available and would love to help with your event. Any questions I can answer for you?`,
+      },
+      {
+        label: "Urgencia (stock limitado)",
+        texto: `Quick heads up — our ready-to-ship units are moving fast! 🚨 If you want to lock in availability for your event, now is the perfect time to secure your unit with a deposit. Want me to send over the details to get started?`,
+      },
+    ],
+  },
+];
+
+// ============================================================
 // CHAT PANEL
 // ============================================================
 function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onBack, isMobile }) {
@@ -1178,7 +1245,16 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [hoverMsg, setHoverMsg]   = useState(null);
   const [confirmElim, setConfirmElim] = useState(false);
   const [eliminando, setEliminando]   = useState(false);
+  const [showPlantillas, setShowPlantillas] = useState(false);
   const endRef = useRef(null);
+  const plantillasRef = useRef(null);
+
+  useEffect(() => {
+    if (!showPlantillas) return;
+    const h = (e) => { if (plantillasRef.current && !plantillasRef.current.contains(e.target)) setShowPlantillas(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showPlantillas]);
 
   const eliminarContacto = async () => {
     setEliminando(true);
@@ -1512,7 +1588,36 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
       </div>}
 
       {/* ── Input ── */}
-      <div style={{ padding: isMobile ? "10px 12px" : "14px 22px", borderTop: `1px solid ${L.border}`, background: L.white, display: "flex", gap: 8, alignItems: "flex-end", flexShrink: 0 }}>
+      <div style={{ padding: isMobile ? "10px 12px" : "14px 22px", borderTop: `1px solid ${L.border}`, background: L.white, display: "flex", gap: 8, alignItems: "flex-end", flexShrink: 0, position: "relative" }}>
+        {/* Plantillas rápidas */}
+        <div ref={plantillasRef} style={{ position: "relative", flexShrink: 0 }}>
+          <button onClick={() => setShowPlantillas((v) => !v)} title="Plantillas de respuesta rápida"
+            style={{ background: showPlantillas ? C.red : L.soft, color: showPlantillas ? "#fff" : C.red, border: `1.5px solid ${showPlantillas ? C.red : C.red + "55"}`, borderRadius: 11, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, transition: "all .15s", flexShrink: 0 }}>
+            <Zap size={15} />
+            {!isMobile && <span>Plantillas</span>}
+          </button>
+          {showPlantillas && (
+            <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: isMobile ? "calc(100vw - 24px)" : 380, maxHeight: 460, overflowY: "auto", background: L.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", border: `1px solid ${L.border}`, zIndex: 200 }}>
+              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                <Zap size={14} color={C.red} />
+                <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.8 }}>Plantillas rápidas</span>
+              </div>
+              {PLANTILLAS.map((grupo) => (
+                <div key={grupo.grupo}>
+                  <div style={{ padding: "8px 16px 4px", fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{grupo.grupo}</div>
+                  {grupo.items.map((item) => (
+                    <button key={item.label} onClick={() => { setTexto(item.texto); setShowPlantillas(false); }}
+                      style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40` }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
           placeholder={isMobile ? "Escribí un mensaje…" : "Escribí un mensaje… (Enter para enviar · Shift+Enter = nueva línea)"} rows={1}

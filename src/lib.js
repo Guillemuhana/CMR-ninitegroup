@@ -60,16 +60,18 @@ export function fmtDuracion(seg) {
 
 // ─── Estados del pipeline CRM ───────────────────────────────
 export const ESTADOS = {
-  nuevo:       { label: "Nuevo",        color: "#1e5a8a", bg: "#d6e8f5" },
-  contactado:  { label: "Contactado",   color: "#1D4ED8", bg: "#DBEAFE" },
-  interesado:  { label: "Interesado",   color: "#7C3AED", bg: "#EDE9FE" },
-  pendiente:   { label: "Pendiente",    color: "#92400E", bg: "#FEF3C7" },
-  vendido:     { label: "Vendido",      color: "#15803D", bg: "#DCFCE7" },
-  perdido:     { label: "Perdido",      color: "#9b2c2c", bg: "#f5dcdc" },
+  nuevo:       { label: "Lead Nuevo",          color: "#1e5a8a", bg: "#d6e8f5" },
+  contactado:  { label: "Contactado",          color: "#1D4ED8", bg: "#DBEAFE" },
+  interesado:  { label: "Interesado",          color: "#7C3AED", bg: "#EDE9FE" },
+  cotizacion:  { label: "Cotización Enviada",  color: "#9333EA", bg: "#F3E8FF" },
+  negociando:  { label: "Negociando",          color: "#D97706", bg: "#FEF9C3" },
+  pendiente:   { label: "Pendiente",           color: "#92400E", bg: "#FEF3C7" },
+  vendido:     { label: "Cerrado ✓",           color: "#15803D", bg: "#DCFCE7" },
+  perdido:     { label: "Perdido",             color: "#9b2c2c", bg: "#f5dcdc" },
   // Legacy
   en_conversacion: { label: "En conversación", color: "#1e5a8a", bg: "#d6e8f5" },
-  pedido:      { label: "Pedido",       color: "#15803D", bg: "#DCFCE7" },
-  cerrado:     { label: "Cerrado",      color: "#4a4a4a", bg: "#e3e3e3" },
+  pedido:      { label: "Pedido",              color: "#15803D", bg: "#DCFCE7" },
+  cerrado:     { label: "Cerrado",             color: "#4a4a4a", bg: "#e3e3e3" },
 };
 
 // Paleta de marca NINIT (azul corporativo / blanco / grafito)
