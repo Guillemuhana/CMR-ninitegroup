@@ -5,7 +5,7 @@ import {
   Pencil, Bot, User, Calendar, Send, X, Check,
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, Zap, ShoppingBag, Shield, Trash2,
-  BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu,
+  BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
@@ -19,6 +19,7 @@ import Reportes from "./Reportes";
 import AdminPanel from "./AdminPanel";
 import DiarioVendedor from "./DiarioVendedor";
 import CEODashboard from "./CEODashboard";
+import Directorio from "./Directorio";
 
 // ============================================================
 // PALETA LIGHT — tema claro profesional
@@ -983,9 +984,10 @@ function NavTabs({ vista, setVista, rol }) {
   ];
   const secondary = rol === "ceo"
     ? [
-        ["reportes", <BarChart2 size={14} />, "Reportes"],
-        ["admin",    <Shield size={14} />,    "Admin"],
-        ["control",  <Activity size={14} />,  "Control"],
+        ["directorio", <Users size={14} />,    "Directorio"],
+        ["reportes",   <BarChart2 size={14} />, "Reportes"],
+        ["admin",      <Shield size={14} />,    "Admin"],
+        ["control",    <Activity size={14} />,  "Control"],
       ]
     : [["diario", <BookOpen size={14} />, "Mi Día"]];
 
@@ -1860,7 +1862,7 @@ export default function App() {
   const mobileInPanel = isMobile && (
     activo !== null ||
     vista === "pedidos" || vista === "reportes" || vista === "admin" ||
-    vista === "control" || vista === "diario"
+    vista === "control" || vista === "diario" || vista === "directorio"
   );
 
   return (
@@ -1878,7 +1880,12 @@ export default function App() {
       </div>
 
       <div className="app-main">
-        {vista === "admin" && rol === "ceo" ? (
+        {vista === "directorio" && rol === "ceo" ? (
+          <>
+            {isMobile && <MobileBack title="Directorio" onBack={() => setVista("chat")} />}
+            <div style={{ flex: 1, overflowY: "auto", height: "100%" }}><Directorio /></div>
+          </>
+        ) : vista === "admin" && rol === "ceo" ? (
           <>
             {isMobile && <MobileBack title="Admin" onBack={() => setVista("chat")} />}
             <AdminPanel userName={userName} isMobile={isMobile} />
