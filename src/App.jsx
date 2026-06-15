@@ -5,7 +5,7 @@ import {
   Pencil, Bot, User, Calendar, Send, X, Check,
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, Zap, ShoppingBag, Shield, Trash2,
-  BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users,
+  BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
@@ -169,10 +169,11 @@ function Avatar({ nombre, foto, size = 40, border }) {
 // LOGIN
 // ============================================================
 function Login() {
-  const [email, setEmail]   = useState("");
-  const [pass, setPass]     = useState("");
-  const [err, setErr]       = useState("");
-  const [loading, setLoad]  = useState(false);
+  const [email, setEmail]     = useState("");
+  const [pass, setPass]       = useState("");
+  const [err, setErr]         = useState("");
+  const [loading, setLoad]    = useState(false);
+  const [showPass, setShowPass] = useState(false);
 
   const handleLogin = async () => {
     setErr(""); setLoad(true);
@@ -181,15 +182,15 @@ function Login() {
     setLoad(false);
   };
 
+  const inputSt = { width: "100%", boxSizing: "border-box", padding: "13px 16px", borderRadius: 12, border: `1.5px solid ${L.border}`, fontSize: 14, fontFamily: FONT_BODY, color: L.text, outline: "none", background: L.soft, transition: "border-color .2s" };
+  const labelSt = { display: "block", fontSize: 11, fontWeight: 700, color: L.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.8 };
+
   return (
     <div className="login-scroll" style={{ minHeight: "100%", overflowY: "auto", WebkitOverflowScrolling: "touch", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#fff", fontFamily: FONT_BODY, padding: "40px 20px" }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 36 }}>
-          <img
-            src={LOGO_URL}
-            alt="NINIT Group"
-            style={{ width: "100%", maxWidth: 320, height: "auto", objectFit: "contain", display: "block", filter: "drop-shadow(0 2px 14px rgba(58,141,194,0.45))" }}
-          />
+          <img src={LOGO_URL} alt="NINIT Group"
+            style={{ width: "100%", maxWidth: 320, height: "auto", objectFit: "contain", display: "block", filter: "drop-shadow(0 2px 14px rgba(58,141,194,0.45))" }} />
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
             <div style={{ height: 1, width: 28, background: L.border }} />
             <span style={{ fontFamily: FONT_DISPLAY, fontSize: 11, fontWeight: 700, letterSpacing: 4, color: L.light, textTransform: "uppercase" }}>CRM</span>
@@ -198,17 +199,28 @@ function Login() {
         </div>
 
         <div>
-          {[
-            { label: "Email", type: "email", val: email, set: setEmail, ph: "tu@ninitgroup.com" },
-            { label: "Contraseña", type: "password", val: pass, set: setPass, ph: "••••••••" },
-          ].map(({ label, type, val, set, ph }) => (
-            <div key={label} style={{ marginBottom: 14 }}>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: L.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.8 }}>{label}</label>
-              <input type={type} value={val} onChange={(e) => set(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleLogin()} placeholder={ph}
-                style={{ width: "100%", boxSizing: "border-box", padding: "13px 16px", borderRadius: 12, border: `1.5px solid ${L.border}`, fontSize: 14, fontFamily: FONT_BODY, color: L.text, outline: "none", background: L.soft, transition: "border-color .2s" }} />
+          {/* Email */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelSt}>Email</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()} placeholder="tu@ninitgroup.com"
+              style={inputSt} />
+          </div>
+
+          {/* Contraseña con ojo */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelSt}>Contraseña</label>
+            <div style={{ position: "relative" }}>
+              <input type={showPass ? "text" : "password"} value={pass} onChange={(e) => setPass(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()} placeholder="••••••••"
+                style={{ ...inputSt, paddingRight: 46 }} />
+              <button type="button" onClick={() => setShowPass((v) => !v)}
+                style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: L.muted, display: "flex", alignItems: "center", padding: 0 }}>
+                {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
-          ))}
+          </div>
+
           {err && (
             <div style={{ color: C.red, fontSize: 13, marginBottom: 14, padding: "10px 14px", background: "#FEF2F2", borderRadius: 10, border: "1px solid #FECACA", display: "flex", alignItems: "center", gap: 8 }}>
               <AlertCircle size={15} /> {err}
