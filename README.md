@@ -52,6 +52,20 @@ y un nodo IF: si `bot_activo=false`, no responde (el vendedor atiende).
 3. Environment Variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_N8N_SEND_WEBHOOK`.
 4. Deploy.
 
+## 5. Deploy rápido desde la máquina local
+Si ya tenés el repo clonado, podés commitear y pushear los cambios y luego desplegar en Vercel.
+
+Comandos sugeridos (PowerShell):
+```powershell
+git add -A
+git commit -m "Integra NINI BOT prompt"
+git push origin HEAD
+# Luego en la máquina local (si tenés Vercel CLI configurado):
+vercel --prod --confirm
+```
+
+Se agregó un script opcional `scripts/deploy.ps1` que automatiza los pasos de commit/push y muestra cómo invocar `vercel --prod`.
+
 ## Pedidos y facturación
 El schema ya incluye la tabla `pedidos` con campo `total`. Los reportes calculan facturación y ticket
 promedio automáticamente. Para activarlo, cuando definas: insertá un registro en `pedidos` al confirmar

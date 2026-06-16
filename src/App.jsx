@@ -539,7 +539,7 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
   const [typing, setTyping]       = useState(false);
   const [grabando, setGrabando]   = useState(false);
   const [hablando, setHablando]   = useState(false);
-  const [vozOn, setVozOn]         = useState(true);
+  const [vozOn, setVozOn]         = useState(false);
   const [sttOk, setSttOk]         = useState(false);
   const [transcrib, setTranscrib] = useState("");
   const [briefingHecho, setBriefing] = useState(false);
@@ -547,6 +547,7 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
   const recognitionRef = useRef(null);
   const audioCtxRef    = useRef(null);  // AudioContext — desbloqueado por gesto del usuario
   const audioSrcRef    = useRef(null);  // AudioBufferSourceNode activo
+  const audioRef       = useRef(null);
   const vozOnRef       = useRef(vozOn);
   const saludadoRef    = useRef(false);
 
@@ -651,7 +652,12 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
     const nombre = nombreUsuario.split(" ")[0];
     // Pequeño delay para que el AudioContext esté desbloqueado
     const t = setTimeout(() => {
-      hablar(`${saludo} ${nombre}. ¿Cómo estás? ¿Puedo ayudarte en algo?`);
+      const mensaje = `${saludo} ${nombre}. ¿Cómo estás? ¿Puedo ayudarte en algo?`;
+      if (vozOnRef.current) {
+        hablar(mensaje);
+      } else {
+        setMsgs((p) => [...p, { from: "ai", text: mensaje }]);
+      }
     }, 400);
     return () => clearTimeout(t);
   }, [open, nombreUsuario, hablar]);
@@ -676,7 +682,7 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
     else briefing += ` ¿Arrancamos por eso?`;
 
     setMsgs([{ from: "ai", text: briefing }]);
-    hablar(briefing);
+    if (vozOnRef.current) hablar(briefing);
   }, [open]);  // eslint-disable-line
 
   // ── STT ──────────────────────────────────────────────────
@@ -754,7 +760,7 @@ REGLAS ESTRICTAS:
 5. Solo un <ACCION> por respuesta.`;
 
       const apiMsgs = [
-        { role: "system", content: GROK_SYSTEM + sysExtra },
+        { role: "system", content: GROK_SYSTEM + (niniPrompt ? "\n\n" + niniPrompt : "") + sysExtra },
         ...historial.map((m) => ({ role: m.from === "user" ? "user" : "assistant", content: m.text })),
         { role: "user", content: q },
       ];
@@ -817,12 +823,12 @@ REGLAS ESTRICTAS:
     ? `Escuchando… ${transcrib ? `"${transcrib.slice(0, 28)}…"` : ""}`
     : hablando ? "Hablando (Google TTS)…"
     : typing   ? "Pensando…"
-    : "Online · Voz Google es-AR";
+    : "Online · Modo texto";
 
   return (
     <>
       {/* Botón flotante */}
-      <button onClick={() => { unlockAudio(); setOpen((v) => !v); }} title="Asistente IA"
+      <button onClick={() => { setOpen((v) => !v); }} title="Asistente IA"
         style={{ position: "fixed", bottom: isMobile ? "calc(76px + env(safe-area-inset-bottom))" : 84, right: isMobile ? 16 : 24, width: isMobile ? 50 : 56, height: isMobile ? 50 : 56, borderRadius: "50%", background: grabando ? "#DC2626" : open ? L.muted : C.red, border: grabando ? "3px solid #FCA5A5" : "none", color: "#fff", cursor: "pointer", boxShadow: grabando ? "0 0 0 8px rgba(220,38,38,.2), 0 4px 20px rgba(185,28,28,.5)" : hablando ? "0 0 0 6px rgba(22,163,74,.25), 0 4px 20px rgba(58,141,194,.5)" : "0 4px 20px rgba(185,28,28,.45)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", transition: "all .25s" }}
         onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.1)"; }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}>
@@ -845,11 +851,7 @@ REGLAS ESTRICTAS:
                 {statusLabel}
               </div>
             </div>
-            <button onClick={() => { setVozOn((v) => !v); audioRef.current?.pause(); window.speechSynthesis?.cancel(); setHablando(false); }}
-              title={vozOn ? "Silenciar voz" : "Activar voz"}
-              style={{ background: vozOn ? "rgba(255,255,255,.22)" : "rgba(255,255,255,.08)", border: `1.5px solid ${vozOn ? "rgba(255,255,255,.45)" : "rgba(255,255,255,.15)"}`, color: "#fff", borderRadius: 8, width: 29, height: 29, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }}>
-              {vozOn ? <Volume2 size={13} /> : <VolumeX size={13} />}
-            </button>
+            <
             <button onClick={() => setOpen(false)}
               style={{ background: "rgba(255,255,255,.12)", border: "none", color: "#fff", borderRadius: 8, width: 29, height: 29, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <X size={14} />
@@ -927,19 +929,19 @@ REGLAS ESTRICTAS:
           {/* Input */}
           <div style={{ padding: "10px 12px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 8, background: L.white, alignItems: "center", flexShrink: 0 }}>
             {/* Botón micrófono — siempre visible, grande y claro */}
-            <button onClick={() => { unlockAudio(); iniciarGrabacion(); }} disabled={typing}
-              title={!sttOk ? "Tu navegador no soporta voz — usá Chrome" : grabando ? "Detener grabación" : "Hablar con el asistente (voz)"}
-              style={{ background: grabando ? C.red : sttOk ? "#EFF6FF" : L.light, border: `2px solid ${grabando ? C.red : sttOk ? C.red : L.border}`, color: grabando ? "#fff" : sttOk ? C.red : L.muted, borderRadius: 12, width: 46, height: 46, cursor: typing || !sttOk ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s", boxShadow: grabando ? `0 0 0 5px rgba(58,141,194,.25)` : sttOk ? `0 2px 8px rgba(58,141,194,.2)` : "none" }}>
-              {grabando ? <MicOff size={20} /> : <Mic size={20} />}
+            <button onClick={() => { document.getElementById('nini-input')?.focus(); }} disabled={typing}
+              title={"Modo solo texto — escribí tu consulta"}
+              style={{ background: L.soft, border: `2px solid ${L.border}`, color: L.muted, borderRadius: 12, width: 46, height: 46, cursor: typing ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }}>
+              <Sparkles size={20} />
             </button>
-            <input value={transcrib || input}
-              onChange={(e) => { if (!grabando) setInput(e.target.value); }}
-              onKeyDown={(e) => { if (e.key === "Enter" && !grabando) enviar(); }}
-              placeholder={grabando ? "Escuchando…" : "Escribí o usá el micrófono…"}
-              readOnly={grabando}
+            <input id="nini-input" value={transcrib || input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") enviar(); }}
+              placeholder={"Escribí tu consulta..."}
+              readOnly={false}
               style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${grabando ? "#FDE68A" : L.border}`, fontSize: 13.5, fontFamily: FONT_BODY, outline: "none", color: grabando ? "#713F12" : L.text, background: grabando ? "#FFFBEB" : L.soft, transition: "all .2s" }} />
-            <button onClick={() => { unlockAudio(); enviar(); }} disabled={typing || grabando}
-              style={{ background: typing || grabando ? L.light : C.red, border: "none", color: "#fff", borderRadius: 10, width: 42, height: 42, cursor: typing || grabando ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .2s" }}>
+            <button onClick={() => { enviar(); }} disabled={typing}
+              style={{ background: typing ? L.light : C.red, border: "none", color: "#fff", borderRadius: 10, width: 42, height: 42, cursor: typing ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .2s" }}>
               <Send size={16} />
             </button>
           </div>
@@ -1774,6 +1776,7 @@ export default function App() {
   const [activo,    setActivo]    = useState(null);
   const [vista,     setVista]     = useState("chat");
   const [ready,     setReady]     = useState(false);
+  const [niniPrompt, setNiniPrompt] = useState("");
   const tuvoSesion   = useRef(false);
   const sesionDBId   = useRef(null);
   const heartbeatRef = useRef(null);
@@ -1788,6 +1791,22 @@ export default function App() {
       }
     });
     return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // Cargar prompt maestro NINI BOT (si existe en public)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const r = await fetch('/nini_master_prompt.md');
+        if (!r.ok) return;
+        const txt = await r.text();
+        if (mounted) setNiniPrompt(txt);
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
   }, []);
 
   // ── Perfil + contactos + tracking al iniciar sesión ──────
