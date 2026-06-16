@@ -1776,9 +1776,7 @@ export default function App() {
       setPerfil(p);
 
       const cargar = async () => {
-        let query = supabase.from("contactos").select("*").order("updated_at", { ascending: false });
-        if (p?.role === "vendedor") query = query.eq("vendedor", p.nombre);
-        const { data } = await query;
+        const { data } = await supabase.from("contactos").select("*").order("updated_at", { ascending: false });
         setContactos(data || []);
       };
       await cargar();
