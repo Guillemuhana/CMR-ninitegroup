@@ -85,6 +85,7 @@ export default function CEODashboard({ isMobile }) {
           { data: sesHoy },
           { data: sesSem },
           { data: contactosVend },
+          { data: contactosRev },
         ] = await Promise.all([
           supabase.from("mensajes").select("*", { count: "exact", head: true })
             .eq("agente", v.nombre).eq("direccion", "out").gte("created_at", inicioDia.toISOString()),
@@ -102,6 +103,8 @@ export default function CEODashboard({ isMobile }) {
             .eq("vendedor_id", v.id).gte("fecha", inicioSemana.toISOString().slice(0, 10)),
           supabase.from("contactos").select("ultimo_in_at, ultimo_out_at")
             .eq("vendedor", v.nombre).not("ultimo_in_at", "is", null).not("ultimo_out_at", "is", null),
+          supabase.from("contactos").select("ultimo_in_at, revisado_at")
+            .eq("vendedor", v.nombre).not("ultimo_in_at", "is", null),
         ]);
 
         const tiempoHoy = (sesHoy || []).reduce((a, s) => a + (s.duracion_seg || 0), 0);
@@ -120,6 +123,25 @@ export default function CEODashboard({ isMobile }) {
           }
         }
 
+        // ── Revisión: cuántas consultas sin abrir + tiempo prom. de revisión ──
+        const pendientes = (contactosRev || []).filter(
+          (c) => !c.revisado_at || new Date(c.ultimo_in_at) > new Date(c.revisado_at)
+        );
+        const sinRevisar = pendientes.length;
+        const esperaMax = pendientes.length
+          ? Math.max(...pendientes.map((c) => Date.now() - new Date(c.ultimo_in_at).getTime()))
+          : 0;
+        const tiemposRev = (contactosRev || [])
+          .map((c) => {
+            if (!c.revisado_at) return null;
+            const diff = new Date(c.revisado_at) - new Date(c.ultimo_in_at);
+            return diff >= 0 ? diff : null;
+          })
+          .filter((x) => x !== null);
+        const tiempoRevProm = tiemposRev.length
+          ? Math.round(tiemposRev.reduce((a, b) => a + b, 0) / tiemposRev.length / 1000)
+          : null;
+
         nuevasStats[v.id] = {
           msgsHoy: msgsHoy || 0,
           msgsSem: msgsSem || 0,
@@ -129,6 +151,9 @@ export default function CEODashboard({ isMobile }) {
           tiempoHoy,
           tiempoSem,
           tiempoRespProm,
+          sinRevisar,
+          esperaMax,
+          tiempoRevProm,
           convRate: contactosTotales > 0 ? Math.round(((vendidos || 0) / contactosTotales) * 100) : 0,
         };
       }));
@@ -185,6 +210,11 @@ export default function CEODashboard({ isMobile }) {
   const totalMsgsHoy = Object.values(statsVend).reduce((a, s) => a + s.msgsHoy, 0);
   const totalContactos = Object.values(statsVend).reduce((a, s) => a + s.contactosTotales, 0);
   const totalPedidos = Object.values(statsVend).reduce((a, s) => a + s.pedidosMes, 0);
+  const totalSinRevisar = Object.values(statsVend).reduce((a, s) => a + (s.sinRevisar || 0), 0);
+  const vendSinRevisar = vendedores
+    .map((v) => ({ nombre: v.nombre.split(" ")[0], n: statsVend[v.id]?.sinRevisar || 0 }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n);
   const mejorRespVend = vendedores.reduce((best, v) => {
     const t = statsVend[v.id]?.tiempoRespProm;
     if (t && (!best || t < best.t)) return { nombre: v.nombre.split(" ")[0], t };
@@ -230,6 +260,23 @@ export default function CEODashboard({ isMobile }) {
           {/* ══════════════ TAB RESUMEN ══════════════ */}
           {tab === "resumen" && (
             <>
+              {/* Banner de consultas sin revisar */}
+              <div style={{ background: totalSinRevisar > 0 ? "#FEF2F2" : "#F0FDF4", border: `1.5px solid ${totalSinRevisar > 0 ? "#FECACA" : "#BBF7D0"}`, borderRadius: 14, padding: "14px 20px", marginBottom: 22, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 26 }}>{totalSinRevisar > 0 ? "👁" : "✅"}</div>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 16, color: totalSinRevisar > 0 ? "#B91C1C" : "#15803D" }}>
+                    {totalSinRevisar > 0
+                      ? `${totalSinRevisar} consulta${totalSinRevisar > 1 ? "s" : ""} sin revisar`
+                      : "Todas las consultas revisadas"}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: L.muted, marginTop: 2 }}>
+                    {totalSinRevisar > 0
+                      ? `El vendedor todavía no abrió: ${vendSinRevisar.map((x) => `${x.nombre} (${x.n})`).join(" · ")}`
+                      : "Cada cliente que escribió ya fue visto por su vendedor."}
+                  </div>
+                </div>
+              </div>
+
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}>
                 <KPICard icon={<MessageSquare size={16} />} label="Mensajes hoy (equipo)" value={totalMsgsHoy} color={C.red} />
                 <KPICard icon={<Users size={16} />} label="Contactos totales" value={totalContactos} color="#7C3AED" />
@@ -330,8 +377,8 @@ export default function CEODashboard({ isMobile }) {
                       ))}
                     </div>
 
-                    {/* Tiempo en app */}
-                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr", padding: "14px 18px", gap: 16 }}>
+                    {/* Tiempo en app + Revisión */}
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", padding: "14px 18px", gap: 16 }}>
                       <div>
                         <div style={{ fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4, fontFamily: FONT_DISPLAY, display: "flex", alignItems: "center", gap: 5 }}>
                           <Clock size={12} /> Tiempo en app hoy
@@ -346,6 +393,25 @@ export default function CEODashboard({ isMobile }) {
                         </div>
                         <div style={{ fontSize: 18, fontWeight: 800, color: s.tiempoSem > 0 ? "#0E7490" : L.light, fontFamily: FONT_DISPLAY }}>
                           {fmtDuracion(s.tiempoSem)}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4, fontFamily: FONT_DISPLAY }}>
+                          👁 Sin revisar
+                        </div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: s.sinRevisar > 0 ? "#DC2626" : "#16A34A", fontFamily: FONT_DISPLAY }}>
+                          {s.sinRevisar ?? 0}
+                          {s.sinRevisar > 0 && s.esperaMax > 0 && (
+                            <span style={{ fontSize: 11.5, fontWeight: 600, color: L.muted, marginLeft: 6 }}>hace {msToStr(s.esperaMax)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4, fontFamily: FONT_DISPLAY }}>
+                          Revisión prom.
+                        </div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: s.tiempoRevProm ? (s.tiempoRevProm < 600 ? "#16A34A" : s.tiempoRevProm < 3600 ? "#D97706" : "#DC2626") : L.light, fontFamily: FONT_DISPLAY }}>
+                          {s.tiempoRevProm ? msToStr(s.tiempoRevProm * 1000) : "—"}
                         </div>
                       </div>
                     </div>
@@ -454,7 +520,7 @@ export default function CEODashboard({ isMobile }) {
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, fontFamily: FONT_BODY }}>
                     <thead>
                       <tr style={{ background: L.soft }}>
-                        {["Vendedor", "Msgs hoy", "Msgs semana", "Resp. prom.", "Tiempo hoy", "Tiempo semana", "Conversión"].map((h) => (
+                        {["Vendedor", "Msgs hoy", "Msgs semana", "Sin revisar", "Resp. prom.", "Tiempo hoy", "Tiempo semana", "Conversión"].map((h) => (
                           <th key={h} style={{ padding: "11px 16px", textAlign: "left", fontSize: 10.5, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.4, whiteSpace: "nowrap", fontFamily: FONT_DISPLAY }}>{h}</th>
                         ))}
                       </tr>
@@ -473,6 +539,11 @@ export default function CEODashboard({ isMobile }) {
                             </td>
                             <td style={{ padding: "12px 16px", fontWeight: 700, color: L.text }}>{s.msgsHoy ?? 0}</td>
                             <td style={{ padding: "12px 16px", color: L.muted }}>{s.msgsSem ?? 0}</td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <span style={{ padding: "3px 10px", borderRadius: 20, background: s.sinRevisar > 0 ? "#FEE2E2" : "#DCFCE7", color: s.sinRevisar > 0 ? "#DC2626" : "#16A34A", fontWeight: 800, fontSize: 12 }}>
+                                {s.sinRevisar ?? 0}
+                              </span>
+                            </td>
                             <td style={{ padding: "12px 16px", color: s.tiempoRespProm ? (s.tiempoRespProm < 1800 ? "#16A34A" : s.tiempoRespProm < 7200 ? "#D97706" : "#DC2626") : L.light, fontWeight: 700 }}>
                               {s.tiempoRespProm ? msToStr(s.tiempoRespProm) : "—"}
                             </td>

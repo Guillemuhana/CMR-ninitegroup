@@ -6,6 +6,7 @@ import {
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
+  Image as ImageIcon,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
@@ -66,6 +67,14 @@ function calcEspera(c) {
   if (!enEspera) return null;
   return Date.now() - new Date(c.ultimo_in_at).getTime();
 }
+// Tiempo que la consulta lleva SIN que el vendedor la haya visto/abierto,
+// aunque el bot ya haya respondido. null = ya revisada (o sin mensajes del cliente).
+function calcSinRevisar(c) {
+  if (!c.ultimo_in_at) return null;
+  const revisada = c.revisado_at && new Date(c.revisado_at) >= new Date(c.ultimo_in_at);
+  if (revisada) return null;
+  return Date.now() - new Date(c.ultimo_in_at).getTime();
+}
 
 // ============================================================
 // MOBILE HOOK
@@ -118,7 +127,15 @@ Garantía: 12 meses de fábrica. No prometer cobertura mayor salvo confirmación
 NTG no financia directamente. Respuesta correcta: "Trabajamos con socios de financiamiento y podemos guiarlos en las opciones disponibles."
 
 ════ SHOWROOM Y FEATURES ════
-No hay showroom tradicional — la mayoría de las unidades se construyen a pedido, pero se pueden compartir fotos, videos, layouts y avances de producción reales.
+No hay showroom tradicional — la mayoría de las unidades se construyen a pedido, pero se pueden compartir fotos reales, el catálogo y avances de producción.
+IMÁGENES POR MODELO (links oficiales — el vendedor las manda al cliente; vos podés sugerir cuál usar):
+- 2-Stall White Marble → https://ninitgroup.com/wp-content/uploads/2026/05/2bano.png
+- 3-Stall (el más popular) → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM.jpeg
+- 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/4bano.png
+- ADA+2 → https://ninitgroup.com/wp-content/uploads/2026/05/ada22.png
+- 6-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/6bano.png
+- Vista general / render → https://ninitgroup.com/wp-content/uploads/2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png
+Usá SOLO estos links. No inventes otras URLs de imágenes. En el chat el vendedor tiene un botón "Fotos" con estos mismos links por modelo.
 Features estándar: A/C, luces LED, inodoros con descarga, lavamanos, espejos, tanques de agua limpia/residual, sistema de bomba de agua, freno eléctrico, escalones plegables, gatos estabilizadores, pasamanos. No abrumar con detalle técnico salvo que lo pidan.
 
 ════ PIPELINE DE VENTAS (estados del CRM) ════
@@ -1122,12 +1139,14 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
     const porCanal  = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
     const porQuick  = !quickFiltro
       || (quickFiltro === "noleidos"     && c.no_leidos > 0)
+      || (quickFiltro === "sinrevisar"   && calcSinRevisar(c) != null)
       || (quickFiltro === "sinresponder" && c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at)));
     const porTipo   = !tipoFiltro || (c.tipo || "prospecto") === tipoFiltro;
     return porEstado && porBusq && porCanal && porQuick && porTipo;
   });
 
   const cntNoLeidos     = contactos.filter((c) => c.no_leidos > 0).length;
+  const cntSinRevisar   = contactos.filter((c) => calcSinRevisar(c) != null).length;
   const cntSinResponder = contactos.filter((c) => c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at))).length;
   const cntClientes     = contactos.filter((c) => c.tipo === "cliente").length;
   const cntProspectos   = contactos.filter((c) => !c.tipo || c.tipo === "prospecto").length;
@@ -1171,6 +1190,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
           {/* ── Filtros rápidos ── */}
           <div style={{ padding: "8px 12px", borderBottom: `1px solid ${L.border}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
             {[
+              { key: "sinrevisar",   label: "👁 Sin revisar",  cnt: cntSinRevisar,   color: "#0EA5E9",  set: setQuick, val: quickFiltro },
               { key: "noleidos",     label: "No leídos",     cnt: cntNoLeidos,     color: C.red,      set: setQuick, val: quickFiltro },
               { key: "sinresponder", label: "Sin responder",  cnt: cntSinResponder, color: "#F59E0B",  set: setQuick, val: quickFiltro },
               { key: "cliente",      label: "★ Clientes",     cnt: cntClientes,     color: "#16A34A",  set: setTipo,  val: tipoFiltro },
@@ -1262,6 +1282,16 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
                       {c.vendedor && <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>{c.vendedor}</span>}
                       {c.seguimiento_at && new Date(c.seguimiento_at) <= new Date() && <span title="Seguimiento vencido"><Clock size={12} color={C.red} /></span>}
                       {(() => {
+                        const sr = calcSinRevisar(c);
+                        if (sr == null) return null;
+                        const clr = tiempoClr(sr);
+                        return (
+                          <span title="Consulta sin revisar — el vendedor todavía no la abrió" style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 4, background: clr + "18", color: clr, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                            👁 {sr < 60000 ? "nueva" : msToStr(sr)}
+                          </span>
+                        );
+                      })()}
+                      {(() => {
                         const espera = calcEspera(c);
                         if (!espera || espera < 60000) return null;
                         const clr = tiempoClr(espera);
@@ -1312,6 +1342,36 @@ const COTIZACIONES = [
 ];
 
 // ============================================================
+// FOTOS POR MODELO (links de imagen para enviar al cliente)
+// ============================================================
+const FOTOS_MODELOS = [
+  {
+    label: "2-Stall White Marble",
+    texto: `Here's our 2-Stall White Marble unit 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/05/2bano.png`,
+  },
+  {
+    label: "3-Stall (most popular ⭐)",
+    texto: `Here's our 3-Stall unit — our most popular one ⭐ 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM.jpeg`,
+  },
+  {
+    label: "4-Stall",
+    texto: `Here's our 4-Stall unit 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/05/4bano.png`,
+  },
+  {
+    label: "ADA+2 Accessible",
+    texto: `Here's our ADA+2 fully accessible unit 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/05/ada22.png`,
+  },
+  {
+    label: "6-Stall",
+    texto: `Here's our 6-Stall unit 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/05/6bano.png`,
+  },
+  {
+    label: "Render / vista general",
+    texto: `Here's a look at our restroom trailers 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png`,
+  },
+];
+
+// ============================================================
 // PLANTILLAS DE RESPUESTA RÁPIDA
 // ============================================================
 const PLANTILLAS = [
@@ -1319,8 +1379,12 @@ const PLANTILLAS = [
     grupo: "🟢 Primer contacto",
     items: [
       {
-        label: "Saludo Fernando (NINIT)",
+        label: "Saludo Fernando (ES)",
         texto: `Hola mucho gusto mi nombre es Fernando con Ninit Group, te puedo ayudar a partir de aqui en la compra de la unidad que estas buscando, dejame saber las preguntas que pudieras tener gracias 🚐✨`,
+      },
+      {
+        label: "Saludo Fernando (EN)",
+        texto: `Hi, nice to meet you! My name is Fernando with Ninit Group. I can help you from here with the purchase of the unit you're looking for. Let me know any questions you may have. Thank you 🚐✨`,
       },
       {
         label: "Bienvenida Meta Ads",
@@ -1385,9 +1449,11 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [eliminando, setEliminando]   = useState(false);
   const [showPlantillas, setShowPlantillas] = useState(false);
   const [showCotizaciones, setShowCotizaciones] = useState(false);
+  const [showFotos, setShowFotos] = useState(false);
   const endRef = useRef(null);
   const plantillasRef = useRef(null);
   const cotizacionesRef = useRef(null);
+  const fotosRef = useRef(null);
 
   useEffect(() => {
     if (!showPlantillas) return;
@@ -1402,6 +1468,13 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [showCotizaciones]);
+
+  useEffect(() => {
+    if (!showFotos) return;
+    const h = (e) => { if (fotosRef.current && !fotosRef.current.contains(e.target)) setShowFotos(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showFotos]);
 
   const eliminarContacto = async () => {
     setEliminando(true);
@@ -1424,7 +1497,8 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const cargar = useCallback(async () => {
     const { data } = await supabase.from("mensajes").select("*").eq("contacto_id", contacto.id).order("created_at", { ascending: true });
     setMensajes(data || []);
-    await supabase.from("contactos").update({ no_leidos: 0 }).eq("id", contacto.id);
+    // Al abrir el chat queda "revisado": el vendedor vio la consulta aunque no responda
+    await supabase.from("contactos").update({ no_leidos: 0, revisado_at: new Date().toISOString() }).eq("id", contacto.id);
   }, [contacto.id]);
 
   useEffect(() => {
@@ -1755,6 +1829,30 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                   onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
                   {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {/* Fotos por modelo */}
+        <div ref={fotosRef} style={{ position: "relative", flexShrink: 0 }}>
+          <button onClick={() => setShowFotos((v) => !v)} title="Enviar foto del modelo al cliente"
+            style={{ background: showFotos ? "#0EA5E9" : L.soft, color: showFotos ? "#fff" : "#0EA5E9", border: `1.5px solid ${showFotos ? "#0EA5E9" : "#0EA5E955"}`, borderRadius: 11, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, transition: "all .15s", flexShrink: 0 }}>
+            <ImageIcon size={15} />
+            {!isMobile && <span>Fotos</span>}
+          </button>
+          {showFotos && (
+            <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: isMobile ? "calc(100vw - 24px)" : 320, maxHeight: 460, overflowY: "auto", background: L.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", border: `1px solid ${L.border}`, zIndex: 200 }}>
+              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                <ImageIcon size={14} color="#0EA5E9" />
+                <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.8 }}>Fotos por modelo</span>
+              </div>
+              {FOTOS_MODELOS.map((item) => (
+                <button key={item.label} onClick={() => { setTexto(item.texto); setShowFotos(false); }}
+                  style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40`, display: "flex", alignItems: "center", gap: 8 }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
+                  <ImageIcon size={13} color="#0EA5E9" style={{ flexShrink: 0 }} /> {item.label}
                 </button>
               ))}
             </div>
