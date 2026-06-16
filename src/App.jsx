@@ -531,7 +531,7 @@ const EJECUTAR_ACCION = {
   },
 };
 
-function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuario = "", rol = "vendedor", onRefrescar }) {
+function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuario = "", rol = "vendedor", onRefrescar, niniPrompt = "" }) {
   const isMobile   = useIsMobile();
   const [open, setOpen]           = useState(false);
   const [msgs, setMsgs]           = useState([]);
@@ -809,7 +809,7 @@ REGLAS ESTRICTAS:
       setMsgs((p) => [...p, { from: "ai", text: `Sin conexión: ${e.message}` }]);
     }
     setTyping(false);
-  }, [input, msgs, typing, contactoActivo, alertas, contactos, hablar]);
+  }, [input, msgs, typing, contactoActivo, alertas, contactos, hablar, niniPrompt]);
 
   // ── Sugerencias contextuales ─────────────────────────────
   const sugerencias = [
@@ -2010,7 +2010,7 @@ export default function App() {
         )}
       </div>
 
-      <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} nombreUsuario={userName} rol={rol} onRefrescar={recargarContactos} />
+      <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} nombreUsuario={userName} rol={rol} onRefrescar={recargarContactos} niniPrompt={niniPrompt} />
     </div>
   );
 }
