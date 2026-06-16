@@ -61,10 +61,18 @@ function tiempoClr(ms) {
   if (m < 120) return "#EA580C";
   return "#DC2626";
 }
+// Margen para ignorar el artefacto de orden in/out: si el bot/agente respondió
+// dentro de este lapso del último inbound, se considera ya respondido.
+const ESPERA_TOLERANCIA_MS = 90000; // 1.5 min
+// "Espera" = un HUMANO debe responder. Si el bot está activo, él contesta solo
+// y no hay espera (para ese caso se usa "sin revisar").
 function calcEspera(c) {
   if (!c.ultimo_in_at) return null;
-  const enEspera = !c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at);
-  if (!enEspera) return null;
+  if (c.bot_activo) return null;
+  if (c.ultimo_out_at) {
+    const diff = new Date(c.ultimo_in_at).getTime() - new Date(c.ultimo_out_at).getTime();
+    if (diff <= ESPERA_TOLERANCIA_MS) return null; // ya respondido (o casi simultáneo)
+  }
   return Date.now() - new Date(c.ultimo_in_at).getTime();
 }
 // Tiempo que la consulta lleva SIN que el vendedor la haya visto/abierto,
@@ -1138,7 +1146,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
     if (filtro === "todos") porFiltro = true;
     else if (filtro === "q:sinrevisar")   porFiltro = calcSinRevisar(c) != null;
     else if (filtro === "q:noleidos")     porFiltro = c.no_leidos > 0;
-    else if (filtro === "q:sinresponder") porFiltro = c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at));
+    else if (filtro === "q:sinresponder") porFiltro = calcEspera(c) != null;
     else if (filtro === "t:cliente")      porFiltro = c.tipo === "cliente";
     else if (filtro === "t:prospecto")    porFiltro = !c.tipo || c.tipo === "prospecto";
     else porFiltro = c.estado === filtro;
@@ -1147,7 +1155,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
 
   const cntNoLeidos     = contactos.filter((c) => c.no_leidos > 0).length;
   const cntSinRevisar   = contactos.filter((c) => calcSinRevisar(c) != null).length;
-  const cntSinResponder = contactos.filter((c) => c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at))).length;
+  const cntSinResponder = contactos.filter((c) => calcEspera(c) != null).length;
   const cntClientes     = contactos.filter((c) => c.tipo === "cliente").length;
   const cntProspectos   = contactos.filter((c) => !c.tipo || c.tipo === "prospecto").length;
 
