@@ -1153,12 +1153,6 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
     return porBusq && porCanal && porFiltro;
   });
 
-  const cntNoLeidos     = contactos.filter((c) => c.no_leidos > 0).length;
-  const cntSinRevisar   = contactos.filter((c) => calcSinRevisar(c) != null).length;
-  const cntSinResponder = contactos.filter((c) => calcEspera(c) != null).length;
-  const cntClientes     = contactos.filter((c) => c.tipo === "cliente").length;
-  const cntProspectos   = contactos.filter((c) => !c.tipo || c.tipo === "prospecto").length;
-
   return (
     <div style={{ width: "100%", height: "100%", background: L.white, borderRight: `1px solid ${L.border}`, display: "flex", flexDirection: "column" }}>
 
@@ -1210,14 +1204,9 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
             <select value={filtro} onChange={(e) => setFiltro(e.target.value)}
               style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${filtro !== "todos" ? C.red : L.border}`, fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, color: filtro !== "todos" ? C.red : L.muted, background: L.white, cursor: "pointer", outline: "none" }}>
               <option value="todos">Todos los contactos</option>
-              <optgroup label="Atención">
-                <option value="q:sinrevisar">👁 Sin revisar ({cntSinRevisar})</option>
-                <option value="q:noleidos">No leídos ({cntNoLeidos})</option>
-                <option value="q:sinresponder">Sin responder ({cntSinResponder})</option>
-              </optgroup>
               <optgroup label="Tipo">
-                <option value="t:cliente">★ Clientes ({cntClientes})</option>
-                <option value="t:prospecto">◎ Prospectos ({cntProspectos})</option>
+                <option value="t:cliente">★ Clientes</option>
+                <option value="t:prospecto">◎ Prospectos</option>
               </optgroup>
               <optgroup label="Estado">
                 {Object.keys(ESTADOS).map((f) => (
@@ -1281,26 +1270,6 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
                       {c.tipo === "cliente" && <span style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 4, background: "#DCFCE7", color: "#16A34A", fontWeight: 700 }}>★ Cliente</span>}
                       {c.vendedor && <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>{c.vendedor}</span>}
                       {c.seguimiento_at && new Date(c.seguimiento_at) <= new Date() && <span title="Seguimiento vencido"><Clock size={12} color={C.red} /></span>}
-                      {(() => {
-                        const sr = calcSinRevisar(c);
-                        if (sr == null) return null;
-                        const clr = tiempoClr(sr);
-                        return (
-                          <span title="Consulta sin revisar — el vendedor todavía no la abrió" style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 4, background: clr + "18", color: clr, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 3 }}>
-                            👁 {sr < 60000 ? "nueva" : msToStr(sr)}
-                          </span>
-                        );
-                      })()}
-                      {(() => {
-                        const espera = calcEspera(c);
-                        if (!espera || espera < 60000) return null;
-                        const clr = tiempoClr(espera);
-                        return (
-                          <span title="Tiempo sin responder" style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 4, background: clr + "18", color: clr, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 3 }}>
-                            ⏱ {msToStr(espera)}
-                          </span>
-                        );
-                      })()}
                     </div>
                   </div>
                 </div>
@@ -1676,25 +1645,6 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
           </button>
         </div>
       </div>
-
-      {/* ── Alerta tiempo de respuesta ── */}
-      {(() => {
-        const espera = calcEspera(contacto);
-        if (!espera || espera < 120000) return null; // solo si > 2 min
-        const clr = tiempoClr(espera);
-        const urgente = espera > 7200000; // > 2 horas
-        return (
-          <div style={{ background: clr + "12", borderBottom: `2px solid ${clr}40`, padding: isMobile ? "7px 14px" : "7px 22px", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 14 }}>{urgente ? "🚨" : "⏱"}</span>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: clr, flex: 1 }}>
-              {urgente ? "¡URGENTE! " : ""}Cliente esperando respuesta hace <strong>{msToStr(espera)}</strong>
-            </span>
-            <span style={{ fontSize: 11, color: clr, opacity: 0.7, fontWeight: 600 }}>
-              {espera < 600000 ? "Normal" : espera < 3600000 ? "Demorado" : "Muy demorado"}
-            </span>
-          </div>
-        );
-      })()}
 
       {/* ── Panel seguimiento ── */}
       {panelSeg && (
