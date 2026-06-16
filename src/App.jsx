@@ -1125,8 +1125,6 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
   const [canal, setCanal]         = useState("todos");
-  const [quickFiltro, setQuick]   = useState(null);
-  const [tipoFiltro, setTipo]     = useState(null);
   const [now, setNow]             = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
@@ -1134,15 +1132,17 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
   }, []);
 
   const lista = contactos.filter((c) => {
-    const porEstado = filtro === "todos" || c.estado === filtro;
     const porBusq   = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
     const porCanal  = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
-    const porQuick  = !quickFiltro
-      || (quickFiltro === "noleidos"     && c.no_leidos > 0)
-      || (quickFiltro === "sinrevisar"   && calcSinRevisar(c) != null)
-      || (quickFiltro === "sinresponder" && c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at)));
-    const porTipo   = !tipoFiltro || (c.tipo || "prospecto") === tipoFiltro;
-    return porEstado && porBusq && porCanal && porQuick && porTipo;
+    let porFiltro = true;
+    if (filtro === "todos") porFiltro = true;
+    else if (filtro === "q:sinrevisar")   porFiltro = calcSinRevisar(c) != null;
+    else if (filtro === "q:noleidos")     porFiltro = c.no_leidos > 0;
+    else if (filtro === "q:sinresponder") porFiltro = c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at));
+    else if (filtro === "t:cliente")      porFiltro = c.tipo === "cliente";
+    else if (filtro === "t:prospecto")    porFiltro = !c.tipo || c.tipo === "prospecto";
+    else porFiltro = c.estado === filtro;
+    return porBusq && porCanal && porFiltro;
   });
 
   const cntNoLeidos     = contactos.filter((c) => c.no_leidos > 0).length;
@@ -1187,26 +1187,6 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
             })}
           </div>
 
-          {/* ── Filtros rápidos ── */}
-          <div style={{ padding: "8px 12px", borderBottom: `1px solid ${L.border}`, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
-            {[
-              { key: "sinrevisar",   label: "👁 Sin revisar",  cnt: cntSinRevisar,   color: "#0EA5E9",  set: setQuick, val: quickFiltro },
-              { key: "noleidos",     label: "No leídos",     cnt: cntNoLeidos,     color: C.red,      set: setQuick, val: quickFiltro },
-              { key: "sinresponder", label: "Sin responder",  cnt: cntSinResponder, color: "#F59E0B",  set: setQuick, val: quickFiltro },
-              { key: "cliente",      label: "★ Clientes",     cnt: cntClientes,     color: "#16A34A",  set: setTipo,  val: tipoFiltro },
-              { key: "prospecto",    label: "◎ Prospectos",   cnt: cntProspectos,   color: "#6366F1",  set: setTipo,  val: tipoFiltro },
-            ].map(({ key, label, cnt, color, set, val }) => {
-              const active = val === key;
-              return (
-                <button key={key} onClick={() => set(active ? null : key)}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, padding: "5px 9px", borderRadius: 8, border: `1.5px solid ${active ? color : L.border}`, background: active ? color : active ? L.soft : L.soft, color: active ? "#fff" : color, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11, cursor: "pointer", transition: "all .15s", boxShadow: active ? `0 2px 8px ${color}44` : "none" }}>
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
-                  <span style={{ background: active ? "rgba(255,255,255,.25)" : color + "20", color: active ? "#fff" : color, borderRadius: 6, padding: "1px 6px", fontSize: 10, fontWeight: 800, flexShrink: 0, minWidth: 18, textAlign: "center" }}>{cnt}</span>
-                </button>
-              );
-            })}
-          </div>
-
           {/* ── Búsqueda ── */}
           <div style={{ padding: "12px 14px", borderBottom: `1px solid ${L.border}` }}>
             <div style={{ position: "relative" }}>
@@ -1217,13 +1197,25 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
             </div>
           </div>
 
-          {/* ── Filtros estado ── */}
+          {/* ── Filtros (atención + tipo + estado) ── */}
           <div style={{ padding: "8px 14px", borderBottom: `1px solid ${L.border}` }}>
             <select value={filtro} onChange={(e) => setFiltro(e.target.value)}
               style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${filtro !== "todos" ? C.red : L.border}`, fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, color: filtro !== "todos" ? C.red : L.muted, background: L.white, cursor: "pointer", outline: "none" }}>
-              {["todos", ...Object.keys(ESTADOS)].map((f) => (
-                <option key={f} value={f}>{f === "todos" ? "Todos los estados" : ESTADOS[f].label}</option>
-              ))}
+              <option value="todos">Todos los contactos</option>
+              <optgroup label="Atención">
+                <option value="q:sinrevisar">👁 Sin revisar ({cntSinRevisar})</option>
+                <option value="q:noleidos">No leídos ({cntNoLeidos})</option>
+                <option value="q:sinresponder">Sin responder ({cntSinResponder})</option>
+              </optgroup>
+              <optgroup label="Tipo">
+                <option value="t:cliente">★ Clientes ({cntClientes})</option>
+                <option value="t:prospecto">◎ Prospectos ({cntProspectos})</option>
+              </optgroup>
+              <optgroup label="Estado">
+                {Object.keys(ESTADOS).map((f) => (
+                  <option key={f} value={f}>{ESTADOS[f].label}</option>
+                ))}
+              </optgroup>
             </select>
           </div>
 
