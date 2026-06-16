@@ -1308,6 +1308,10 @@ const PLANTILLAS = [
     grupo: "🟢 Primer contacto",
     items: [
       {
+        label: "Saludo Fernando (NINIT)",
+        texto: `Hola mucho gusto mi nombre es Fernando con Ninit Group, te puedo ayudar a partir de aqui en la compra de la unidad que estas buscando, dejame saber las preguntas que pudieras tener gracias 🚐✨`,
+      },
+      {
         label: "Bienvenida Meta Ads",
         texto: `Hi! Thanks for reaching out to NINIT Group 🚐✨ I'm here to help! I saw you were interested in our luxury restroom trailers. Could you tell me a bit more about your needs?\n\n• Are you looking to buy or rent?\n• What's the event date and location?\n• How many guests are you expecting?\n\nWe'll put together a custom quote for you right away!`,
       },
