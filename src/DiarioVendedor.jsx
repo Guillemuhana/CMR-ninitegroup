@@ -1,6 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase, C, FONT_DISPLAY, FONT_BODY, fmtFechaLarga, fmtDuracion } from "./lib";
-import { Clock, MessageSquare, ShoppingBag, TrendingUp, Save, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { supabase, C, FONT_DISPLAY, FONT_BODY, ESTADOS, calcularAlertas, fmtFechaLarga, fmtDuracion } from "./lib";
+import {
+  Clock, MessageSquare, ShoppingBag, TrendingUp, Save, ChevronDown, ChevronUp,
+  Target, AlertTriangle, ArrowUpRight, Users, BarChart2,
+} from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const L = {
   bg:     "#F5F6F8",
@@ -10,6 +14,7 @@ const L = {
   muted:  "#64748B",
   light:  "#94A3B8",
   soft:   "#F1F5F9",
+  hover:  "#EFF6FF",
 };
 
 const ANIMOS = [
@@ -32,7 +37,22 @@ function StatCard({ icon, label, value, color = C.red, sub }) {
   );
 }
 
-export default function DiarioVendedor({ perfil, isMobile }) {
+function SeccionCard({ icon, titulo, badge, children, isMobile }) {
+  return (
+    <div style={{ background: L.white, borderRadius: 16, border: `1px solid ${L.border}`, padding: isMobile ? "16px 14px" : "20px 22px", marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <span style={{ color: C.red, display: "flex" }}>{icon}</span>
+        <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 15, color: L.text }}>{titulo}</span>
+        {badge != null && badge > 0 && (
+          <span style={{ background: C.red, color: "#fff", borderRadius: 20, padding: "1px 9px", fontSize: 11, fontWeight: 700 }}>{badge}</span>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+export default function DiarioVendedor({ perfil, isMobile, contactos = [], onAbrirChat }) {
   const hoy = new Date().toISOString().slice(0, 10);
 
   const [entrada, setEntrada]         = useState(null);  // registro del día de hoy
@@ -42,8 +62,39 @@ export default function DiarioVendedor({ perfil, isMobile }) {
   const [guardado, setGuardado]       = useState(false);
   const [historial, setHistorial]     = useState([]);
   const [stats, setStats]             = useState(null);
+  const [chartSemana, setChartSemana] = useState([]);
   const [entradaAbierta, setAbierta]  = useState(null);
   const autoSaveTimer                 = useRef(null);
+
+  // ── Mis contactos (solo los asignados a este vendedor) ────
+  const misContactos = useMemo(
+    () => contactos.filter((c) => c.vendedor === perfil?.nombre),
+    [contactos, perfil?.nombre]
+  );
+
+  // ── Pipeline propio: cantidad por estado ───────────────────
+  const pipeline = useMemo(() => {
+    const conteo = {};
+    misContactos.forEach((c) => {
+      const key = c.estado || "nuevo";
+      conteo[key] = (conteo[key] || 0) + 1;
+    });
+    return Object.keys(ESTADOS)
+      .filter((k) => conteo[k] > 0)
+      .map((k) => ({ key: k, ...ESTADOS[k], count: conteo[k] }));
+  }, [misContactos]);
+
+  // ── Mis alertas / seguimientos pendientes ──────────────────
+  const misAlertas = useMemo(() => calcularAlertas(misContactos), [misContactos]);
+
+  // ── Conversaciones recientes propias ───────────────────────
+  const recientes = useMemo(() => {
+    return [...misContactos]
+      .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))
+      .slice(0, 6);
+  }, [misContactos]);
+
+  const leadsActivos = misContactos.filter((c) => c.estado !== "perdido" && c.estado !== "vendido" && c.estado !== "cerrado").length;
 
   // ── Cargar entrada de hoy ─────────────────────────────────
   useEffect(() => {
@@ -129,6 +180,32 @@ export default function DiarioVendedor({ perfil, isMobile }) {
     fetchStats();
   }, [perfil?.id, perfil?.nombre, hoy]);
 
+  // ── Mensajes enviados por día (últimos 7 días) ─────────────
+  useEffect(() => {
+    if (!perfil?.nombre) return;
+    const fetchSemana = async () => {
+      const inicio = new Date(); inicio.setDate(inicio.getDate() - 6); inicio.setHours(0, 0, 0, 0);
+      const { data } = await supabase
+        .from("mensajes")
+        .select("created_at")
+        .eq("agente", perfil.nombre).eq("direccion", "out")
+        .gte("created_at", inicio.toISOString());
+
+      const dias = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        dias.push({ fecha: d.toISOString().slice(0, 10), label: d.toLocaleDateString("es-AR", { weekday: "short" }), cantidad: 0 });
+      }
+      (data || []).forEach((m) => {
+        const f = m.created_at.slice(0, 10);
+        const dia = dias.find((d) => d.fecha === f);
+        if (dia) dia.cantidad += 1;
+      });
+      setChartSemana(dias);
+    };
+    fetchSemana();
+  }, [perfil?.nombre, hoy]);
+
   // ── Guardar con debounce automático ───────────────────────
   const guardar = useCallback(async (nuevoContenido, nuevoAnimo) => {
     if (!perfil?.id) return;
@@ -171,6 +248,17 @@ export default function DiarioVendedor({ perfil, isMobile }) {
     return `${h}h ${m % 60 > 0 ? (m % 60) + "m" : ""}`.trim();
   };
 
+  const tiempoDesde = (iso) => {
+    if (!iso) return "—";
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const min = Math.floor(diffMs / 60000);
+    if (min < 1) return "ahora";
+    if (min < 60) return `hace ${min} min`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `hace ${h}h`;
+    return `hace ${Math.floor(h / 24)}d`;
+  };
+
   const fechaHoyLabel = new Date().toLocaleDateString("es-AR", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
@@ -181,26 +269,106 @@ export default function DiarioVendedor({ perfil, isMobile }) {
       {/* ── Título ── */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: isMobile ? 20 : 24, color: L.text }}>
-          Mi Día
+          Mi Día — {perfil?.nombre?.split(" ")[0] || "Vendedor"}
         </div>
         <div style={{ fontSize: 13, color: L.muted, marginTop: 4, textTransform: "capitalize" }}>{fechaHoyLabel}</div>
       </div>
 
       {/* ── Stats del día ── */}
       {stats && (
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
           <StatCard icon={<MessageSquare size={15} />} label="Mensajes enviados" value={stats.msgEnviados} color={C.red} />
           <StatCard icon={<TrendingUp size={15} />}    label="Contactos atendidos" value={stats.contactosAtendidos} color="#7C3AED" />
           <StatCard icon={<ShoppingBag size={15} />}   label="Pedidos del día" value={stats.pedidos} color="#15803D" />
+          <StatCard icon={<Users size={15} />}         label="Leads activos" value={leadsActivos} color="#0E7490" sub={`${misContactos.length} totales`} />
           <StatCard
             icon={<Clock size={15} />}
             label="Tiempo en app"
             value={fmtDuracion(stats.tiempoHoy)}
-            color="#0E7490"
+            color="#D97706"
             sub={stats.tiempoRespProm ? `Resp. prom: ${msToStr(stats.tiempoRespProm)}` : null}
           />
         </div>
       )}
+
+      {/* ── Pipeline propio ── */}
+      <SeccionCard icon={<BarChart2 size={16} />} titulo="Mi Pipeline" isMobile={isMobile}>
+        {pipeline.length === 0 ? (
+          <div style={{ fontSize: 13, color: L.light, textAlign: "center", padding: "10px 0" }}>Todavía no tenés contactos asignados.</div>
+        ) : (
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {pipeline.map((p) => (
+              <div key={p.key} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 12, background: p.bg }}>
+                <span style={{ fontSize: 17, fontWeight: 800, color: p.color, fontFamily: FONT_DISPLAY }}>{p.count}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: p.color }}>{p.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </SeccionCard>
+
+      {/* ── Seguimientos pendientes ── */}
+      <SeccionCard icon={<AlertTriangle size={16} />} titulo="Seguimientos pendientes" badge={misAlertas.length} isMobile={isMobile}>
+        {misAlertas.length === 0 ? (
+          <div style={{ fontSize: 13, color: L.light, textAlign: "center", padding: "10px 0" }}>Sin pendientes ✓ Todo al día.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {misAlertas.map((a) => (
+              <div key={a.id} onClick={() => onAbrirChat?.(a.contacto)}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 12px", borderRadius: 10, background: L.soft, cursor: onAbrirChat ? "pointer" : "default", transition: "background .12s" }}
+                onMouseEnter={(e) => onAbrirChat && (e.currentTarget.style.background = L.hover)}
+                onMouseLeave={(e) => onAbrirChat && (e.currentTarget.style.background = L.soft)}>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                  <span style={{ fontSize: 15, flexShrink: 0 }}>{a.tipo === "sin_respuesta" ? "⏰" : a.tipo === "lead_sin_asignar" ? "👤" : "📌"}</span>
+                  <span style={{ fontSize: 13, color: L.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.texto}</span>
+                </div>
+                {onAbrirChat && <ArrowUpRight size={14} color={L.muted} style={{ flexShrink: 0 }} />}
+              </div>
+            ))}
+          </div>
+        )}
+      </SeccionCard>
+
+      {/* ── Conversaciones recientes ── */}
+      <SeccionCard icon={<MessageSquare size={16} />} titulo="Conversaciones recientes" isMobile={isMobile}>
+        {recientes.length === 0 ? (
+          <div style={{ fontSize: 13, color: L.light, textAlign: "center", padding: "10px 0" }}>Sin actividad reciente.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {recientes.map((c) => {
+              const e = ESTADOS[c.estado] || ESTADOS.nuevo;
+              return (
+                <div key={c.id} onClick={() => onAbrirChat?.(c)}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 12px", borderRadius: 10, cursor: onAbrirChat ? "pointer" : "default", transition: "background .12s" }}
+                  onMouseEnter={(e2) => onAbrirChat && (e2.currentTarget.style.background = L.hover)}
+                  onMouseLeave={(e2) => onAbrirChat && (e2.currentTarget.style.background = "transparent")}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: e.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13.5, fontWeight: 600, color: L.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: isMobile ? 140 : 260 }}>
+                      {c.nombre || c.telefono || "Sin nombre"}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: e.color, background: e.bg, borderRadius: 20, padding: "2px 8px", flexShrink: 0 }}>{e.label}</span>
+                  </div>
+                  <span style={{ fontSize: 11.5, color: L.light, flexShrink: 0 }}>{tiempoDesde(c.updated_at)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </SeccionCard>
+
+      {/* ── Gráfico desempeño semanal ── */}
+      <SeccionCard icon={<Target size={16} />} titulo="Mi desempeño — últimos 7 días" isMobile={isMobile}>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={chartSemana} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={L.border} />
+            <XAxis dataKey="label" tick={{ fontSize: 12, fontFamily: FONT_BODY }} />
+            <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+            <Tooltip formatter={(v) => [v, "Mensajes enviados"]} contentStyle={{ borderRadius: 10, border: `1px solid ${L.border}`, fontFamily: FONT_BODY, fontSize: 12 }} />
+            <Bar dataKey="cantidad" radius={[6, 6, 0, 0]} fill={C.red} />
+          </BarChart>
+        </ResponsiveContainer>
+      </SeccionCard>
 
       {/* ── Editor del día ── */}
       <div style={{ background: L.white, borderRadius: 16, border: `1px solid ${L.border}`, padding: isMobile ? "18px 16px" : "24px 28px", marginBottom: 24, boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>

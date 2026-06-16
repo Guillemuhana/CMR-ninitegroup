@@ -1916,7 +1916,8 @@ export default function App() {
           <>
             {isMobile && <MobileBack title="Mi Día" onBack={() => setVista("chat")} />}
             <div style={{ flex: 1, overflowY: "auto", height: "100%" }}>
-              <DiarioVendedor perfil={perfil} isMobile={isMobile} />
+              <DiarioVendedor perfil={perfil} isMobile={isMobile} contactos={contactos}
+                onAbrirChat={(c) => { setActivo(c); setVista("chat"); }} />
             </div>
           </>
         ) : vista === "pedidos" ? (
