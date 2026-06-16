@@ -644,7 +644,8 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
   }, [open]);
 
   // ── Saludo al abrir el panel por primera vez (gesto → OK en móvil) ──
-  useEffect(() => {
+  // Desactivado: no enviar saludos automáticos
+  /* useEffect(() => {
     if (!open || saludadoRef.current || !nombreUsuario) return;
     saludadoRef.current = true;
     const hora   = new Date().getHours();
@@ -660,7 +661,7 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
       }
     }, 400);
     return () => clearTimeout(t);
-  }, [open, nombreUsuario, hablar]);
+  }, [open, nombreUsuario, hablar]); */
 
   // ── Briefing proactivo al abrir ──────────────────────────
   useEffect(() => {
@@ -1301,6 +1302,16 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
 }
 
 // ============================================================
+// COTIZACIONES (links por modelo)
+// ============================================================
+const COTIZACIONES = [
+  {
+    label: "2-Stall White Marble",
+    texto: `Here's your custom quote for the 2-Stall White Marble unit 👇\nhttps://ninitgroup.com/ninit_quote/`,
+  },
+];
+
+// ============================================================
 // PLANTILLAS DE RESPUESTA RÁPIDA
 // ============================================================
 const PLANTILLAS = [
@@ -1373,8 +1384,10 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [confirmElim, setConfirmElim] = useState(false);
   const [eliminando, setEliminando]   = useState(false);
   const [showPlantillas, setShowPlantillas] = useState(false);
+  const [showCotizaciones, setShowCotizaciones] = useState(false);
   const endRef = useRef(null);
   const plantillasRef = useRef(null);
+  const cotizacionesRef = useRef(null);
 
   useEffect(() => {
     if (!showPlantillas) return;
@@ -1382,6 +1395,13 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [showPlantillas]);
+
+  useEffect(() => {
+    if (!showCotizaciones) return;
+    const h = (e) => { if (cotizacionesRef.current && !cotizacionesRef.current.contains(e.target)) setShowCotizaciones(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showCotizaciones]);
 
   const eliminarContacto = async () => {
     setEliminando(true);
@@ -1716,6 +1736,30 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
 
       {/* ── Input ── */}
       <div style={{ padding: isMobile ? "10px 12px" : "14px 22px", borderTop: `1px solid ${L.border}`, background: L.white, display: "flex", gap: 8, alignItems: "flex-end", flexShrink: 0, position: "relative" }}>
+        {/* Cotizaciones */}
+        <div ref={cotizacionesRef} style={{ position: "relative", flexShrink: 0 }}>
+          <button onClick={() => setShowCotizaciones((v) => !v)} title="Enviar link de cotización"
+            style={{ background: showCotizaciones ? C.gold : L.soft, color: showCotizaciones ? "#fff" : C.gold, border: `1.5px solid ${showCotizaciones ? C.gold : C.gold + "55"}`, borderRadius: 11, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, transition: "all .15s", flexShrink: 0 }}>
+            <FileText size={15} />
+            {!isMobile && <span>Cotizaciones</span>}
+          </button>
+          {showCotizaciones && (
+            <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: isMobile ? "calc(100vw - 24px)" : 320, maxHeight: 460, overflowY: "auto", background: L.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", border: `1px solid ${L.border}`, zIndex: 200 }}>
+              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                <FileText size={14} color={C.gold} />
+                <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.8 }}>Cotizaciones</span>
+              </div>
+              {COTIZACIONES.map((item) => (
+                <button key={item.label} onClick={() => { setTexto(item.texto); setShowCotizaciones(false); }}
+                  style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40` }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         {/* Plantillas rápidas */}
         <div ref={plantillasRef} style={{ position: "relative", flexShrink: 0 }}>
           <button onClick={() => setShowPlantillas((v) => !v)} title="Plantillas de respuesta rápida"
