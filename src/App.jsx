@@ -851,7 +851,6 @@ REGLAS ESTRICTAS:
                 {statusLabel}
               </div>
             </div>
-            <
             <button onClick={() => setOpen(false)}
               style={{ background: "rgba(255,255,255,.12)", border: "none", color: "#fff", borderRadius: 8, width: 29, height: 29, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <X size={14} />
