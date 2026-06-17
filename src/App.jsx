@@ -20,6 +20,7 @@ import Reportes from "./Reportes";
 import AdminPanel from "./AdminPanel";
 import DiarioVendedor from "./DiarioVendedor";
 import CEODashboard from "./CEODashboard";
+import Agenda from "./Agenda";
 import Directorio from "./Directorio";
 
 // ============================================================
@@ -1077,7 +1078,10 @@ function NavTabs({ vista, setVista, rol }) {
         ["admin",      <Shield size={14} />,    "Admin"],
         ["control",    <Activity size={14} />,  "Control"],
       ]
-    : [["diario", <BookOpen size={14} />, "Mi Día"]];
+    : [
+        ["diario", <BookOpen size={14} />, "Mi Día"],
+        ["agenda", <Calendar size={14} />, "Agenda"],
+      ];
 
   const secActivo = secondary.some(([k]) => k === vista);
   const secLabel  = secondary.find(([k]) => k === vista)?.[2];
@@ -2161,7 +2165,7 @@ export default function App() {
   const mobileInPanel = isMobile && (
     activo !== null ||
     vista === "pedidos" || vista === "reportes" || vista === "admin" ||
-    vista === "control" || vista === "diario" || vista === "directorio"
+    vista === "control" || vista === "diario" || vista === "agenda" || vista === "directorio"
   );
 
   return (
@@ -2206,6 +2210,14 @@ export default function App() {
             {isMobile && <MobileBack title="Mi Día" onBack={() => setVista("chat")} />}
             <div style={{ flex: 1, overflowY: "auto", height: "100%" }}>
               <DiarioVendedor perfil={perfil} isMobile={isMobile} contactos={contactos}
+                onAbrirChat={(c) => { setActivo(c); setVista("chat"); }} />
+            </div>
+          </>
+        ) : vista === "agenda" && rol === "vendedor" ? (
+          <>
+            {isMobile && <MobileBack title="Agenda" onBack={() => setVista("chat")} />}
+            <div style={{ flex: 1, overflowY: "auto", height: "100%" }}>
+              <Agenda vendedorId={perfil?.id} vendedorNombre={perfil?.nombre} isMobile={isMobile} contactos={contactos}
                 onAbrirChat={(c) => { setActivo(c); setVista("chat"); }} />
             </div>
           </>

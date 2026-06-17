@@ -3,8 +3,9 @@ import { supabase, C, FONT_DISPLAY, FONT_BODY, fmtDuracion, fmtFechaLarga } from
 import {
   Users, Clock, MessageSquare, ShoppingBag, TrendingUp,
   ChevronDown, ChevronUp, BookOpen, Activity, BarChart2, RefreshCw,
-  Star, CheckCircle2, Save,
+  Star, CheckCircle2, Save, Calendar,
 } from "lucide-react";
+import Agenda from "./Agenda";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const L = {
@@ -74,6 +75,7 @@ export default function CEODashboard({ isMobile, perfil }) {
   const [refreshKey, setRefresh]      = useState(0);
   const [valDraft, setValDraft]       = useState({});   // { [diarioId]: { nota, comentario } }
   const [guardandoVal, setGuardVal]   = useState(null); // id en guardado
+  const [agendaVend, setAgendaVend]   = useState("");   // vendedor seleccionado en tab Agenda
 
   // ── Cargar vendedores activos ─────────────────────────────
   useEffect(() => {
@@ -285,6 +287,7 @@ export default function CEODashboard({ isMobile, perfil }) {
         <TabBtn label="Resumen" icon={<BarChart2 size={13} />} active={tab === "resumen"} onClick={() => setTab("resumen")} />
         <TabBtn label="Vendedores" icon={<Users size={13} />} active={tab === "vendedores"} onClick={() => setTab("vendedores")} />
         <TabBtn label="Diarios" icon={<BookOpen size={13} />} active={tab === "diarios"} onClick={() => setTab("diarios")} />
+        <TabBtn label="Agenda" icon={<Calendar size={13} />} active={tab === "agenda"} onClick={() => setTab("agenda")} />
         <TabBtn label="Actividad" icon={<Activity size={13} />} active={tab === "actividad"} onClick={() => setTab("actividad")} />
       </div>
 
@@ -571,6 +574,30 @@ export default function CEODashboard({ isMobile, perfil }) {
               })()}
             </>
           )}
+
+          {/* ══════════════ TAB AGENDA ══════════════ */}
+          {tab === "agenda" && (() => {
+            const vSel = agendaVend || vendedores[0]?.id || "";
+            const vObj = vendedores.find((v) => v.id === vSel);
+            return (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4, flexWrap: "wrap" }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Agenda de</label>
+                  <select value={vSel} onChange={(e) => setAgendaVend(e.target.value)}
+                    style={{ padding: "9px 14px", borderRadius: 10, border: `1.5px solid ${L.border}`, fontSize: 14, fontFamily: FONT_BODY, background: L.white, color: L.text, outline: "none", cursor: "pointer", fontWeight: 600 }}>
+                    {vendedores.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+                  </select>
+                </div>
+                {vSel ? (
+                  <div style={{ height: 640, background: L.white, borderRadius: 16, border: `1px solid ${L.border}`, overflow: "hidden", marginTop: 12 }}>
+                    <Agenda key={vSel} vendedorId={vSel} vendedorNombre={vObj?.nombre} isMobile={isMobile} readOnly />
+                  </div>
+                ) : (
+                  <div style={{ textAlign: "center", padding: "50px 20px", color: L.muted, fontSize: 14 }}>No hay vendedores.</div>
+                )}
+              </>
+            );
+          })()}
 
           {/* ══════════════ TAB ACTIVIDAD ══════════════ */}
           {tab === "actividad" && (
