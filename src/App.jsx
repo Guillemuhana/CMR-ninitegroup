@@ -760,6 +760,67 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
     }
   }, [grabando]); // eslint-disable-line
 
+  // ── Reporte por vendedor (solo CEO) — datos para informes ──
+  const reporteCEORef = useRef({ ts: 0, texto: "" });
+  const cargarReporteCEO = useCallback(async () => {
+    const hoy = new Date();
+    const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+    const inicioDia = new Date(); inicioDia.setHours(0, 0, 0, 0);
+    const desde7 = new Date(); desde7.setDate(desde7.getDate() - 6);
+    const desde7Str = `${desde7.getFullYear()}-${String(desde7.getMonth() + 1).padStart(2, "0")}-${String(desde7.getDate()).padStart(2, "0")}`;
+    const mesActual = hoy.getMonth(), anioActual = hoy.getFullYear();
+    const safe = async (p) => { try { const { data, error } = await p; return error ? [] : (data || []); } catch { return []; } };
+
+    const [vends, pedidos, diarios, sesiones, agenda, msgsHoy] = await Promise.all([
+      safe(supabase.from("vendedores").select("id,nombre,role,activo").eq("activo", true)),
+      safe(supabase.from("pedidos").select("vendedor,total,estado,created_at")),
+      safe(supabase.from("diario_vendedor").select("vendedor_id,fecha,completado,estado_animo,valoracion_nota,valoracion_comentario").gte("fecha", desde7Str).order("fecha", { ascending: false })),
+      safe(supabase.from("sesiones_vendedor").select("vendedor_id,duracion_seg,fecha").gte("fecha", desde7Str)),
+      safe(supabase.from("agenda_vendedor").select("vendedor_id,fecha,hora,tipo,titulo,completado").gte("fecha", hoyStr).order("fecha").order("hora", { nullsFirst: true })),
+      safe(supabase.from("mensajes").select("agente,created_at").eq("direccion", "out").gte("created_at", inicioDia.toISOString())),
+    ]);
+
+    const vendedoresList = vends.filter((v) => v.role === "vendedor");
+    const ANIMO = { excelente: "excelente", bien: "bien", neutro: "normal", mal: "difícil", muy_mal: "mal día" };
+
+    const bloques = vendedoresList.map((v) => {
+      const misC = contactos.filter((c) => c.vendedor === v.nombre);
+      const porEstado = {}; misC.forEach((c) => { const k = c.estado || "nuevo"; porEstado[k] = (porEstado[k] || 0) + 1; });
+      const activos  = misC.filter((c) => !["vendido", "perdido", "cerrado"].includes(c.estado)).length;
+      const vendidos = misC.filter((c) => c.estado === "vendido" || c.estado === "cerrado").length;
+      const perdidos = misC.filter((c) => c.estado === "perdido").length;
+      const sinResp  = misC.filter((c) => !c.bot_activo && c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at))).length;
+      const pedV     = pedidos.filter((p) => p.vendedor === v.nombre);
+      const pedMes   = pedV.filter((p) => { const d = new Date(p.created_at); return d.getMonth() === mesActual && d.getFullYear() === anioActual; });
+      const montoMes = pedMes.reduce((s, p) => s + (Number(p.total) || 0), 0);
+      const minWeek  = Math.round(sesiones.filter((s) => s.vendedor_id === v.id).reduce((a, s) => a + (s.duracion_seg || 0), 0) / 60);
+      const diarioHoy = diarios.find((d) => d.vendedor_id === v.id && d.fecha === hoyStr);
+      const ultimaVal = diarios.find((d) => d.vendedor_id === v.id && d.valoracion_nota);
+      const msgsV     = msgsHoy.filter((m) => m.agente === v.nombre).length;
+      const agV       = agenda.filter((a) => a.vendedor_id === v.id && !a.completado);
+      const proxAg    = agV.slice(0, 3).map((a) => `${a.fecha}${a.hora ? " " + a.hora.slice(0, 5) : ""} ${a.titulo}`).join("; ");
+      const pipelineTxt = Object.entries(porEstado).map(([k, n]) => `${n} ${ESTADOS[k]?.label || k}`).join(", ") || "sin leads";
+
+      let b = `▸ ${v.nombre}:\n`;
+      b += `  Pipeline: ${activos} activos (${pipelineTxt}) | ${vendidos} vendidos | ${perdidos} perdidos\n`;
+      b += `  Pendientes: ${sinResp} sin responder\n`;
+      b += `  Ventas: ${pedMes.length} pedidos este mes${montoMes ? " ($" + montoMes.toLocaleString("en-US") + ")" : ""} | ${pedV.length} total histórico\n`;
+      b += `  Actividad: ${msgsV} mensajes enviados hoy | ${minWeek} min en app (últimos 7 días)\n`;
+      b += diarioHoy
+        ? `  Diario hoy: ${diarioHoy.completado ? "completado" : "pendiente/borrador"} (ánimo: ${ANIMO[diarioHoy.estado_animo] || "-"})\n`
+        : `  Diario hoy: sin registrar\n`;
+      if (ultimaVal) b += `  Última valoración de Nicolás: ${ultimaVal.valoracion_nota}/5${ultimaVal.valoracion_comentario ? ` "${ultimaVal.valoracion_comentario}"` : ""}\n`;
+      b += `  Agenda próxima: ${agV.length} tareas pendientes${proxAg ? " → " + proxAg : ""}`;
+      return b;
+    });
+
+    const texto = vendedoresList.length
+      ? `\n\n════ DATOS POR VENDEDOR (usalos cuando Nicolás pida un reporte/desempeño) ════\n${bloques.join("\n\n")}`
+      : "";
+    reporteCEORef.current = { ts: Date.now(), texto };
+    return texto;
+  }, [contactos]);
+
   // ── Enviar mensaje ────────────────────────────────────────
   const enviar = useCallback(async (textoForzado) => {
     const q = (textoForzado || input).trim();
@@ -785,6 +846,12 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
         sysExtra += `\nCONTACTO ABIERTO: ${contactoActivo.nombre || contactoActivo.telefono} (id: ${contactoActivo.id}) | ${est?.label || contactoActivo.estado} | vendedor: ${contactoActivo.vendedor || "sin asignar"}`;
       }
       if (vozOnRef.current) sysExtra += "\nMODO VOZ ACTIVO: máximo 2 oraciones, sin listas, sin markdown, lenguaje natural hablado.";
+      if (rol === "ceo") {
+        if (Date.now() - reporteCEORef.current.ts > 60000) { await cargarReporteCEO(); }
+        sysExtra += reporteCEORef.current.texto;
+        sysExtra += `\n\n════ REPORTES DE VENDEDORES (sos CEO) ════
+Cuando Nicolás pida un REPORTE, RESUMEN o el DESEMPEÑO de un vendedor (ej: "dame un reporte de Fernando") o de todo el equipo, armá un informe PROFESIONAL, completo y ordenado usando los DATOS POR VENDEDOR de arriba. Incluí: pipeline y leads activos, pendientes sin responder, ventas del mes, actividad (mensajes/tiempo), estado del diario (si lo completó y su ánimo), tu última valoración, y la agenda próxima. Estructuralo con secciones o viñetas claras, destacá lo positivo y lo que hay que mejorar, y cerrá con 1-2 recomendaciones concretas. Si comparás vendedores, hacelo de forma objetiva. NUNCA inventes números: usá solo los datos provistos; si falta un dato, decí "sin datos".`;
+      }
       if (rol === "ceo") sysExtra += `\n\n════ ACCIONES DISPONIBLES (sos CEO) ════
 Podés ejecutar cambios REALES en la base de datos del CRM. Cuando el usuario pida hacer algo, incluí AL FINAL de tu respuesta un bloque exactamente así (JSON válido, una sola línea):
 <ACCION>{"tipo":"nombre_accion","campo":"valor"}</ACCION>
@@ -812,7 +879,7 @@ REGLAS ESTRICTAS:
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${GROK_KEY}` },
-        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: apiMsgs, max_tokens: vozOnRef.current ? 130 : 700 }),
+        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: apiMsgs, max_tokens: vozOnRef.current ? 130 : (rol === "ceo" ? 1400 : 700) }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -854,7 +921,7 @@ REGLAS ESTRICTAS:
       setMsgs((p) => [...p, { from: "ai", text: `Sin conexión: ${e.message}` }]);
     }
     setTyping(false);
-  }, [input, msgs, typing, contactoActivo, alertas, contactos, hablar, niniPrompt]);
+  }, [input, msgs, typing, contactoActivo, alertas, contactos, hablar, niniPrompt, rol, cargarReporteCEO]);
 
   // ── Sugerencias contextuales ─────────────────────────────
   const sugerencias = [
