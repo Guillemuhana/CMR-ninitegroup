@@ -717,7 +717,8 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
     const segVencidos = alertas.filter((a) => a.tipo === "seguimiento").length;
     const urgentes    = alertas.filter((a) => a.tipo === "sin_respuesta").length;
 
-    let briefing = `${saludo}, Nicolás.`;
+    const primerNombre = (nombreUsuario || "").split(" ")[0] || "equipo";
+    let briefing = `${saludo}, ${primerNombre}.`;
     if (urgentes > 0)       briefing += ` Hay ${urgentes} cliente${urgentes > 1 ? "s" : ""} esperando respuesta urgente.`;
     if (segVencidos > 0)    briefing += ` Tenés ${segVencidos} seguimiento${segVencidos > 1 ? "s" : ""} vencido${segVencidos > 1 ? "s" : ""}.`;
     if (sinRespuesta > 0 && urgentes === 0) briefing += ` Hay ${sinRespuesta} conversación${sinRespuesta > 1 ? "es" : ""} sin responder.`;
@@ -1937,6 +1938,73 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
 }
 
 // ============================================================
+// RECORDATORIO DIARIO (avisar al vendedor ~20hs que escriba su Mi Día)
+// ============================================================
+function RecordatorioDiario({ perfil, rol, onIr }) {
+  const [visible, setVisible] = useState(false);
+  const HORA_RECORDATORIO = 20; // 20hs
+
+  useEffect(() => {
+    if (rol !== "vendedor" || !perfil?.id) { setVisible(false); return; }
+    let cancel = false;
+    const check = async () => {
+      const ahora = new Date();
+      const hoy = ahora.toISOString().slice(0, 10);
+      // Antes de las 20hs, o si ya lo cerró hoy → no mostrar
+      if (ahora.getHours() < HORA_RECORDATORIO) { if (!cancel) setVisible(false); return; }
+      if (localStorage.getItem(`diario_recordatorio_${perfil.id}_${hoy}`)) { if (!cancel) setVisible(false); return; }
+      const { data } = await supabase
+        .from("diario_vendedor")
+        .select("completado")
+        .eq("vendedor_id", perfil.id)
+        .eq("fecha", hoy)
+        .limit(1);
+      if (!cancel) setVisible(!data?.[0]?.completado);
+    };
+    check();
+    const timer = setInterval(check, 3 * 60 * 1000); // re-chequear cada 3 min
+    return () => { cancel = true; clearInterval(timer); };
+  }, [perfil?.id, rol]);
+
+  if (!visible) return null;
+
+  const cerrar = () => {
+    const hoy = new Date().toISOString().slice(0, 10);
+    localStorage.setItem(`diario_recordatorio_${perfil.id}_${hoy}`, "1");
+    setVisible(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 5000, width: "min(440px, calc(100vw - 24px))", background: "#FFFFFF", border: "1px solid #FDE68A", borderLeft: "4px solid #F59E0B", borderRadius: 14, boxShadow: "0 10px 40px rgba(0,0,0,.18)", padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: 12, fontFamily: FONT_BODY }}>
+      <div style={{ width: 34, height: 34, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <BookOpen size={17} color="#B45309" />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 14, color: "#0F172A", marginBottom: 2 }}>
+          Te falta el reporte de hoy
+        </div>
+        <div style={{ fontSize: 12.5, color: "#64748B", lineHeight: 1.5 }}>
+          {perfil?.nombre?.split(" ")[0] ? `${perfil.nombre.split(" ")[0]}, ` : ""}no te olvides de completar tu <b>Mi Día</b> antes de cerrar. Así Nicolás lo puede revisar.
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button onClick={() => { onIr?.(); setVisible(false); }}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 13px", borderRadius: 8, border: "none", background: C.red, color: "#fff", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
+            <BookOpen size={13} /> Escribir mi día
+          </button>
+          <button onClick={cerrar}
+            style={{ padding: "6px 13px", borderRadius: 8, border: "1px solid #E4E8ED", background: "#fff", color: "#64748B", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
+            Más tarde
+          </button>
+        </div>
+      </div>
+      <button onClick={cerrar} title="Cerrar" style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", padding: 2, flexShrink: 0 }}>
+        <X size={16} />
+      </button>
+    </div>
+  );
+}
+
+// ============================================================
 // APP
 // ============================================================
 export default function App() {
@@ -2179,6 +2247,8 @@ export default function App() {
       </div>
 
       <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} nombreUsuario={userName} rol={rol} onRefrescar={recargarContactos} niniPrompt={niniPrompt} />
+
+      <RecordatorioDiario perfil={perfil} rol={rol} onIr={() => setVista("diario")} />
     </div>
   );
 }
