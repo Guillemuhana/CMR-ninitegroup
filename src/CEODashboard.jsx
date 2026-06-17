@@ -3,6 +3,7 @@ import { supabase, C, FONT_DISPLAY, FONT_BODY, fmtDuracion, fmtFechaLarga } from
 import {
   Users, Clock, MessageSquare, ShoppingBag, TrendingUp,
   ChevronDown, ChevronUp, BookOpen, Activity, BarChart2, RefreshCw,
+  Star, CheckCircle2, Save,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
@@ -26,6 +27,20 @@ const ANIMOS = {
 
 const COLORES_VENDEDOR = ["#3a8dc2", "#7C3AED", "#15803D", "#D97706", "#0E7490", "#B91C1C"];
 
+function StarsInput({ value = 0, onChange, readOnly = false, size = 20 }) {
+  return (
+    <div style={{ display: "flex", gap: 3 }}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star key={n} size={size}
+          onClick={readOnly ? undefined : () => onChange?.(n === value ? 0 : n)}
+          fill={n <= value ? "#F59E0B" : "none"}
+          color={n <= value ? "#F59E0B" : "#CBD5E1"}
+          style={{ cursor: readOnly ? "default" : "pointer", transition: "transform .1s" }} />
+      ))}
+    </div>
+  );
+}
+
 function KPICard({ icon, label, value, color = C.red, sub }) {
   return (
     <div style={{ background: L.white, borderRadius: 14, padding: "18px 22px", border: `1px solid ${L.border}`, display: "flex", flexDirection: "column", gap: 7 }}>
@@ -47,7 +62,7 @@ function TabBtn({ label, active, onClick, icon }) {
   );
 }
 
-export default function CEODashboard({ isMobile }) {
+export default function CEODashboard({ isMobile, perfil }) {
   const hoy = new Date().toISOString().slice(0, 10);
   const [tab, setTab]                 = useState("resumen");
   const [vendedores, setVendedores]   = useState([]);
@@ -57,6 +72,8 @@ export default function CEODashboard({ isMobile }) {
   const [fechaDiario, setFechaDiario] = useState(hoy);
   const [loading, setLoading]         = useState(true);
   const [refreshKey, setRefresh]      = useState(0);
+  const [valDraft, setValDraft]       = useState({});   // { [diarioId]: { nota, comentario } }
+  const [guardandoVal, setGuardVal]   = useState(null); // id en guardado
 
   // ── Cargar vendedores activos ─────────────────────────────
   useEffect(() => {
@@ -174,9 +191,34 @@ export default function CEODashboard({ isMobile }) {
         .eq("fecha", fechaDiario)
         .order("vendedor_nombre");
       setDiarios(data || []);
+      // precargar borradores de valoración con lo ya guardado
+      setValDraft((data || []).reduce((acc, d) => {
+        acc[d.id] = { nota: d.valoracion_nota || 0, comentario: d.valoracion_comentario || "" };
+        return acc;
+      }, {}));
     };
     fetchDiarios();
   }, [fechaDiario, refreshKey]);
+
+  // ── Guardar valoración del CEO ────────────────────────────
+  const guardarValoracion = async (d) => {
+    const draft = valDraft[d.id] || { nota: 0, comentario: "" };
+    if (!draft.nota && !draft.comentario.trim()) return;
+    setGuardVal(d.id);
+    const { data, error } = await supabase
+      .from("diario_vendedor")
+      .update({
+        valoracion_nota: draft.nota || null,
+        valoracion_comentario: draft.comentario.trim() || null,
+        valorado_at: new Date().toISOString(),
+        valorado_por: perfil?.nombre || "Nicolás",
+      })
+      .eq("id", d.id).select().single();
+    if (!error && data) {
+      setDiarios((prev) => prev.map((x) => (x.id === data.id ? data : x)));
+    }
+    setGuardVal(null);
+  };
 
   const msToStr = (ms) => {
     const m = Math.floor(ms / 60000);
@@ -397,53 +439,136 @@ export default function CEODashboard({ isMobile }) {
                 </span>
               </div>
 
-              {diarios.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "60px 20px", color: L.muted, fontSize: 14 }}>
-                  <div style={{ fontSize: 36, marginBottom: 12 }}>📭</div>
-                  Ningún vendedor registró su día el {new Date(fechaDiario + "T12:00:00").toLocaleDateString("es-AR", { day: "numeric", month: "long" })}.
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {diarios.map((d) => {
-                    const animoObj = ANIMOS[d.estado_animo] || ANIMOS.neutro;
-                    const abierto = diariosAbiertos[d.id] !== false;
-                    const vIdx = vendedores.findIndex((v) => v.id === d.vendedor_id);
-                    const color = COLORES_VENDEDOR[vIdx >= 0 ? vIdx % COLORES_VENDEDOR.length : 0];
-                    return (
-                      <div key={d.id} style={{ background: L.white, borderRadius: 14, border: `1px solid ${L.border}`, overflow: "hidden" }}>
-                        <div
-                          onClick={() => setAbiertos((prev) => ({ ...prev, [d.id]: !abierto }))}
-                          style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", borderBottom: abierto ? `1px solid ${L.border}` : "none", justifyContent: "space-between" }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                            <div style={{ width: 36, height: 36, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 15, color: "#fff", flexShrink: 0 }}>
-                              {d.vendedor_nombre[0]}
-                            </div>
-                            <div>
-                              <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 14, color: L.text }}>
-                                {d.vendedor_nombre}
-                              </div>
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-                                <span style={{ fontSize: 16 }}>{animoObj.emoji}</span>
-                                <span style={{ fontSize: 11.5, color: animoObj.color, fontWeight: 700 }}>{animoObj.label}</span>
-                              </div>
-                            </div>
-                          </div>
-                          {abierto ? <ChevronUp size={16} color={L.muted} /> : <ChevronDown size={16} color={L.muted} />}
-                        </div>
-                        {abierto && (
-                          <div style={{ padding: "16px 20px" }}>
-                            {d.contenido
-                              ? <p style={{ margin: 0, fontSize: 14, color: L.text, lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{d.contenido}</p>
-                              : <p style={{ margin: 0, fontSize: 13, color: L.light, fontStyle: "italic" }}>El vendedor no escribió contenido este día.</p>}
-                          </div>
-                        )}
+              {(() => {
+                const idsConDiario = new Set(diarios.map((d) => d.vendedor_id));
+                const completados  = diarios.filter((d) => d.completado);
+                const enBorrador   = diarios.filter((d) => !d.completado);
+                const sinRegistrar = vendedores.filter((v) => !idsConDiario.has(v.id));
+                const pendientesTotal = enBorrador.length + sinRegistrar.length;
+                return (
+                  <>
+                    {/* Resumen de cumplimiento */}
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 12, background: "#DCFCE7" }}>
+                        <CheckCircle2 size={15} color="#15803D" />
+                        <span style={{ fontSize: 13, fontWeight: 800, color: "#15803D" }}>{completados.length} completados</span>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 12, background: "#FEF3C7" }}>
+                        <Clock size={15} color="#B45309" />
+                        <span style={{ fontSize: 13, fontWeight: 800, color: "#B45309" }}>{pendientesTotal} pendientes</span>
+                      </div>
+                    </div>
+
+                    {/* Vendedores que aún no completaron */}
+                    {pendientesTotal > 0 && (
+                      <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 12, padding: "12px 16px", marginBottom: 18 }}>
+                        <div style={{ fontSize: 11.5, fontWeight: 800, color: "#92400E", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 8 }}>
+                          Pendientes de completar
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                          {enBorrador.map((d) => (
+                            <span key={d.id} style={{ fontSize: 12.5, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderRadius: 8, padding: "4px 10px" }}>
+                              {d.vendedor_nombre} · borrador
+                            </span>
+                          ))}
+                          {sinRegistrar.map((v) => (
+                            <span key={v.id} style={{ fontSize: 12.5, fontWeight: 700, color: "#92400E", background: "#FEF3C7", borderRadius: 8, padding: "4px 10px" }}>
+                              {v.nombre} · sin registrar
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {diarios.length === 0 ? (
+                      <div style={{ textAlign: "center", padding: "50px 20px", color: L.muted, fontSize: 14 }}>
+                        <div style={{ fontSize: 36, marginBottom: 12 }}>📭</div>
+                        Ningún vendedor registró su día el {new Date(fechaDiario + "T12:00:00").toLocaleDateString("es-AR", { day: "numeric", month: "long" })}.
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                        {diarios.map((d) => {
+                          const animoObj = ANIMOS[d.estado_animo] || ANIMOS.neutro;
+                          const abierto = diariosAbiertos[d.id] !== false;
+                          const vIdx = vendedores.findIndex((v) => v.id === d.vendedor_id);
+                          const color = COLORES_VENDEDOR[vIdx >= 0 ? vIdx % COLORES_VENDEDOR.length : 0];
+                          const draft = valDraft[d.id] || { nota: 0, comentario: "" };
+                          const yaValorado = !!d.valorado_at;
+                          return (
+                            <div key={d.id} style={{ background: L.white, borderRadius: 14, border: `1px solid ${d.completado ? "#16A34A40" : L.border}`, overflow: "hidden" }}>
+                              <div
+                                onClick={() => setAbiertos((prev) => ({ ...prev, [d.id]: !abierto }))}
+                                style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", borderBottom: abierto ? `1px solid ${L.border}` : "none", justifyContent: "space-between" }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 15, color: "#fff", flexShrink: 0 }}>
+                                    {d.vendedor_nombre[0]}
+                                  </div>
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                      <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 14, color: L.text }}>{d.vendedor_nombre}</span>
+                                      {d.completado ? (
+                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#DCFCE7", color: "#15803D", borderRadius: 20, padding: "2px 9px", fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.3 }}>
+                                          <CheckCircle2 size={11} /> Completado
+                                        </span>
+                                      ) : (
+                                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#FEF3C7", color: "#B45309", borderRadius: 20, padding: "2px 9px", fontSize: 10.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.3 }}>
+                                          <Clock size={11} /> Borrador
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                                      <span style={{ fontSize: 16 }}>{animoObj.emoji}</span>
+                                      <span style={{ fontSize: 11.5, color: animoObj.color, fontWeight: 700 }}>{animoObj.label}</span>
+                                      {yaValorado && <span style={{ marginLeft: 4 }}><StarsInput value={d.valoracion_nota || 0} readOnly size={13} /></span>}
+                                    </div>
+                                  </div>
+                                </div>
+                                {abierto ? <ChevronUp size={16} color={L.muted} /> : <ChevronDown size={16} color={L.muted} />}
+                              </div>
+                              {abierto && (
+                                <div style={{ padding: "16px 20px" }}>
+                                  {d.contenido
+                                    ? <p style={{ margin: 0, fontSize: 14, color: L.text, lineHeight: 1.75, whiteSpace: "pre-wrap" }}>{d.contenido}</p>
+                                    : <p style={{ margin: 0, fontSize: 13, color: L.light, fontStyle: "italic" }}>El vendedor no escribió contenido este día.</p>}
+
+                                  {/* Editor de valoración */}
+                                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${L.border}` }}>
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                                      <span style={{ fontSize: 11.5, fontWeight: 800, color: L.muted, textTransform: "uppercase", letterSpacing: 0.5 }}>Tu valoración</span>
+                                      <StarsInput value={draft.nota}
+                                        onChange={(n) => setValDraft((p) => ({ ...p, [d.id]: { ...draft, nota: n } }))} />
+                                    </div>
+                                    <textarea
+                                      value={draft.comentario}
+                                      onChange={(ev) => setValDraft((p) => ({ ...p, [d.id]: { ...draft, comentario: ev.target.value } }))}
+                                      placeholder="Comentario / feedback para el vendedor (opcional)…"
+                                      rows={3}
+                                      style={{ width: "100%", boxSizing: "border-box", resize: "vertical", border: `1.5px solid ${L.border}`, borderRadius: 10, padding: "10px 13px", fontSize: 13.5, fontFamily: FONT_BODY, color: L.text, background: L.soft, outline: "none", lineHeight: 1.6 }}
+                                    />
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+                                      <span style={{ fontSize: 11.5, color: L.light }}>
+                                        {yaValorado ? `Valorado por ${d.valorado_por || "vos"} · ${new Date(d.valorado_at).toLocaleDateString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : "Sin valorar todavía"}
+                                      </span>
+                                      <button
+                                        onClick={() => guardarValoracion(d)}
+                                        disabled={guardandoVal === d.id || (!draft.nota && !draft.comentario.trim())}
+                                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 9, border: "none", background: C.red, color: "#fff", fontSize: 13, fontWeight: 700, cursor: (guardandoVal === d.id || (!draft.nota && !draft.comentario.trim())) ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: (guardandoVal === d.id || (!draft.nota && !draft.comentario.trim())) ? 0.5 : 1 }}>
+                                        <Save size={14} /> {guardandoVal === d.id ? "Guardando…" : yaValorado ? "Actualizar" : "Guardar valoración"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </>
           )}
 

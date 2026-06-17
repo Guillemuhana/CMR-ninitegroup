@@ -3,6 +3,7 @@ import { supabase, C, FONT_DISPLAY, FONT_BODY, ESTADOS, calcularAlertas, fmtFech
 import {
   Clock, MessageSquare, ShoppingBag, TrendingUp, Save, ChevronDown, ChevronUp,
   Target, AlertTriangle, ArrowUpRight, Users, BarChart2,
+  Star, CheckCircle2, Send, Lock,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -24,6 +25,18 @@ const ANIMOS = [
   { key: "mal",       emoji: "😔", label: "Difícil"   },
   { key: "muy_mal",   emoji: "😤", label: "Mal día"   },
 ];
+
+function Stars({ value = 0, size = 16 }) {
+  return (
+    <div style={{ display: "flex", gap: 2 }}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star key={n} size={size}
+          fill={n <= value ? "#F59E0B" : "none"}
+          color={n <= value ? "#F59E0B" : "#CBD5E1"} />
+      ))}
+    </div>
+  );
+}
 
 function StatCard({ icon, label, value, color = C.red, sub }) {
   return (
@@ -229,13 +242,56 @@ export default function DiarioVendedor({ perfil, isMobile, contactos = [], onAbr
     setGuardando(false);
   }, [perfil, hoy, entrada]);
 
+  const completado = !!entrada?.completado;
+
+  // ── Completar el día (enviar a revisión de Nicolás) ───────
+  const completarDia = useCallback(async () => {
+    if (!perfil?.id) return;
+    if (!contenido.trim()) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    setGuardando(true);
+    const payload = {
+      vendedor_id: perfil.id,
+      vendedor_nombre: perfil.nombre,
+      fecha: hoy,
+      contenido,
+      estado_animo: animo,
+      completado: true,
+      completado_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = entrada
+      ? await supabase.from("diario_vendedor").update(payload).eq("id", entrada.id).select().single()
+      : await supabase.from("diario_vendedor").upsert(payload, { onConflict: "vendedor_id,fecha" }).select().single();
+    if (!error && data) {
+      setEntrada(data);
+      setGuardado(true);
+      setTimeout(() => setGuardado(false), 2500);
+    }
+    setGuardando(false);
+  }, [perfil, hoy, entrada, contenido, animo]);
+
+  // ── Reabrir el día (volver a editar) ──────────────────────
+  const reabrirDia = useCallback(async () => {
+    if (!entrada?.id) return;
+    setGuardando(true);
+    const { data, error } = await supabase
+      .from("diario_vendedor")
+      .update({ completado: false, completado_at: null, updated_at: new Date().toISOString() })
+      .eq("id", entrada.id).select().single();
+    if (!error && data) setEntrada(data);
+    setGuardando(false);
+  }, [entrada]);
+
   const onCambioContenido = (val) => {
+    if (completado) return;
     setContenido(val);
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => guardar(val, animo), 1800);
   };
 
   const onCambioAnimo = (key) => {
+    if (completado) return;
     setAnimo(key);
     guardar(contenido, key);
   };
@@ -371,20 +427,71 @@ export default function DiarioVendedor({ perfil, isMobile, contactos = [], onAbr
       </SeccionCard>
 
       {/* ── Editor del día ── */}
-      <div style={{ background: L.white, borderRadius: 16, border: `1px solid ${L.border}`, padding: isMobile ? "18px 16px" : "24px 28px", marginBottom: 24, boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>
+      <div style={{ background: L.white, borderRadius: 16, border: `1px solid ${completado ? "#16A34A55" : L.border}`, padding: isMobile ? "18px 16px" : "24px 28px", marginBottom: 24, boxShadow: "0 2px 12px rgba(0,0,0,.04)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
-          <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 15, color: L.text }}>¿Cómo fue el día?</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 15, color: L.text }}>¿Cómo fue el día?</span>
+            {completado ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#DCFCE7", color: "#15803D", borderRadius: 20, padding: "3px 11px", fontSize: 11.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4 }}>
+                <CheckCircle2 size={13} /> Completado
+              </span>
+            ) : (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FEF3C7", color: "#B45309", borderRadius: 20, padding: "3px 11px", fontSize: 11.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.4 }}>
+                <Clock size={13} /> Pendiente
+              </span>
+            )}
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {guardando && <span style={{ fontSize: 12, color: L.muted }}>Guardando…</span>}
-            {guardado && <span style={{ fontSize: 12, color: "#16A34A", fontWeight: 700 }}>✓ Guardado</span>}
-            <button
-              onClick={() => guardar(contenido, animo)}
-              disabled={guardando}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 9, border: "none", background: C.red, color: "#fff", fontSize: 13, fontWeight: 700, cursor: guardando ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: guardando ? 0.6 : 1 }}>
-              <Save size={14} /> Guardar
-            </button>
+            {guardado && !guardando && <span style={{ fontSize: 12, color: "#16A34A", fontWeight: 700 }}>✓ Guardado</span>}
+            {completado ? (
+              <button
+                onClick={reabrirDia}
+                disabled={guardando}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 9, border: `1.5px solid ${L.border}`, background: L.white, color: L.muted, fontSize: 13, fontWeight: 700, cursor: guardando ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: guardando ? 0.6 : 1 }}>
+                <Lock size={13} /> Reabrir para editar
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => guardar(contenido, animo)}
+                  disabled={guardando}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 9, border: `1.5px solid ${L.border}`, background: L.white, color: L.text, fontSize: 13, fontWeight: 700, cursor: guardando ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: guardando ? 0.6 : 1 }}>
+                  <Save size={14} /> Guardar borrador
+                </button>
+                <button
+                  onClick={completarDia}
+                  disabled={guardando || !contenido.trim()}
+                  title={!contenido.trim() ? "Escribí el resumen del día antes de completar" : "Enviar a Nicolás"}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 9, border: "none", background: "#16A34A", color: "#fff", fontSize: 13, fontWeight: 700, cursor: (guardando || !contenido.trim()) ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: (guardando || !contenido.trim()) ? 0.5 : 1 }}>
+                  <Send size={14} /> Completar día
+                </button>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Valoración de Nicolás */}
+        {(entrada?.valoracion_nota || entrada?.valoracion_comentario) && (
+          <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: entrada?.valoracion_comentario ? 8 : 0 }}>
+              <span style={{ fontSize: 11.5, fontWeight: 800, color: "#92400E", textTransform: "uppercase", letterSpacing: 0.4 }}>
+                Valoración de {entrada?.valorado_por || "Nicolás"}
+              </span>
+              {entrada?.valoracion_nota && <Stars value={entrada.valoracion_nota} size={15} />}
+            </div>
+            {entrada?.valoracion_comentario && (
+              <p style={{ margin: 0, fontSize: 13.5, color: "#78350F", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{entrada.valoracion_comentario}</p>
+            )}
+          </div>
+        )}
+
+        {completado && (
+          <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, color: "#15803D", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 10, padding: "9px 14px", marginBottom: 16 }}>
+            <CheckCircle2 size={15} />
+            Día enviado a Nicolás{entrada?.completado_at ? ` · ${new Date(entrada.completado_at).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}` : ""}. Reabrí si necesitás corregir algo.
+          </div>
+        )}
 
         {/* Estado de ánimo */}
         <div style={{ marginBottom: 14 }}>
@@ -408,12 +515,15 @@ export default function DiarioVendedor({ perfil, isMobile, contactos = [], onAbr
         <textarea
           value={contenido}
           onChange={(e) => onCambioContenido(e.target.value)}
+          readOnly={completado}
           placeholder={`Contá cómo fue el día, ${perfil?.nombre?.split(" ")[0] || ""}. ¿Qué conversaciones tuviste? ¿Cuáles avanzaron? ¿Qué obstáculos encontraste? ¿Qué mejorarías para mañana?`}
           rows={isMobile ? 8 : 12}
-          style={{ width: "100%", boxSizing: "border-box", resize: "vertical", border: `1.5px solid ${L.border}`, borderRadius: 10, padding: "14px 16px", fontSize: 14.5, fontFamily: FONT_BODY, color: L.text, background: L.soft, outline: "none", lineHeight: 1.7, minHeight: 200 }}
+          style={{ width: "100%", boxSizing: "border-box", resize: "vertical", border: `1.5px solid ${L.border}`, borderRadius: 10, padding: "14px 16px", fontSize: 14.5, fontFamily: FONT_BODY, color: L.text, background: completado ? "#F8FAFC" : L.soft, outline: "none", lineHeight: 1.7, minHeight: 200, cursor: completado ? "default" : "text" }}
         />
         <div style={{ marginTop: 8, fontSize: 11.5, color: L.light, textAlign: "right" }}>
-          {contenido.length > 0 ? `${contenido.length} caracteres · Autoguardado activado` : "Empezá a escribir — se guarda solo"}
+          {completado
+            ? `${contenido.length} caracteres · Completado (solo lectura)`
+            : contenido.length > 0 ? `${contenido.length} caracteres · Autoguardado activado` : "Empezá a escribir — se guarda solo"}
         </div>
       </div>
 
@@ -448,13 +558,31 @@ export default function DiarioVendedor({ perfil, isMobile, contactos = [], onAbr
                         )}
                       </div>
                     </div>
-                    {abierta ? <ChevronUp size={16} color={L.muted} /> : <ChevronDown size={16} color={L.muted} />}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                      {e.valoracion_nota
+                        ? <Stars value={e.valoracion_nota} size={13} />
+                        : !e.completado && <span style={{ fontSize: 10.5, fontWeight: 800, color: "#B45309", background: "#FEF3C7", borderRadius: 20, padding: "2px 8px", textTransform: "uppercase", letterSpacing: 0.3 }}>Pendiente</span>}
+                      {abierta ? <ChevronUp size={16} color={L.muted} /> : <ChevronDown size={16} color={L.muted} />}
+                    </div>
                   </div>
                   {abierta && (
                     <div style={{ padding: "0 18px 16px", borderTop: `1px solid ${L.border}`, paddingTop: 14 }}>
                       {e.contenido
                         ? <p style={{ margin: 0, fontSize: 14, color: L.text, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{e.contenido}</p>
                         : <p style={{ margin: 0, fontSize: 13, color: L.light, fontStyle: "italic" }}>Sin contenido registrado</p>}
+                      {(e.valoracion_nota || e.valoracion_comentario) && (
+                        <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 10, padding: "10px 14px", marginTop: 14 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: e.valoracion_comentario ? 6 : 0 }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: "#92400E", textTransform: "uppercase", letterSpacing: 0.4 }}>
+                              Valoración de {e.valorado_por || "Nicolás"}
+                            </span>
+                            {e.valoracion_nota && <Stars value={e.valoracion_nota} size={14} />}
+                          </div>
+                          {e.valoracion_comentario && (
+                            <p style={{ margin: 0, fontSize: 13, color: "#78350F", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{e.valoracion_comentario}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

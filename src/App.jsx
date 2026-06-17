@@ -4,7 +4,7 @@ import {
   Bell, Search, LogOut, MessageSquare, BarChart2, Package,
   Pencil, Bot, User, Calendar, Send, X, Check,
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
-  AlertCircle, Clock, ChevronDown, ChevronLeft, Zap, ShoppingBag, Shield, Trash2,
+  AlertCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
   Image as ImageIcon,
 } from "lucide-react";
@@ -136,14 +136,31 @@ NTG no financia directamente. Respuesta correcta: "Trabajamos con socios de fina
 
 ════ SHOWROOM Y FEATURES ════
 No hay showroom tradicional — la mayoría de las unidades se construyen a pedido, pero se pueden compartir fotos reales, el catálogo y avances de producción.
-IMÁGENES POR MODELO (links oficiales — el vendedor las manda al cliente; vos podés sugerir cuál usar):
+IMÁGENES POR MODELO (links oficiales — el vendedor las manda al cliente; vos podés sugerir cuál usar). Cada modelo tiene exterior, y según el modelo: interior, plano y/o video. La paleta de colores es la misma para todos los modelos.
+EXTERIORES:
 - 2-Stall White Marble → https://ninitgroup.com/wp-content/uploads/2026/05/2bano.png
 - 3-Stall (el más popular) → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM.jpeg
 - 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/4bano.png
 - ADA+2 → https://ninitgroup.com/wp-content/uploads/2026/05/ada22.png
 - 6-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/6bano.png
 - Vista general / render → https://ninitgroup.com/wp-content/uploads/2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png
-Usá SOLO estos links. No inventes otras URLs de imágenes. En el chat el vendedor tiene un botón "Fotos" con estos mismos links por modelo.
+INTERIORES:
+- 2-Stall y 3-Stall (comparten el mismo interior):
+  - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1-1.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1.jpeg
+- 4-Stall, 5-Stall y 6-Stall (comparten el mismo interior):
+  - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM-1-1.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-3.jpeg
+- ADA+2: https://ninitgroup.com/wp-content/uploads/2026/01/dfhxvb.png
+PLANOS (floor plans):
+- 2-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1-1.jpeg
+- 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/PHOTO-2026-01-08-01-13-01-1.jpg
+- 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg
+VIDEO:
+- 2-Stall (walkthrough) → https://ninitgroup.com/wp-content/uploads/2026/06/2-stalls.mp4
+PALETA DE COLORES (misma para todos los modelos):
+- https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1.jpeg
+Usá SOLO estos links. No inventes otras URLs de imágenes. En el chat el vendedor tiene un botón "Fotos" → elige el modelo → elige Exterior / Interior / Plano / Video / Paleta.
 Features estándar: A/C, luces LED, inodoros con descarga, lavamanos, espejos, tanques de agua limpia/residual, sistema de bomba de agua, freno eléctrico, escalones plegables, gatos estabilizadores, pasamanos. No abrumar con detalle técnico salvo que lo pidan.
 
 ════ PIPELINE DE VENTAS (estados del CRM) ════
@@ -1313,30 +1330,65 @@ const COTIZACIONES = [
 // ============================================================
 // FOTOS POR MODELO (links de imagen para enviar al cliente)
 // ============================================================
+const FOTO_PREFIX = "https://ninitgroup.com/wp-content/uploads/";
+
+// Assets compartidos entre modelos
+const FOTO_INTERIOR_456 = `Here's the interior 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM-1-1.jpeg\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-3.jpeg`;
+const FOTO_INTERIOR_23 = `Here's the interior 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1-1.jpeg\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1.jpeg`;
+const FOTO_PALETA = `Here's our color palette 🎨 (same premium finish on every model) 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1.jpeg`;
+
+// Cada modelo tiene varios assets: Exterior / Interior / Plano / Video / Paleta
+// (solo se listan los assets disponibles para cada modelo)
 const FOTOS_MODELOS = [
   {
     label: "2-Stall White Marble",
-    texto: `Here's our 2-Stall White Marble unit 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/05/2bano.png`,
+    assets: [
+      { tipo: "Exterior", texto: `Here's our 2-Stall White Marble unit 👇\n${FOTO_PREFIX}2026/05/2bano.png` },
+      { tipo: "Interior", texto: FOTO_INTERIOR_23 },
+      { tipo: "Plano", texto: `Here's the floor plan of the 2-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1-1.jpeg` },
+      { tipo: "Video", texto: `Here's a video walkthrough of the 2-Stall 👇\n${FOTO_PREFIX}2026/06/2-stalls.mp4` },
+      { tipo: "Paleta de colores", texto: FOTO_PALETA },
+    ],
   },
   {
     label: "3-Stall (most popular ⭐)",
-    texto: `Here's our 3-Stall unit — our most popular one ⭐ 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM.jpeg`,
+    assets: [
+      { tipo: "Exterior", texto: `Here's our 3-Stall unit — our most popular one ⭐ 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM.jpeg` },
+      { tipo: "Interior", texto: FOTO_INTERIOR_23 },
+      { tipo: "Plano", texto: `Here's the floor plan of the 3-Stall 👇\n${FOTO_PREFIX}2026/05/PHOTO-2026-01-08-01-13-01-1.jpg` },
+      { tipo: "Paleta de colores", texto: FOTO_PALETA },
+    ],
   },
   {
     label: "4-Stall",
-    texto: `Here's our 4-Stall unit 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/05/4bano.png`,
+    assets: [
+      { tipo: "Exterior", texto: `Here's our 4-Stall unit 👇\n${FOTO_PREFIX}2026/05/4bano.png` },
+      { tipo: "Interior", texto: FOTO_INTERIOR_456 },
+      { tipo: "Plano", texto: `Here's the floor plan of the 4-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg` },
+      { tipo: "Paleta de colores", texto: FOTO_PALETA },
+    ],
   },
   {
     label: "ADA+2 Accessible",
-    texto: `Here's our ADA+2 fully accessible unit 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/05/ada22.png`,
+    assets: [
+      { tipo: "Exterior", texto: `Here's our ADA+2 fully accessible unit 👇\n${FOTO_PREFIX}2026/05/ada22.png` },
+      { tipo: "Interior", texto: `Here's the interior of the ADA+2 👇\n${FOTO_PREFIX}2026/01/dfhxvb.png` },
+      { tipo: "Paleta de colores", texto: FOTO_PALETA },
+    ],
   },
   {
     label: "6-Stall",
-    texto: `Here's our 6-Stall unit 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/05/6bano.png`,
+    assets: [
+      { tipo: "Exterior", texto: `Here's our 6-Stall unit 👇\n${FOTO_PREFIX}2026/05/6bano.png` },
+      { tipo: "Interior", texto: FOTO_INTERIOR_456 },
+      { tipo: "Paleta de colores", texto: FOTO_PALETA },
+    ],
   },
   {
     label: "Render / vista general",
-    texto: `Here's a look at our restroom trailers 👇\nhttps://ninitgroup.com/wp-content/uploads/2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png`,
+    assets: [
+      { tipo: "Render", texto: `Here's a look at our restroom trailers 👇\n${FOTO_PREFIX}2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png` },
+    ],
   },
 ];
 
@@ -1419,6 +1471,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [showPlantillas, setShowPlantillas] = useState(false);
   const [showCotizaciones, setShowCotizaciones] = useState(false);
   const [showFotos, setShowFotos] = useState(false);
+  const [fotoModelo, setFotoModelo] = useState(null);
   const endRef = useRef(null);
   const plantillasRef = useRef(null);
   const cotizacionesRef = useRef(null);
@@ -1440,7 +1493,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
 
   useEffect(() => {
     if (!showFotos) return;
-    const h = (e) => { if (fotosRef.current && !fotosRef.current.contains(e.target)) setShowFotos(false); };
+    const h = (e) => { if (fotosRef.current && !fotosRef.current.contains(e.target)) { setShowFotos(false); setFotoModelo(null); } };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [showFotos]);
@@ -1786,25 +1839,48 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
         </div>
         {/* Fotos por modelo */}
         <div ref={fotosRef} style={{ position: "relative", flexShrink: 0 }}>
-          <button onClick={() => setShowFotos((v) => !v)} title="Enviar foto del modelo al cliente"
+          <button onClick={() => { setShowFotos((v) => !v); setFotoModelo(null); }} title="Enviar foto del modelo al cliente"
             style={{ background: showFotos ? "#0EA5E9" : L.soft, color: showFotos ? "#fff" : "#0EA5E9", border: `1.5px solid ${showFotos ? "#0EA5E9" : "#0EA5E955"}`, borderRadius: 11, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, transition: "all .15s", flexShrink: 0 }}>
             <ImageIcon size={15} />
             {!isMobile && <span>Fotos</span>}
           </button>
           {showFotos && (
             <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: isMobile ? "calc(100vw - 24px)" : 320, maxHeight: 460, overflowY: "auto", background: L.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", border: `1px solid ${L.border}`, zIndex: 200 }}>
-              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-                <ImageIcon size={14} color="#0EA5E9" />
-                <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.8 }}>Fotos por modelo</span>
-              </div>
-              {FOTOS_MODELOS.map((item) => (
-                <button key={item.label} onClick={() => { setTexto(item.texto); setShowFotos(false); }}
-                  style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40`, display: "flex", alignItems: "center", gap: 8 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
-                  <ImageIcon size={13} color="#0EA5E9" style={{ flexShrink: 0 }} /> {item.label}
-                </button>
-              ))}
+              {fotoModelo == null ? (
+                <>
+                  <div style={{ padding: "12px 16px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                    <ImageIcon size={14} color="#0EA5E9" />
+                    <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.8 }}>Fotos por modelo</span>
+                  </div>
+                  {FOTOS_MODELOS.map((item, i) => (
+                    <button key={item.label} onClick={() => setFotoModelo(i)}
+                      style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40`, display: "flex", alignItems: "center", gap: 8 }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
+                      <ImageIcon size={13} color="#0EA5E9" style={{ flexShrink: 0 }} /> {item.label}
+                      <ChevronRight size={15} color={L.muted} style={{ marginLeft: "auto", flexShrink: 0 }} />
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <div style={{ padding: "10px 12px 10px 8px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 4 }}>
+                    <button onClick={() => setFotoModelo(null)}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", color: "#0EA5E9" }}>
+                      <ChevronLeft size={18} />
+                    </button>
+                    <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.6 }}>{FOTOS_MODELOS[fotoModelo].label}</span>
+                  </div>
+                  {FOTOS_MODELOS[fotoModelo].assets.map((a) => (
+                    <button key={a.tipo} onClick={() => { setTexto(a.texto); setShowFotos(false); setFotoModelo(null); }}
+                      style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40`, display: "flex", alignItems: "center", gap: 8 }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
+                      <ImageIcon size={13} color="#0EA5E9" style={{ flexShrink: 0 }} /> {a.tipo}
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -2054,7 +2130,7 @@ export default function App() {
           <>
             {isMobile && <MobileBack title="Control" onBack={() => setVista("chat")} />}
             <div style={{ flex: 1, overflowY: "auto", height: "100%" }}>
-              <CEODashboard isMobile={isMobile} />
+              <CEODashboard isMobile={isMobile} perfil={perfil} />
             </div>
           </>
         ) : vista === "diario" && rol === "vendedor" ? (
