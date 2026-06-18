@@ -1425,9 +1425,10 @@ const FOTOS_MODELOS = [
   {
     label: "3-Stall (most popular ⭐)",
     assets: [
-      { tipo: "Exterior", texto: `Here's our 3-Stall unit — our most popular one ⭐ 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM.jpeg` },
-      { tipo: "Interior", texto: FOTO_INTERIOR_23 },
+      { tipo: "Exterior", texto: `Here's our 3-Stall unit — our most popular one ⭐ 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-18-at-5.18.09-PM-2.jpeg` },
+      { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-18-at-5.18.09-PM-1.jpeg\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-18-at-5.18.09-PM.jpeg\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-18-at-5.18.10-PM.jpeg` },
       { tipo: "Plano", texto: `Here's the floor plan of the 3-Stall 👇\n${FOTO_PREFIX}2026/05/PHOTO-2026-01-08-01-13-01-1.jpg` },
+      { tipo: "Video", texto: `Here's a video walkthrough of the 3-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Video-2026-06-18-at-5.18.10-PM.mp4` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
     ],
   },
@@ -1437,6 +1438,7 @@ const FOTOS_MODELOS = [
       { tipo: "Exterior", texto: `Here's our 4-Stall unit 👇\n${FOTO_PREFIX}2026/05/4bano.png` },
       { tipo: "Interior", texto: FOTO_INTERIOR_456 },
       { tipo: "Plano", texto: `Here's the floor plan of the 4-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg` },
+      { tipo: "Video", texto: `Here's a video walkthrough of the 4-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Video-2026-06-18-at-5.18.10-PM.mp4` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
     ],
   },
@@ -1472,12 +1474,12 @@ const PLANTILLAS = [
     grupo: "🟢 Primer contacto",
     items: [
       {
-        label: "Saludo Fernando (ES)",
-        texto: `Hola mucho gusto mi nombre es Fernando con Ninit Group, te puedo ayudar a partir de aqui en la compra de la unidad que estas buscando, dejame saber las preguntas que pudieras tener gracias 🚐✨`,
+        label: "Saludo (ES)",
+        texto: `Hola, mucho gusto, mi nombre es {VENDEDOR} con Ninit Group. Te puedo ayudar a partir de aquí en la compra de la unidad que estás buscando, dejame saber las preguntas que pudieras tener. ¡Gracias! 🚐✨`,
       },
       {
-        label: "Saludo Fernando (EN)",
-        texto: `Hi, nice to meet you! My name is Fernando with Ninit Group. I can help you from here with the purchase of the unit you're looking for. Let me know any questions you may have. Thank you 🚐✨`,
+        label: "Saludo (EN)",
+        texto: `Hi, nice to meet you! My name is {VENDEDOR} with Ninit Group. I can help you from here with the purchase of the unit you're looking for. Let me know any questions you may have. Thank you! 🚐✨`,
       },
       {
         label: "Bienvenida Meta Ads",
@@ -1715,11 +1717,19 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     setEnviando(false);
   };
 
-  // Envía un contenido directo (ej: una foto de modelo) sin pasar por el input.
-  const enviarDirecto = async (cuerpo) => {
-    if (!cuerpo || enviando) return;
+  // Envía un asset de "Fotos por modelo": si trae varias imágenes/videos, manda
+  // una por mensaje (así en WhatsApp llegan TODAS como media, no solo la primera).
+  const enviarFotoAsset = async (texto) => {
+    if (!texto || enviando) return;
+    const urls = String(texto).match(URL_RE) || [];
     setEnviando(true); setErr("");
-    await enviarMensaje(cuerpo);
+    if (urls.length <= 1) {
+      await enviarMensaje(texto);
+    } else {
+      const caption = String(texto).replace(URL_RE, "").trim();
+      await enviarMensaje(caption ? `${caption}\n${urls[0]}` : urls[0]);
+      for (let i = 1; i < urls.length; i++) await enviarMensaje(urls[i]);
+    }
     setEnviando(false);
   };
 
@@ -2047,7 +2057,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                       const thumb = primeraImagen(a.texto);
                       return (
                         <button key={a.tipo} disabled={enviando}
-                          onClick={() => { enviarDirecto(a.texto); setShowFotos(false); setFotoModelo(null); }}
+                          onClick={() => { enviarFotoAsset(a.texto); setShowFotos(false); setFotoModelo(null); }}
                           title={`Enviar ${a.tipo}`}
                           style={{ padding: 0, background: L.soft, border: `1px solid ${L.border}`, borderRadius: 10, cursor: enviando ? "default" : "pointer", overflow: "hidden", display: "flex", flexDirection: "column", transition: "all .15s" }}
                           onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#0EA5E9"; e.currentTarget.style.transform = "translateY(-1px)"; }}
@@ -2091,7 +2101,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 <div key={grupo.grupo}>
                   <div style={{ padding: "8px 16px 4px", fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{grupo.grupo}</div>
                   {grupo.items.map((item) => (
-                    <button key={item.label} onClick={() => { setTexto(item.texto); setShowPlantillas(false); }}
+                    <button key={item.label} onClick={() => { setTexto(item.texto.replaceAll("{VENDEDOR}", (userName || "").split(" ")[0])); setShowPlantillas(false); }}
                       style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40` }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
