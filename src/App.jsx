@@ -1527,6 +1527,36 @@ const PLANTILLAS = [
 ];
 
 // ============================================================
+// RENDER DE CONTENIDO DEL MENSAJE (imágenes/videos inline)
+// El vendedor ve la imagen real, igual que el cliente — sin links sueltos.
+// ============================================================
+const URL_RE = /(https?:\/\/[^\s]+)/g;
+const esImagenURL = (u) => /\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(u);
+const esVideoURL  = (u) => /\.(mp4|webm|mov)(\?.*)?$/i.test(u);
+
+function MensajeContenido({ texto }) {
+  if (!texto) return null;
+  const partes = String(texto).split(URL_RE);
+  return (
+    <>
+      {partes.map((p, i) => {
+        if (i % 2 === 1) {
+          if (esImagenURL(p))
+            return <img key={i} src={p} alt="imagen" loading="lazy"
+              onClick={() => window.open(p, "_blank")}
+              style={{ display: "block", maxWidth: "100%", maxHeight: 320, borderRadius: 10, marginTop: 4, marginBottom: 2, cursor: "zoom-in", objectFit: "cover" }} />;
+          if (esVideoURL(p))
+            return <video key={i} src={p} controls
+              style={{ display: "block", maxWidth: "100%", maxHeight: 320, borderRadius: 10, marginTop: 4, marginBottom: 2 }} />;
+          return <a key={i} href={p} target="_blank" rel="noreferrer" style={{ color: "#0EA5E9", wordBreak: "break-all" }}>{p}</a>;
+        }
+        return p ? <span key={i}>{p}</span> : null;
+      })}
+    </>
+  );
+}
+
+// ============================================================
 // CHAT PANEL
 // ============================================================
 function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onBack, isMobile }) {
@@ -1544,10 +1574,12 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [showCotizaciones, setShowCotizaciones] = useState(false);
   const [showFotos, setShowFotos] = useState(false);
   const [fotoModelo, setFotoModelo] = useState(null);
+  const [subiendo, setSubiendo]   = useState(false);
   const endRef = useRef(null);
   const plantillasRef = useRef(null);
   const cotizacionesRef = useRef(null);
   const fotosRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!showPlantillas) return;
@@ -1606,20 +1638,16 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [mensajes]);
 
-  const enviar = async () => {
-    const cuerpo = texto.trim();
-    if (!cuerpo || enviando) return;
-    setEnviando(true); setErr(""); setTexto("");
-
+  // Envía un contenido (texto o URL de imagen) por el canal del contacto.
+  // Devuelve true si se guardó en el CRM.
+  const enviarMensaje = async (cuerpo) => {
     // 1) Guardar en CRM (Supabase)
     const { error } = await supabase.from("mensajes").insert({
       contacto_id: contacto.id, direccion: "out", origen: "agente", agente: userName, contenido: cuerpo,
     });
     if (error) {
       setErr("Error al guardar el mensaje: " + error.message);
-      setTexto(cuerpo);
-      setEnviando(false);
-      return;
+      return false;
     }
 
     // 2) Enviar por el canal correspondiente (email, Messenger o WhatsApp)
@@ -1670,8 +1698,65 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
         }
       }
     }
+    return true;
+  };
 
+  const enviar = async () => {
+    const cuerpo = texto.trim();
+    if (!cuerpo || enviando) return;
+    setEnviando(true); setErr(""); setTexto("");
+    const ok = await enviarMensaje(cuerpo);
+    if (!ok) setTexto(cuerpo);
     setEnviando(false);
+  };
+
+  // Comprime/redimensiona la imagen en el navegador antes de subirla (máx 1600px, JPEG).
+  const comprimirImagen = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const max = 1600;
+        let { width, height } = img;
+        if (width > max || height > max) {
+          const r = Math.min(max / width, max / height);
+          width = Math.round(width * r); height = Math.round(height * r);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+        resolve({ dataBase64: dataUrl.split(",")[1], contentType: "image/jpeg" });
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Adjuntar imagen: comprime → sube a Storage → envía la URL por el canal.
+  const onPickImage = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setErr("Solo se pueden adjuntar imágenes."); return; }
+    if (enviando || subiendo) return;
+    setSubiendo(true); setErr("");
+    try {
+      const { dataBase64, contentType } = await comprimirImagen(file);
+      const res = await fetch("/api/upload", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataBase64, contentType }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.url) throw new Error(json.error || "No se pudo subir la imagen");
+      await enviarMensaje(json.url);
+    } catch (e2) {
+      setErr("No se pudo enviar la imagen: " + (e2.message || e2));
+    } finally {
+      setSubiendo(false);
+    }
   };
 
   const upd = async (campos) => {
@@ -1859,7 +1944,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               )}
               {/* Burbuja */}
               <div style={{ background: esCliente ? L.white : esAgente ? "#FEF2F2" : "#FFFBEB", borderRadius: esCliente ? "3px 14px 14px 14px" : "14px 3px 14px 14px", borderLeft: esCliente ? `3px solid ${L.border}` : "none", borderRight: !esCliente ? `3px solid ${esAgente ? C.red : C.gold}` : "none", padding: "10px 14px", fontSize: 14, color: L.text, boxShadow: "0 1px 4px rgba(0,0,0,.07)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                {m.contenido}
+                <MensajeContenido texto={m.contenido} />
               </div>
               {/* Hora + eliminar */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: esCliente ? "flex-start" : "flex-end" }}>
@@ -1956,6 +2041,13 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
             </div>
           )}
         </div>
+        {/* Adjuntar imagen (subir desde el dispositivo) */}
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
+        <button onClick={() => fileInputRef.current?.click()} disabled={subiendo || enviando} title="Adjuntar imagen"
+          style={{ background: subiendo ? C.gold : L.soft, color: subiendo ? "#fff" : "#16A34A", border: `1.5px solid ${subiendo ? C.gold : "#16A34A55"}`, borderRadius: 11, padding: "10px 12px", cursor: subiendo || enviando ? "default" : "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, transition: "all .15s", flexShrink: 0 }}>
+          <ImageIcon size={15} />
+          {!isMobile && <span>{subiendo ? "Subiendo…" : "Imagen"}</span>}
+        </button>
         {/* Plantillas rápidas */}
         <div ref={plantillasRef} style={{ position: "relative", flexShrink: 0 }}>
           <button onClick={() => setShowPlantillas((v) => !v)} title="Plantillas de respuesta rápida"

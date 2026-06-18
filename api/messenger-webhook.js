@@ -43,7 +43,9 @@ export default async function handler(req, res) {
         if (!event.sender?.id || !event.message || event.message.is_echo) continue;
 
         const senderId = event.sender.id;
-        const contenido = event.message.text || "[media]";
+        // Texto + URLs de imágenes/archivos que mande el cliente (para verlas inline en el CRM)
+        const adjuntos = (event.message.attachments || []).map((a) => a?.payload?.url).filter(Boolean);
+        const contenido = [event.message.text || "", ...adjuntos].filter(Boolean).join("\n") || "[media]";
 
         const { data: existingContact, error: selectError } = await supabase
           .from("contactos")

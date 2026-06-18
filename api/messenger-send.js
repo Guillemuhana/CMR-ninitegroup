@@ -1,3 +1,5 @@
+const IMG_RE = /https?:\/\/[^\s]+\.(?:png|jpe?g|gif|webp)(?:\?[^\s]*)?/gi;
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -16,22 +18,35 @@ export default async function handler(req, res) {
   }
 
   const url = `https://graph.facebook.com/v17.0/me/messages?access_token=${encodeURIComponent(PAGE_TOKEN)}`;
-  try {
-    const fbRes = await fetch(url, {
+  const send = async (message) => {
+    const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        recipient: { id: messenger_id },
-        message: { text: mensaje },
-      }),
+      body: JSON.stringify({ recipient: { id: messenger_id }, message }),
     });
+    const data = await r.json();
+    return { ok: r.ok, data };
+  };
 
-    const fbData = await fbRes.json();
-    if (!fbRes.ok) {
-      return res.status(500).json({ error: fbData.error?.message || "Facebook Messenger API error", detail: fbData });
+  try {
+    // Separar imágenes del texto: las imágenes se mandan como attachment real,
+    // el texto restante como mensaje aparte (así el cliente ve la foto, no un link).
+    const imagenes = mensaje.match(IMG_RE) || [];
+    const texto = mensaje.replace(IMG_RE, "").trim();
+
+    if (imagenes.length === 0) {
+      const { ok, data } = await send({ text: mensaje });
+      if (!ok) return res.status(500).json({ error: data.error?.message || "Facebook Messenger API error", detail: data });
+      return res.status(200).json({ success: true, data });
     }
 
-    return res.status(200).json({ success: true, data: fbData });
+    let last;
+    if (texto) last = await send({ text: texto });
+    for (const img of imagenes) {
+      last = await send({ attachment: { type: "image", payload: { url: img, is_reusable: true } } });
+      if (!last.ok) return res.status(500).json({ error: last.data.error?.message || "Facebook Messenger API error (imagen)", detail: last.data });
+    }
+    return res.status(200).json({ success: true, data: last?.data });
   } catch (error) {
     return res.status(500).json({ error: error.message || "Messenger send failed" });
   }
