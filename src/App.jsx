@@ -1533,6 +1533,11 @@ const PLANTILLAS = [
 const URL_RE = /(https?:\/\/[^\s]+)/g;
 const esImagenURL = (u) => /\.(png|jpe?g|gif|webp)(\?.*)?$/i.test(u);
 const esVideoURL  = (u) => /\.(mp4|webm|mov)(\?.*)?$/i.test(u);
+// Eco de WhatsApp: n8n re-guarda lo que el CRM ya mandó, con el prefijo
+// "*Nombre · NINIT Group:*". El CRM ya guardó la versión limpia, así que
+// estos son duplicados y no se muestran (evita imágenes/mensajes repetidos).
+const ECHO_PREFIX_RE = /^\*.*NINIT Group:\*/;
+const primeraImagen = (txt) => (String(txt).match(URL_RE) || []).find(esImagenURL);
 
 function MensajeContenido({ texto }) {
   if (!texto) return null;
@@ -1707,6 +1712,14 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     setEnviando(true); setErr(""); setTexto("");
     const ok = await enviarMensaje(cuerpo);
     if (!ok) setTexto(cuerpo);
+    setEnviando(false);
+  };
+
+  // Envía un contenido directo (ej: una foto de modelo) sin pasar por el input.
+  const enviarDirecto = async (cuerpo) => {
+    if (!cuerpo || enviando) return;
+    setEnviando(true); setErr("");
+    await enviarMensaje(cuerpo);
     setEnviando(false);
   };
 
@@ -1904,7 +1917,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
         {mensajes.length === 0 && (
           <div style={{ textAlign: "center", color: L.light, fontSize: 13.5, marginTop: 40 }}>Sin mensajes en esta conversación aún.</div>
         )}
-        {mensajes.map((m) => {
+        {mensajes.filter((m) => !ECHO_PREFIX_RE.test(m.contenido || "")).map((m) => {
           const esCliente = m.direccion === "in";
           const esBot     = m.origen === "bot";
           const esAgente  = m.origen === "agente";
@@ -2028,14 +2041,27 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                     </button>
                     <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.6 }}>{FOTOS_MODELOS[fotoModelo].label}</span>
                   </div>
-                  {FOTOS_MODELOS[fotoModelo].assets.map((a) => (
-                    <button key={a.tipo} onClick={() => { setTexto(a.texto); setShowFotos(false); setFotoModelo(null); }}
-                      style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40`, display: "flex", alignItems: "center", gap: 8 }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
-                      <ImageIcon size={13} color="#0EA5E9" style={{ flexShrink: 0 }} /> {a.tipo}
-                    </button>
-                  ))}
+                  <div style={{ padding: "8px 16px 2px", fontSize: 11, color: L.muted }}>Tocá una foto para enviarla directo al cliente 👇</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, padding: 11 }}>
+                    {FOTOS_MODELOS[fotoModelo].assets.map((a) => {
+                      const thumb = primeraImagen(a.texto);
+                      return (
+                        <button key={a.tipo} disabled={enviando}
+                          onClick={() => { enviarDirecto(a.texto); setShowFotos(false); setFotoModelo(null); }}
+                          title={`Enviar ${a.tipo}`}
+                          style={{ padding: 0, background: L.soft, border: `1px solid ${L.border}`, borderRadius: 10, cursor: enviando ? "default" : "pointer", overflow: "hidden", display: "flex", flexDirection: "column", transition: "all .15s" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#0EA5E9"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.transform = "none"; }}>
+                          <div style={{ width: "100%", height: 92, background: "#0F172A0A", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                            {thumb
+                              ? <img src={thumb} alt={a.tipo} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              : <span style={{ fontSize: 26 }}>🎬</span>}
+                          </div>
+                          <div style={{ padding: "6px 6px 7px", fontSize: 11.5, fontWeight: 700, color: L.text, textAlign: "center", lineHeight: 1.2 }}>{a.tipo}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </>
               )}
             </div>
