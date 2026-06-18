@@ -5,9 +5,9 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const PAGE_TOKEN = process.env.MESSENGER_PAGE_TOKEN;
+  const PAGE_TOKEN = process.env.MESSENGER_PAGE_TOKEN || process.env.PAGE_ACCESS_TOKEN;
   if (!PAGE_TOKEN) {
-    return res.status(500).json({ error: "MESSENGER_PAGE_TOKEN is not configured" });
+    return res.status(500).json({ error: "MESSENGER_PAGE_TOKEN / PAGE_ACCESS_TOKEN is not configured" });
   }
 
   const { messenger_id, mensaje } = req.body || {};
