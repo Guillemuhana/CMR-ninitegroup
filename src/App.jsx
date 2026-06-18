@@ -2168,6 +2168,67 @@ function RecordatorioDiario({ perfil, rol, onIr }) {
 }
 
 // ============================================================
+// BIENVENIDA — primer ingreso de un vendedor al CRM
+// ============================================================
+function BienvenidaVendedor({ perfil, rol }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (rol !== "vendedor" || !perfil?.id) { setVisible(false); return; }
+    const key = `ninit_bienvenida_${perfil.id}`;
+    if (!localStorage.getItem(key)) setVisible(true);
+  }, [perfil?.id, rol]);
+
+  if (!visible) return null;
+
+  const primerNombre = perfil?.nombre?.split(" ")[0] || "";
+  const cerrar = () => {
+    if (perfil?.id) localStorage.setItem(`ninit_bienvenida_${perfil.id}`, new Date().toISOString());
+    setVisible(false);
+  };
+
+  return (
+    <div onClick={cerrar}
+      style={{ position: "fixed", inset: 0, zIndex: 6000, background: "rgba(15,23,42,.55)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: FONT_BODY }}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ width: "min(460px, 100%)", background: "#fff", borderRadius: 20, boxShadow: "0 20px 70px rgba(0,0,0,.3)", overflow: "hidden" }}>
+        <div style={{ background: `linear-gradient(135deg, ${C.red}, ${C.redDark})`, padding: "30px 26px 24px", textAlign: "center" }}>
+          <img src={LOGO_URL} alt="NINIT Group" style={{ height: 46, marginBottom: 12, filter: "brightness(0) invert(1)" }} />
+          <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 22, color: "#fff", letterSpacing: 0.3 }}>
+            ¡Te damos la bienvenida{primerNombre ? `, ${primerNombre}` : ""}! 🎉
+          </div>
+          <div style={{ fontSize: 13.5, color: "rgba(255,255,255,.92)", marginTop: 5 }}>
+            Este es tu CRM de <b>NINIT Group</b>
+          </div>
+        </div>
+        <div style={{ padding: "22px 26px 26px" }}>
+          <div style={{ fontSize: 14, color: L.text, lineHeight: 1.6, marginBottom: 16 }}>
+            Desde acá vas a gestionar todo tu trabajo con los clientes. Esto es lo que podés hacer:
+          </div>
+          {[
+            { icon: <MessageSquare size={16} color={C.red} />, t: "Chatear con tus clientes", d: "Respondé consultas de WhatsApp y Messenger en tiempo real." },
+            { icon: <BookOpen size={16} color={C.red} />, t: "Registrar tu día en \"Mi Día\"", d: "Contá cómo te fue para que Nicolás pueda hacer el seguimiento." },
+            { icon: <Calendar size={16} color={C.red} />, t: "Organizar tu agenda", d: "Anotá tus reuniones y recordatorios." },
+          ].map((it) => (
+            <div key={it.t} style={{ display: "flex", gap: 11, alignItems: "flex-start", marginBottom: 13 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: "#EAF3FA", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{it.icon}</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 13.5, color: L.text }}>{it.t}</div>
+                <div style={{ fontSize: 12.5, color: L.muted, lineHeight: 1.45 }}>{it.d}</div>
+              </div>
+            </div>
+          ))}
+          <button onClick={cerrar}
+            style={{ width: "100%", marginTop: 10, background: C.red, color: "#fff", border: "none", borderRadius: 11, padding: "12px", fontSize: 14.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY, letterSpacing: 0.4, boxShadow: "0 4px 14px rgba(58,141,194,.35)" }}>
+            Comenzar ✨
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // APP
 // ============================================================
 export default function App() {
@@ -2420,6 +2481,7 @@ export default function App() {
       <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} nombreUsuario={userName} rol={rol} onRefrescar={recargarContactos} niniPrompt={niniPrompt} />
 
       <RecordatorioDiario perfil={perfil} rol={rol} onIr={() => setVista("diario")} />
+      <BienvenidaVendedor perfil={perfil} rol={rol} />
     </div>
   );
 }
