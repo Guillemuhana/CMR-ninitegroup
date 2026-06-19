@@ -1438,7 +1438,7 @@ const FOTOS_MODELOS = [
       { tipo: "Exterior", texto: `Here's our 4-Stall unit 👇\n${FOTO_PREFIX}2026/05/4bano.png` },
       { tipo: "Interior", texto: FOTO_INTERIOR_456 },
       { tipo: "Plano", texto: `Here's the floor plan of the 4-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg` },
-      { tipo: "Video", texto: `Here's a video walkthrough of the 4-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Video-2026-06-18-at-5.18.10-PM.mp4` },
+      { tipo: "Video", texto: `Here's a video walkthrough of the 4-Stall 👇\n${FOTO_PREFIX}2026/06/video2_con_musica_avicii.mp4` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
     ],
   },
