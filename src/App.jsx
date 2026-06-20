@@ -158,7 +158,7 @@ PLANOS (floor plans):
 - 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/PHOTO-2026-01-08-01-13-01-1.jpg
 - 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg
 VIDEO:
-- 2-Stall (walkthrough) → https://ninitgroup.com/wp-content/uploads/2026/06/2-stalls.mp4
+- 2-Stall (walkthrough) → https://ninitgroup.com/wp-content/uploads/2026/06/2_stalls_con_musica.mp4
 PALETA DE COLORES (misma para todos los modelos):
 - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1.jpeg
 Usá SOLO estos links. No inventes otras URLs de imágenes. En el chat el vendedor tiene un botón "Fotos" → elige el modelo → elige Exterior / Interior / Plano / Video / Paleta.
@@ -1418,7 +1418,7 @@ const FOTOS_MODELOS = [
       { tipo: "Exterior", texto: `Here's our 2-Stall White Marble unit 👇\n${FOTO_PREFIX}2026/05/2bano.png` },
       { tipo: "Interior", texto: FOTO_INTERIOR_23 },
       { tipo: "Plano", texto: `Here's the floor plan of the 2-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1-1.jpeg` },
-      { tipo: "Video", texto: `Here's a video walkthrough of the 2-Stall 👇\n${FOTO_PREFIX}2026/06/2-stalls.mp4` },
+      { tipo: "Video", texto: `Here's a video walkthrough of the 2-Stall 👇\n${FOTO_PREFIX}2026/06/2_stalls_con_musica.mp4` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
     ],
   },
