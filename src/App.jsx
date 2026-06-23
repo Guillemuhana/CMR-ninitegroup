@@ -2432,7 +2432,7 @@ export default function App() {
       // Asegurar que ninitgroup@gmail.com SIEMPRE sea CEO aunque la DB diga otra cosa,
       // y darle un nombre lindo (en vez de "ninitgroup") si la DB no tiene uno.
       if (email === "ninitgroup@gmail.com") {
-        const nombreLindo = p.nombre && p.nombre !== "ninitgroup" ? p.nombre : "Guillermo";
+        const nombreLindo = p.nombre && p.nombre !== "ninitgroup" ? p.nombre : "Nicolas";
         p = { ...p, role: "ceo", nombre: nombreLindo };
       }
       setPerfil(p);
