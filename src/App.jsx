@@ -1246,7 +1246,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
     <div style={{ width: "100%", height: "100%", background: L.white, borderRight: `1px solid ${L.border}`, display: "flex", flexDirection: "column" }}>
 
       {/* ── Brand bar ── */}
-      <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.red, borderBottom: `3px solid ${C.redDark}` }}>
+      <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.gradAI, borderBottom: `3px solid ${C.redDark}`, boxShadow: "0 4px 18px rgba(58,141,194,.22)" }}>
         <img src={LOGO_URL} alt="NINIT Group" style={{ width: 210, height: 52, objectFit: "cover", objectPosition: "center 38%", filter: "brightness(0) invert(1)", opacity: 0.95 }} />
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }} />
@@ -1582,6 +1582,11 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [showFotos, setShowFotos] = useState(false);
   const [fotoModelo, setFotoModelo] = useState(null);
   const [subiendo, setSubiendo]   = useState(false);
+  const [resumenOpen, setResumenOpen]   = useState(false);
+  const [resumenTexto, setResumenTexto] = useState("");
+  const [resumenLoading, setResumenLoading] = useState(false);
+  const [resumenErr, setResumenErr]     = useState("");
+  const [resumenCopiado, setResumenCopiado] = useState(false);
   const endRef = useRef(null);
   const plantillasRef = useRef(null);
   const cotizacionesRef = useRef(null);
@@ -1625,6 +1630,43 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     if (!window.confirm("¿Eliminar este mensaje del CRM?")) return;
     await supabase.from("mensajes").delete().eq("id", id);
     setMensajes((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const generarResumen = async () => {
+    setResumenOpen(true);
+    setResumenErr("");
+    setResumenCopiado(false);
+    if (!mensajes.length) { setResumenErr("Todavía no hay mensajes en esta conversación."); return; }
+    setResumenLoading(true);
+    setResumenTexto("");
+    try {
+      const res = await fetch("/api/resumen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contacto: { nombre: contacto.nombre, telefono: contacto.telefono, email: contacto.email },
+          vendedor: userName,
+          mensajes: mensajes.map((m) => ({
+            direccion: m.direccion, origen: m.origen, agente: m.agente,
+            contenido: m.contenido, created_at: m.created_at,
+          })),
+        }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || "No se pudo generar el resumen.");
+      setResumenTexto(out.resumen || "El asistente no devolvió un resumen.");
+    } catch (e) {
+      setResumenErr(e.message || "Error al generar el resumen.");
+    }
+    setResumenLoading(false);
+  };
+
+  const copiarResumen = async () => {
+    try {
+      await navigator.clipboard.writeText(resumenTexto);
+      setResumenCopiado(true);
+      setTimeout(() => setResumenCopiado(false), 2000);
+    } catch { /* sin clipboard */ }
   };
 
   const cargar = useCallback(async () => {
@@ -1824,11 +1866,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.color = L.muted; }}>
                 <Pencil size={14} /> Editar
               </button>
-              <button onClick={() => setPedido(true)}
-                style={{ background: C.red, border: "none", color: "#fff", borderRadius: 9, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 10px rgba(185,28,28,.3)", transition: "all .15s", flexShrink: 0 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = C.redDark; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = C.red; }}>
-                <ShoppingBag size={14} /> Nuevo Pedido
+              <button onClick={generarResumen} title="Resumen IA de la conversación + mensaje sugerido para el cliente"
+                style={{ background: C.gradBtn, border: "none", color: "#fff", borderRadius: 9, padding: "6px 16px", cursor: "pointer", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 14px rgba(99,102,241,.32)", flexShrink: 0 }}>
+                <Sparkles size={14} /> Avanzar
               </button>
               <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
                 style={{ background: confirmElim ? "#FEE2E2" : L.soft, border: `1.5px solid ${confirmElim ? "#FECACA" : L.border}`, color: confirmElim ? C.red : L.muted, borderRadius: 9, width: 36, height: 36, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}
@@ -1847,9 +1887,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 11px", background: L.soft, color: L.muted, borderColor: L.border }}>
                 <Pencil size={13} /> Editar
               </button>
-              <button onClick={() => setPedido(true)}
-                style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 11px", background: C.red, color: "#fff", borderColor: C.red }}>
-                <ShoppingBag size={13} /> Pedido
+              <button onClick={generarResumen}
+                style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 12px", background: C.gradBtn, color: "#fff", borderColor: "transparent" }}>
+                <Sparkles size={13} /> Avanzar
               </button>
               <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
                 style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 10px", background: confirmElim ? "#FEF2F2" : L.soft, color: confirmElim ? C.red : L.muted, borderColor: confirmElim ? "#FECACA" : L.border }}>
@@ -2131,6 +2171,62 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
           onClose={() => setPedido(false)}
           onGuardado={() => {}}
         />
+      )}
+
+      {/* ── Modal: Resumen IA ── */}
+      {resumenOpen && (
+        <>
+          <div onClick={() => setResumenOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 600 }} />
+          <div style={{
+            position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+            width: isMobile ? "calc(100% - 28px)" : 480, maxHeight: "80vh",
+            background: L.white, borderRadius: 18, zIndex: 601,
+            boxShadow: "0 24px 80px rgba(0,0,0,.3)", fontFamily: FONT_BODY,
+            display: "flex", flexDirection: "column", overflow: "hidden",
+          }}>
+            <div style={{ padding: "16px 18px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 9, background: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Sparkles size={17} color="#fff" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 16, color: L.text }}>Resumen IA</div>
+                <div style={{ fontSize: 11.5, color: L.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contacto.nombre || contacto.telefono || contacto.email}</div>
+              </div>
+              <button onClick={() => setResumenOpen(false)} style={{ background: L.soft, border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: L.muted }}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="scroll-y" style={{ padding: "16px 18px", overflowY: "auto", flex: 1 }}>
+              {resumenLoading && (
+                <div style={{ textAlign: "center", color: "#7C3AED", fontSize: 13.5, padding: "26px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                  <style>{`.spin-slow{animation:spinSlow 1.4s linear infinite}@keyframes spinSlow{to{transform:rotate(360deg)}}`}</style>
+                  <Sparkles size={26} className="spin-slow" />
+                  Generando resumen de la conversación…
+                </div>
+              )}
+              {resumenErr && !resumenLoading && (
+                <div style={{ padding: "10px 13px", background: "#FEF2F2", borderRadius: 8, color: C.red, fontSize: 13, display: "flex", gap: 7, alignItems: "center" }}>
+                  <AlertCircle size={14} /> {resumenErr}
+                </div>
+              )}
+              {resumenTexto && !resumenLoading && (
+                <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{resumenTexto}</div>
+              )}
+            </div>
+            {resumenTexto && !resumenLoading && (
+              <div style={{ padding: "12px 18px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button onClick={generarResumen}
+                  style={{ background: L.soft, border: `1.5px solid ${L.border}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", color: L.muted, fontFamily: FONT_BODY, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Sparkles size={13} /> Regenerar
+                </button>
+                <button onClick={copiarResumen}
+                  style={{ background: resumenCopiado ? "#15803D" : "#7C3AED", color: "#fff", border: "none", borderRadius: 9, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY, display: "flex", alignItems: "center", gap: 6 }}>
+                  {resumenCopiado ? <><Check size={14} /> Copiado</> : <><FileText size={14} /> Copiar</>}
+                </button>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

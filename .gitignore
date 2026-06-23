@@ -5,3 +5,6 @@ dist
 
 .vercel
 \.env.*.local
+
+# SQL con contraseñas reales de vendedores (no subir)
+supabase_crear_vendedor.sql

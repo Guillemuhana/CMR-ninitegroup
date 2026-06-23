@@ -87,6 +87,11 @@ export const C = {
   border: "#dde3e9",
   muted: "#7b8794",
   sage: "#2c8a6b",       // verde para acentos positivos
+  // ── Acentos "IA" (azul → violeta) ─────────────────────────
+  ai: "#7C3AED",                 // violeta IA (sólido)
+  aiSoft: "#F5F3FF",             // fondo violeta muy claro
+  gradAI: "linear-gradient(120deg, #2c6e9c 0%, #3a8dc2 45%, #6366F1 100%)", // header / acentos
+  gradBtn: "linear-gradient(120deg, #3a8dc2 0%, #6366F1 100%)",             // botones primarios
 };
 
 export const FONT_DISPLAY = "'Manrope', system-ui, sans-serif";

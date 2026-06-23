@@ -84,7 +84,7 @@ export default function AdminPanel({ userName, isMobile }) {
 
   // Modal vendedor
   const [modalV, setModalV]     = useState(null); // null | "nuevo" | {id,nombre,...}
-  const [formV, setFormV]       = useState({ nombre: "", email: "" });
+  const [formV, setFormV]       = useState({ nombre: "", email: "", password: "" });
   const [guardandoV, setGuardandoV] = useState(false);
   const [errorV, setErrorV]     = useState("");
   const [confirmarElim, setConfirmarElim] = useState(null);
@@ -149,23 +149,60 @@ export default function AdminPanel({ userName, isMobile }) {
   });
 
   // ── CRUD vendedor ───────────────────────────────────────────
-  const abrirNuevoV = () => { setModalV("nuevo"); setFormV({ nombre: "", email: "" }); setErrorV(""); };
-  const abrirEditarV = (v) => { setModalV(v); setFormV({ nombre: v.nombre, email: v.email || "" }); setErrorV(""); };
+  const abrirNuevoV = () => { setModalV("nuevo"); setFormV({ nombre: "", email: "", password: "" }); setErrorV(""); };
+  const abrirEditarV = (v) => { setModalV(v); setFormV({ nombre: v.nombre, email: v.email || "", password: "" }); setErrorV(""); };
 
   const guardarVendedor = async () => {
     if (!formV.nombre.trim()) { setErrorV("El nombre es obligatorio."); return; }
+    if (modalV === "nuevo") {
+      if (!formV.email.trim()) { setErrorV("El email es obligatorio (es el usuario de acceso)."); return; }
+      if (formV.password.trim().length < 6) { setErrorV("La contraseña debe tener al menos 6 caracteres."); return; }
+    }
     setGuardandoV(true); setErrorV("");
     try {
       if (modalV === "nuevo") {
-        const { error } = await supabase.from("vendedores").insert({
-          nombre: formV.nombre.trim(), email: formV.email.trim() || null, activo: true,
+        // Crea el usuario de acceso (con contraseña) + la fila de vendedor vía API segura.
+        const { data: { session } } = await supabase.auth.getSession();
+        const resp = await fetch("/api/crear-vendedor", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token || ""}`,
+          },
+          body: JSON.stringify({
+            nombre: formV.nombre.trim(),
+            email: formV.email.trim(),
+            password: formV.password.trim(),
+          }),
         });
-        if (error) throw error;
+        const out = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(out.error || "No se pudo crear el vendedor.");
       } else {
         const { error } = await supabase.from("vendedores")
           .update({ nombre: formV.nombre.trim(), email: formV.email.trim() || null })
           .eq("id", modalV.id);
         if (error) throw error;
+        // Si se cargó una contraseña nueva, resetear/crear el acceso del vendedor.
+        if (formV.password.trim()) {
+          if (!formV.email.trim()) throw new Error("Para asignar contraseña hace falta el email.");
+          if (formV.password.trim().length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres.");
+          const { data: { session } } = await supabase.auth.getSession();
+          const resp = await fetch("/api/crear-vendedor", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.access_token || ""}`,
+            },
+            body: JSON.stringify({
+              modo: "password",
+              nombre: formV.nombre.trim(),
+              email: formV.email.trim(),
+              password: formV.password.trim(),
+            }),
+          });
+          const out = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(out.error || "No se pudo cambiar la contraseña.");
+        }
       }
       await cargar();
       setModalV(null);
@@ -451,10 +488,24 @@ export default function AdminPanel({ userName, isMobile }) {
                 <input value={formV.nombre} onChange={e => setFormV(f => ({ ...f, nombre: e.target.value }))}
                   placeholder="Ej: María García" style={inputSt} autoFocus />
               </div>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 7 }}>Email (opcional)</label>
+              <div style={{ marginBottom: modalV === "nuevo" ? 14 : 16 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 7 }}>
+                  {modalV === "nuevo" ? "Email * (usuario de acceso)" : "Email (opcional)"}
+                </label>
                 <input value={formV.email} onChange={e => setFormV(f => ({ ...f, email: e.target.value }))}
                   placeholder="maria@ninitgroup.com" type="email" style={inputSt} />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 7 }}>
+                  {modalV === "nuevo" ? "Contraseña *" : "Contraseña (dejar vacío para no cambiar)"}
+                </label>
+                <input value={formV.password} onChange={e => setFormV(f => ({ ...f, password: e.target.value }))}
+                  placeholder="Mínimo 6 caracteres" type="text" autoComplete="new-password" style={inputSt} />
+                <div style={{ fontSize: 11, color: L.light, marginTop: 6 }}>
+                  {modalV === "nuevo"
+                    ? "Con este email y contraseña el vendedor podrá iniciar sesión."
+                    : "Si escribís una contraseña, se asigna/resetea el acceso de este vendedor."}
+                </div>
               </div>
               {errorV && (
                 <div style={{ padding: "9px 13px", background: "#FEF2F2", borderRadius: 8, color: C.red, fontSize: 13, marginBottom: 14, display: "flex", gap: 7, alignItems: "center" }}>
