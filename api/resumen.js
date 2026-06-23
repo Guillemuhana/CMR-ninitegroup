@@ -10,12 +10,32 @@ const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 
 const DELIM = "|||MENSAJE|||";
 
-function buildSystem(vendedor) {
+// Detecta el idioma mirando SOLO los mensajes entrantes del cliente (direccion "in"),
+// para no confundirse con el bot/vendedor que a veces responde en español.
+function detectarIdioma(mensajes) {
+  const texto = (mensajes || [])
+    .filter((m) => m.direccion === "in")
+    .map((m) => (m.contenido || ""))
+    .join(" ")
+    .toLowerCase();
+  if (!texto.trim()) return "es"; // sin mensajes del cliente → español por defecto
+
+  const esHits =
+    (texto.match(/[áéíóúñ¿¡]/g) || []).length +
+    (texto.match(/\b(que|qué|hola|gracias|necesito|necesita|precio|cuánto|cuanto|está|cómo|como|para|por|quiero|buenas|días|dias|usted|información|informacion|enviar|tienen|tenes|tenés|disculpa|estoy|quisiera|comprar|costo|valor)\b/g) || []).length;
+  const enHits =
+    (texto.match(/\b(the|you|i'm|hello|hi|hey|price|need|how|what|thanks|thank|please|want|good|morning|info|information|send|can|could|would|your|you're|is|are|for|with|about|interested|looking|quote|cost|buy|much|available)\b/g) || []).length;
+
+  return enHits > esHits ? "en" : "es";
+}
+
+function buildSystem(vendedor, idioma) {
   const firma = vendedor && vendedor !== "(sin especificar)" ? vendedor : "el vendedor";
+  const idiomaNombre = idioma === "en" ? "INGLÉS (English)" : "ESPAÑOL rioplatense";
   return `Sos un vendedor experto y asesor comercial de NINIT Group (baños y trailers de lujo).
 Te paso la conversación entre un cliente y el equipo (vendedor + bot). Tu trabajo es ENTENDER al cliente a fondo y diseñar el mensaje exacto para avanzar con la venta. Producí DOS partes.
 
-IDIOMA — IMPORTANTE: detectá el idioma principal en que escribe el CLIENTE en la conversación (español o inglés) y escribí ABSOLUTAMENTE TODO tu output en ESE mismo idioma: el resumen, los títulos de las secciones y el mensaje al cliente. Si el cliente habla en inglés → todo en inglés; si habla en español → todo en español rioplatense. La ÚNICA excepción es la línea separadora, que va siempre exactamente así: ${DELIM}
+IDIOMA — OBLIGATORIO: escribí ABSOLUTAMENTE TODO tu output en ${idiomaNombre}. Esto incluye el resumen, los títulos de las secciones (traducidos) y el mensaje al cliente. No uses ningún otro idioma bajo ninguna circunstancia. La ÚNICA excepción es la línea separadora, que va siempre exactamente así: ${DELIM}
 
 Antes de escribir, analizá mentalmente: ¿qué necesita realmente el cliente?, ¿en qué etapa está (recién consulta, comparando, casi decidido, traba/objeción)?, ¿qué lo frena o qué dato falta?, ¿cuál es el ÚNICO mejor próximo paso para acercarlo a la compra?
 
@@ -81,6 +101,7 @@ export default async function handler(req, res) {
   const rawNombre = (contacto?.nombre || "").trim();
   const clienteNombre = /[a-zA-ZáéíóúñÁÉÍÓÚÑ]/.test(rawNombre) && rawNombre.length <= 40 ? rawNombre : "";
   const vendedor = (req.body?.vendedor || "").trim();
+  const idioma = detectarIdioma(mensajes);
 
   try {
     const r = await fetch(GROQ_URL, {
@@ -94,7 +115,7 @@ export default async function handler(req, res) {
         temperature: 0.6,
         max_tokens: 1024,
         messages: [
-          { role: "system", content: buildSystem(vendedor) },
+          { role: "system", content: buildSystem(vendedor, idioma) },
           {
             role: "user",
             content: `Nombre del cliente: ${clienteNombre || "(desconocido — saludar sin nombre)"}\nVendedor que firma el mensaje: ${vendedor || "(sin especificar)"}\n\nConversación (orden cronológico):\n${transcript}`,
