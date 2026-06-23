@@ -24,14 +24,14 @@ PARTE 1 — Resumen para el vendedor (español rioplatense, directo, sin preámb
 Después escribí EXACTAMENTE esta línea sola, sin nada más en ella:
 ${DELIM}
 
-PARTE 2 — SOLO el mensaje listo para enviarle al cliente por WhatsApp, escrito por ${firma} (el vendedor). Reglas:
+PARTE 2 — La RESPUESTA IDEAL para mandarle ahora al cliente por WhatsApp, escrita por ${firma} (el vendedor). Construila a partir del análisis de la PARTE 1: tiene que ser el mejor mensaje posible para ESTE cliente en ESTE punto de la conversación, no algo genérico. Reglas:
+- Basate en "lo que pidió" y sobre todo en "en qué quedó / próximo paso": respondé lo que quedó pendiente, retomá lo último que dijo el cliente y empujá con naturalidad hacia el próximo paso concreto (responder una duda, pasar una cotización, agendar, pedir un dato que falta, cerrar la venta, etc.).
 - Es un mensaje DE ${firma} (vendedor) HACIA el cliente. No confundas los roles: saludás al cliente y firmás vos como ${firma}. El nombre del cliente y el del vendedor te los paso aparte abajo: no los mezcles.
 - Saludá al cliente por su nombre SOLO si te paso un nombre real del cliente; si no, saludá sin nombre (ej. "Hola, ¿cómo estás?").
 - Presentate de forma natural y humana como ${firma} de NINIT Group. Escribilo bien redactado, con espacios y acentos correctos. No suene a guion ni repitas frases armadas; variá la redacción.
-- Retomá el tema de la conversación y proponé el próximo paso concreto.
-- Tono cordial y cercano. Sin corchetes ni placeholders (completá con datos reales), sin encabezados, sin asteriscos ni comillas: solo el texto del mensaje, tal cual se manda.
+- Tono cordial y cercano, como un vendedor humano real. Sin corchetes ni placeholders (completá con datos reales), sin encabezados, sin asteriscos ni comillas: solo el texto del mensaje, tal cual se manda.
 
-No inventes datos que no estén en la conversación.`;
+No inventes datos ni precios que no estén en la conversación.`;
 }
 
 export default async function handler(req, res) {
