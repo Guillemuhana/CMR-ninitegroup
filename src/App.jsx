@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Bell, Search, LogOut, MessageSquare, BarChart2, Package,
-  Pencil, Bot, User, Calendar, Send, X, Check,
+  Pencil, Bot, User, Calendar, Send, X, Check, Plus,
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
@@ -1591,6 +1591,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [traducciones, setTraducciones] = useState({});      // { [msgId]: textoTraducido }
   const [tradLoading, setTradLoading] = useState({});        // { [msgId]: bool }
   const [replyTo, setReplyTo] = useState(null); // { id, contenido, esCliente } | null
+  const [toolsOpen, setToolsOpen] = useState(false); // desplegable de herramientas del input
   const endRef = useRef(null);
   const plantillasRef = useRef(null);
   const cotizacionesRef = useRef(null);
@@ -2105,6 +2106,17 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
 
       {/* ── Input ── */}
       <div style={{ padding: isMobile ? "10px 12px" : "14px 22px", borderTop: `1px solid ${L.border}`, background: L.white, display: "flex", gap: 8, alignItems: "flex-end", flexShrink: 0, position: "relative" }}>
+        {/* Botón ＋ con desplegable de herramientas */}
+        <div style={{ position: "relative", display: "flex", alignItems: "flex-end", gap: 8, flexShrink: 0 }}
+          onMouseEnter={() => setToolsOpen(true)}
+          onMouseLeave={() => { if (!showCotizaciones && !showFotos && !showPlantillas) setToolsOpen(false); }}>
+          <style>{`.tools-pop{animation:toolsIn .18s ease}@keyframes toolsIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}`}</style>
+          <button onClick={() => setToolsOpen((v) => !v)} title="Adjuntar y más opciones"
+            style={{ background: toolsOpen ? C.gradBtn : L.soft, color: toolsOpen ? "#fff" : C.red, border: `1.5px solid ${toolsOpen ? "transparent" : L.border}`, borderRadius: 11, width: 42, height: 42, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .18s" }}>
+            <Plus size={20} style={{ transform: toolsOpen ? "rotate(45deg)" : "none", transition: "transform .18s" }} />
+          </button>
+          {toolsOpen && (
+          <div className="tools-pop" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
         {/* Cotizaciones */}
         <div ref={cotizacionesRef} style={{ position: "relative", flexShrink: 0 }}>
           <button onClick={() => setShowCotizaciones((v) => !v)} title="Enviar link de cotización"
@@ -2223,6 +2235,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 </div>
               ))}
             </div>
+          )}
+        </div>
+          </div>
           )}
         </div>
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)}
