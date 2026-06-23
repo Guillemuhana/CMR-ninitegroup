@@ -2054,9 +2054,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               <div style={{ background: esCliente ? L.white : esAgente ? "#FEF2F2" : "#FFFBEB", borderRadius: esCliente ? "3px 14px 14px 14px" : "14px 3px 14px 14px", borderLeft: esCliente ? `3px solid ${L.border}` : "none", borderRight: !esCliente ? `3px solid ${esAgente ? C.red : C.gold}` : "none", padding: "10px 14px", fontSize: 14, color: L.text, boxShadow: "0 1px 4px rgba(0,0,0,.07)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
                 <MensajeContenido texto={m.contenido} />
               </div>
-              {/* Traducción al español del mensaje del cliente */}
-              {esCliente && traducciones[m.id] && (
-                <div style={{ marginTop: 4, background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: "3px 12px 12px 12px", padding: "8px 12px", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+              {/* Traducción al español del mensaje */}
+              {traducciones[m.id] && (
+                <div style={{ marginTop: 4, background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 12, padding: "8px 12px", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
                   <div style={{ fontSize: 9.5, fontWeight: 800, color: "#7C3AED", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "flex", alignItems: "center", gap: 4 }}>
                     <Languages size={11} /> Traducción
                   </div>
@@ -2066,12 +2066,10 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               {/* Hora + traducir + eliminar */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: esCliente ? "flex-start" : "flex-end" }}>
                 <div style={{ fontSize: 10.5, color: L.light }}>{hora}</div>
-                {esCliente && (
-                  <button onClick={() => toggleTraducirMensaje(m)} title="Traducir al español"
-                    style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 4px", color: "#7C3AED", fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 3, borderRadius: 4 }}>
-                    <Languages size={12} /> {tradLoading[m.id] ? "…" : (traducciones[m.id] ? "Ver original" : "Traducir")}
-                  </button>
-                )}
+                <button onClick={() => toggleTraducirMensaje(m)} title="Traducir al español"
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 4px", color: "#7C3AED", fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 3, borderRadius: 4 }}>
+                  <Languages size={12} /> {tradLoading[m.id] ? "…" : (traducciones[m.id] ? "Ver original" : "Traducir")}
+                </button>
                 {hoverMsg === m.id && (
                   <button onClick={() => eliminarMensaje(m.id)} title="Eliminar mensaje"
                     style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", color: "#EF4444", display: "flex", alignItems: "center", borderRadius: 4, opacity: 0.75 }}
