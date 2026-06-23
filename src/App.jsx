@@ -1872,8 +1872,8 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 <Pencil size={14} /> Editar
               </button>
               <button onClick={generarResumen} title="Resumen IA de la conversación + mensaje sugerido para el cliente"
-                style={{ background: C.gradBtn, border: "none", color: "#fff", borderRadius: 9, padding: "6px 16px", cursor: "pointer", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 14px rgba(99,102,241,.32)", flexShrink: 0 }}>
-                <Sparkles size={14} /> Avanzar
+                style={{ background: C.gradBtn, border: "none", color: "#fff", borderRadius: 999, padding: "11px 24px", cursor: "pointer", fontSize: 14.5, fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: 0.2, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 22px rgba(99,102,241,.34)", flexShrink: 0 }}>
+                <Sparkles size={17} /> Avanzar
               </button>
               <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
                 style={{ background: confirmElim ? "#FEE2E2" : L.soft, border: `1.5px solid ${confirmElim ? "#FECACA" : L.border}`, color: confirmElim ? C.red : L.muted, borderRadius: 9, width: 36, height: 36, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}
@@ -1893,8 +1893,8 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 <Pencil size={13} /> Editar
               </button>
               <button onClick={generarResumen}
-                style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 12px", background: C.gradBtn, color: "#fff", borderColor: "transparent" }}>
-                <Sparkles size={13} /> Avanzar
+                style={{ ...btnSt, flexShrink: 0, fontSize: 13, padding: "8px 18px", borderRadius: 999, fontWeight: 700, gap: 7, background: C.gradBtn, color: "#fff", borderColor: "transparent", boxShadow: "0 6px 16px rgba(99,102,241,.3)" }}>
+                <Sparkles size={15} /> Avanzar
               </button>
               <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
                 style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 10px", background: confirmElim ? "#FEF2F2" : L.soft, color: confirmElim ? C.red : L.muted, borderColor: confirmElim ? "#FECACA" : L.border }}>
