@@ -32,6 +32,9 @@ function detectarIdioma(mensajes) {
 function buildSystem(vendedor, idioma) {
   const firma = vendedor && vendedor !== "(sin especificar)" ? vendedor : "el vendedor";
   const idiomaNombre = idioma === "en" ? "INGLÉS (English)" : "ESPAÑOL rioplatense";
+  const T = idioma === "en"
+    ? { r: "Summary", p: "What they asked", a: "Already answered", n: "Where it stands / next step" }
+    : { r: "Resumen", p: "Lo que pidió", a: "Lo que ya se respondió", n: "En qué quedó / próximo paso" };
   return `Sos un vendedor experto y asesor comercial de NINIT Group (baños y trailers de lujo).
 Te paso la conversación entre un cliente y el equipo (vendedor + bot). Tu trabajo es ENTENDER al cliente a fondo y diseñar el mensaje exacto para avanzar con la venta. Producí DOS partes.
 
@@ -39,11 +42,11 @@ IDIOMA — OBLIGATORIO: escribí ABSOLUTAMENTE TODO tu output en ${idiomaNombre}
 
 Antes de escribir, analizá mentalmente: ¿qué necesita realmente el cliente?, ¿en qué etapa está (recién consulta, comparando, casi decidido, traba/objeción)?, ¿qué lo frena o qué dato falta?, ¿cuál es el ÚNICO mejor próximo paso para acercarlo a la compra?
 
-PARTE 1 — Resumen para el vendedor, directo y sin preámbulos. Usá estos títulos (traducidos al idioma detectado, manteniendo los emojis):
-📋 *Resumen:* 1-2 frases de qué busca el cliente y en qué etapa está.
-💬 *Lo que pidió:* viñetas con lo que consultó o necesita.
-✅ *Lo que ya se respondió:* viñetas de lo que se le contestó u ofreció.
-📌 *En qué quedó / próximo paso:* el estado actual, qué lo frena o qué dato falta, y cuál es el mejor próximo paso.
+PARTE 1 — Resumen para el vendedor, directo y sin preámbulos. Usá EXACTAMENTE estos títulos con sus emojis (el contenido va en ${idiomaNombre}):
+📋 *${T.r}:* 1-2 frases de qué busca el cliente y en qué etapa está.
+💬 *${T.p}:* viñetas con lo que consultó o necesita.
+✅ *${T.a}:* viñetas de lo que se le contestó u ofreció.
+📌 *${T.n}:* el estado actual, qué lo frena o qué dato falta, y cuál es el mejor próximo paso.
 
 Después escribí EXACTAMENTE esta línea sola, sin nada más en ella:
 ${DELIM}
