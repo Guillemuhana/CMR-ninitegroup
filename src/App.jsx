@@ -6,7 +6,7 @@ import {
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
-  Image as ImageIcon, Languages,
+  Image as ImageIcon, Languages, Reply,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
@@ -1591,6 +1591,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [traducciones, setTraducciones] = useState({});      // { [msgId]: textoTraducido }
   const [tradLoading, setTradLoading] = useState({});        // { [msgId]: bool }
   const [tradInputLoading, setTradInputLoading] = useState(false);
+  const [replyTo, setReplyTo] = useState(null); // { id, contenido, esCliente } | null
   const endRef = useRef(null);
   const plantillasRef = useRef(null);
   const cotizacionesRef = useRef(null);
@@ -1798,9 +1799,17 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const enviar = async () => {
     const cuerpo = texto.trim();
     if (!cuerpo || enviando) return;
+    // Si estás respondiendo a un mensaje específico, citá esa consulta arriba.
+    let cuerpoFinal = cuerpo;
+    if (replyTo) {
+      const raw = (replyTo.contenido || "").replace(/\s+/g, " ").trim();
+      const snippet = raw.slice(0, 140) + (raw.length > 140 ? "…" : "");
+      cuerpoFinal = `↪️ Respondiendo a: "${snippet}"\n\n${cuerpo}`;
+    }
     setEnviando(true); setErr(""); setTexto("");
-    const ok = await enviarMensaje(cuerpo);
+    const ok = await enviarMensaje(cuerpoFinal);
     if (!ok) setTexto(cuerpo);
+    else setReplyTo(null);
     setEnviando(false);
   };
 
@@ -2066,6 +2075,10 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               {/* Hora + traducir + eliminar */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: esCliente ? "flex-start" : "flex-end" }}>
                 <div style={{ fontSize: 10.5, color: L.light }}>{hora}</div>
+                <button onClick={() => setReplyTo({ id: m.id, contenido: m.contenido, esCliente })} title="Responder a este mensaje"
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 4px", color: L.muted, fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 3, borderRadius: 4 }}>
+                  <Reply size={12} /> Responder
+                </button>
                 <button onClick={() => toggleTraducirMensaje(m)} title="Traducir al español"
                   style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 4px", color: "#7C3AED", fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 3, borderRadius: 4 }}>
                   <Languages size={12} /> {tradLoading[m.id] ? "…" : (traducciones[m.id] ? "Ver original" : "Traducir")}
@@ -2088,6 +2101,26 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
       {err && <div style={{ background: "#FEF2F2", color: C.red, fontSize: 12.5, padding: "9px 22px", fontWeight: 600, borderTop: `1px solid #FECACA`, display: "flex", gap: 8, alignItems: "center" }}>
         <AlertCircle size={15} /> {err}
       </div>}
+
+      {/* ── Barra: respondiendo a un mensaje específico ── */}
+      {replyTo && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: isMobile ? "8px 12px" : "8px 22px", borderTop: `1px solid ${L.border}`, background: "#F5F3FF" }}>
+          <Reply size={15} color="#7C3AED" style={{ flexShrink: 0 }} />
+          <div style={{ width: 3, alignSelf: "stretch", background: "#7C3AED", borderRadius: 2 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 800, color: "#7C3AED", textTransform: "uppercase", letterSpacing: 0.4 }}>
+              Respondiendo a {replyTo.esCliente ? "el cliente" : "tu mensaje"}
+            </div>
+            <div style={{ fontSize: 12.5, color: L.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {(replyTo.contenido || "").replace(/\s+/g, " ").trim().slice(0, 100) || "(sin texto)"}
+            </div>
+          </div>
+          <button onClick={() => setReplyTo(null)} title="Cancelar respuesta"
+            style={{ background: "none", border: "none", cursor: "pointer", color: L.muted, display: "flex", padding: 4, flexShrink: 0 }}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* ── Input ── */}
       <div style={{ padding: isMobile ? "10px 12px" : "14px 22px", borderTop: `1px solid ${L.border}`, background: L.white, display: "flex", gap: 8, alignItems: "flex-end", flexShrink: 0, position: "relative" }}>
