@@ -1584,6 +1584,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [subiendo, setSubiendo]   = useState(false);
   const [resumenOpen, setResumenOpen]   = useState(false);
   const [resumenTexto, setResumenTexto] = useState("");
+  const [resumenMensaje, setResumenMensaje] = useState("");
   const [resumenLoading, setResumenLoading] = useState(false);
   const [resumenErr, setResumenErr]     = useState("");
   const [resumenCopiado, setResumenCopiado] = useState(false);
@@ -1639,13 +1640,15 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     if (!mensajes.length) { setResumenErr("Todavía no hay mensajes en esta conversación."); return; }
     setResumenLoading(true);
     setResumenTexto("");
+    setResumenMensaje("");
     try {
       const res = await fetch("/api/resumen", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contacto: { nombre: contacto.nombre, telefono: contacto.telefono, email: contacto.email },
-          vendedor: userName,
+          // Firma con el vendedor asignado al contacto (ej. Nicolas); si no hay, el del login.
+          vendedor: contacto.vendedor || userName,
           mensajes: mensajes.map((m) => ({
             direccion: m.direccion, origen: m.origen, agente: m.agente,
             contenido: m.contenido, created_at: m.created_at,
@@ -1655,6 +1658,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
       const out = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(out.error || "No se pudo generar el resumen.");
       setResumenTexto(out.resumen || "El asistente no devolvió un resumen.");
+      setResumenMensaje(out.mensaje || "");
     } catch (e) {
       setResumenErr(e.message || "Error al generar el resumen.");
     }
@@ -1662,8 +1666,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   };
 
   const copiarResumen = async () => {
+    const aCopiar = resumenMensaje || resumenTexto;
     try {
-      await navigator.clipboard.writeText(resumenTexto);
+      await navigator.clipboard.writeText(aCopiar);
       setResumenCopiado(true);
       setTimeout(() => setResumenCopiado(false), 2000);
     } catch { /* sin clipboard */ }
@@ -2212,6 +2217,14 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               {resumenTexto && !resumenLoading && (
                 <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{resumenTexto}</div>
               )}
+              {resumenMensaje && !resumenLoading && (
+                <div style={{ marginTop: 14, background: C.aiSoft, border: "1px solid #DDD6FE", borderRadius: 12, padding: "12px 14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, color: "#6D28D9", fontWeight: 700, fontSize: 11.5, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    <MessageSquare size={13} /> Mensaje para el cliente
+                  </div>
+                  <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{resumenMensaje}</div>
+                </div>
+              )}
             </div>
             {resumenTexto && !resumenLoading && (
               <div style={{ padding: "12px 18px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -2219,9 +2232,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                   style={{ background: L.soft, border: `1.5px solid ${L.border}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", color: L.muted, fontFamily: FONT_BODY, display: "flex", alignItems: "center", gap: 6 }}>
                   <Sparkles size={13} /> Regenerar
                 </button>
-                <button onClick={copiarResumen}
-                  style={{ background: resumenCopiado ? "#15803D" : "#7C3AED", color: "#fff", border: "none", borderRadius: 9, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY, display: "flex", alignItems: "center", gap: 6 }}>
-                  {resumenCopiado ? <><Check size={14} /> Copiado</> : <><FileText size={14} /> Copiar</>}
+                <button onClick={copiarResumen} disabled={!resumenMensaje}
+                  style={{ background: resumenCopiado ? "#15803D" : (resumenMensaje ? "#7C3AED" : L.light), color: "#fff", border: "none", borderRadius: 9, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: resumenMensaje ? "pointer" : "default", fontFamily: FONT_DISPLAY, display: "flex", alignItems: "center", gap: 6 }}>
+                  {resumenCopiado ? <><Check size={14} /> Copiado</> : <><FileText size={14} /> Copiar mensaje</>}
                 </button>
               </div>
             )}
