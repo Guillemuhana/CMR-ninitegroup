@@ -6,7 +6,7 @@ import {
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
-  Image as ImageIcon,
+  Image as ImageIcon, Languages,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
@@ -1588,6 +1588,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [resumenLoading, setResumenLoading] = useState(false);
   const [resumenErr, setResumenErr]     = useState("");
   const [resumenCopiado, setResumenCopiado] = useState(false);
+  const [traducciones, setTraducciones] = useState({});      // { [msgId]: textoTraducido }
+  const [tradLoading, setTradLoading] = useState({});        // { [msgId]: bool }
+  const [tradInputLoading, setTradInputLoading] = useState(false);
   const endRef = useRef(null);
   const plantillasRef = useRef(null);
   const cotizacionesRef = useRef(null);
@@ -1663,6 +1666,43 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
       setResumenErr(e.message || "Error al generar el resumen.");
     }
     setResumenLoading(false);
+  };
+
+  // Idioma del cliente (según sus mensajes entrantes) para traducir respuestas.
+  const idiomaCliente = (() => {
+    const t = mensajes.filter((m) => m.direccion === "in").map((m) => m.contenido || "").join(" ").toLowerCase();
+    if (!t.trim()) return "es";
+    const en = (t.match(/\b(the|you|hello|hi|hey|how|what|price|need|thanks|thank|please|want|your|is|are|for|with|about|can|could|would|good|info|quote|cost|much|available|looking)\b/g) || []).length;
+    const es = (t.match(/[áéíóúñ¿¡]/g) || []).length + (t.match(/\b(que|qué|hola|gracias|necesito|necesita|precio|cuánto|cuanto|está|cómo|como|para|por|quiero|información|informacion|enviar|buenas|quisiera)\b/g) || []).length;
+    return en > es ? "en" : "es";
+  })();
+
+  const traducirTexto = async (txt, destino) => {
+    const res = await fetch("/api/traducir", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto: txt, destino }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(out.error || "No se pudo traducir.");
+    return out.traduccion || "";
+  };
+
+  // Traduce un mensaje entrante del cliente al español (toggle).
+  const toggleTraducirMensaje = async (m) => {
+    if (traducciones[m.id]) { setTraducciones((p) => { const n = { ...p }; delete n[m.id]; return n; }); return; }
+    setTradLoading((p) => ({ ...p, [m.id]: true }));
+    try { const t = await traducirTexto(m.contenido || "", "es"); setTraducciones((p) => ({ ...p, [m.id]: t })); }
+    catch (e) { setErr(e.message || "Error al traducir."); }
+    setTradLoading((p) => ({ ...p, [m.id]: false }));
+  };
+
+  // Traduce lo que el vendedor escribió al idioma del cliente, antes de enviar.
+  const traducirInput = async () => {
+    if (!texto.trim()) return;
+    setTradInputLoading(true);
+    try { const t = await traducirTexto(texto, idiomaCliente); setTexto(t); }
+    catch (e) { setErr(e.message || "Error al traducir."); }
+    setTradInputLoading(false);
   };
 
   const copiarResumen = async () => {
@@ -2014,9 +2054,24 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               <div style={{ background: esCliente ? L.white : esAgente ? "#FEF2F2" : "#FFFBEB", borderRadius: esCliente ? "3px 14px 14px 14px" : "14px 3px 14px 14px", borderLeft: esCliente ? `3px solid ${L.border}` : "none", borderRight: !esCliente ? `3px solid ${esAgente ? C.red : C.gold}` : "none", padding: "10px 14px", fontSize: 14, color: L.text, boxShadow: "0 1px 4px rgba(0,0,0,.07)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
                 <MensajeContenido texto={m.contenido} />
               </div>
-              {/* Hora + eliminar */}
+              {/* Traducción al español del mensaje del cliente */}
+              {esCliente && traducciones[m.id] && (
+                <div style={{ marginTop: 4, background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: "3px 12px 12px 12px", padding: "8px 12px", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+                  <div style={{ fontSize: 9.5, fontWeight: 800, color: "#7C3AED", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "flex", alignItems: "center", gap: 4 }}>
+                    <Languages size={11} /> Traducción
+                  </div>
+                  <div style={{ fontSize: 13.5, color: L.text }}>{traducciones[m.id]}</div>
+                </div>
+              )}
+              {/* Hora + traducir + eliminar */}
               <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: esCliente ? "flex-start" : "flex-end" }}>
                 <div style={{ fontSize: 10.5, color: L.light }}>{hora}</div>
+                {esCliente && (
+                  <button onClick={() => toggleTraducirMensaje(m)} title="Traducir al español"
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 4px", color: "#7C3AED", fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 3, borderRadius: 4 }}>
+                    <Languages size={12} /> {tradLoading[m.id] ? "…" : (traducciones[m.id] ? "Ver original" : "Traducir")}
+                  </button>
+                )}
                 {hoverMsg === m.id && (
                   <button onClick={() => eliminarMensaje(m.id)} title="Eliminar mensaje"
                     style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", color: "#EF4444", display: "flex", alignItems: "center", borderRadius: 4, opacity: 0.75 }}
@@ -2162,6 +2217,11 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
           placeholder={isMobile ? "Escribí un mensaje…" : "Escribí un mensaje… (Enter para enviar · Shift+Enter = nueva línea)"} rows={1}
           style={{ flex: 1, resize: "none", border: `1.5px solid ${L.border}`, borderRadius: 11, padding: "11px 14px", fontSize: 14, fontFamily: FONT_BODY, background: L.soft, color: L.text, outline: "none", maxHeight: 120, lineHeight: 1.5 }} />
+        <button onClick={traducirInput} disabled={tradInputLoading || !texto.trim()}
+          title={`Traducir lo que escribiste a ${idiomaCliente === "en" ? "inglés" : "español"} antes de enviar`}
+          style={{ background: L.soft, color: "#7C3AED", border: "1.5px solid #DDD6FE", borderRadius: 11, padding: "10px 12px", cursor: (tradInputLoading || !texto.trim()) ? "default" : "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, transition: "all .15s", flexShrink: 0, opacity: (tradInputLoading || !texto.trim()) ? 0.55 : 1 }}>
+          <Languages size={15} /> {!isMobile && <span>{tradInputLoading ? "…" : "Traducir"}</span>}
+        </button>
         <button onClick={enviar} disabled={enviando}
           style={{ background: enviando ? L.light : C.red, color: "#fff", border: "none", borderRadius: 11, padding: isMobile ? "11px 16px" : "11px 22px", fontSize: 14, fontWeight: 700, cursor: enviando ? "default" : "pointer", fontFamily: FONT_DISPLAY, letterSpacing: 0.5, display: "flex", alignItems: "center", gap: 7, boxShadow: enviando ? "none" : "0 2px 10px rgba(185,28,28,.3)", transition: "all .2s", flexShrink: 0 }}>
           <Send size={16} /> {enviando || isMobile ? (enviando ? "…" : "") : "Enviar"}
