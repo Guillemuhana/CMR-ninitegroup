@@ -1647,8 +1647,8 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contacto: { nombre: contacto.nombre, telefono: contacto.telefono, email: contacto.email },
-          // Firma con el vendedor asignado al contacto (ej. Nicolas); si no hay, el del login.
-          vendedor: contacto.vendedor || userName,
+          // Firma con el nombre del usuario logueado (perfil.nombre).
+          vendedor: userName,
           mensajes: mensajes.map((m) => ({
             direccion: m.direccion, origen: m.origen, agente: m.agente,
             contenido: m.contenido, created_at: m.created_at,
@@ -2429,8 +2429,12 @@ export default function App() {
       if (!p) {
         p = { nombre: email.split("@")[0], email, role: email === "ninitgroup@gmail.com" ? "ceo" : "vendedor" };
       }
-      // Asegurar que ninitgroup@gmail.com SIEMPRE sea CEO aunque la DB diga otra cosa
-      if (email === "ninitgroup@gmail.com") p = { ...p, role: "ceo" };
+      // Asegurar que ninitgroup@gmail.com SIEMPRE sea CEO aunque la DB diga otra cosa,
+      // y darle un nombre lindo (en vez de "ninitgroup") si la DB no tiene uno.
+      if (email === "ninitgroup@gmail.com") {
+        const nombreLindo = p.nombre && p.nombre !== "ninitgroup" ? p.nombre : "Guillermo";
+        p = { ...p, role: "ceo", nombre: nombreLindo };
+      }
       setPerfil(p);
 
       const cargar = async () => {
