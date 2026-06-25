@@ -4,6 +4,28 @@ import { randomUUID } from "crypto";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const VERIFY_TOKEN = process.env.MESSENGER_VERIFY_TOKEN;
+const PAGE_TOKEN = process.env.MESSENGER_PAGE_TOKEN || process.env.PAGE_ACCESS_TOKEN;
+
+// Messenger NO manda el nombre dentro del mensaje: solo el PSID. Hay que pedirle
+// el perfil (nombre + foto) a la Graph API usando el PSID y el Page Token.
+// Si falla (token vencido, sin permiso, etc.) devuelve null y se sigue sin cortar.
+async function obtenerPerfil(psid) {
+  if (!PAGE_TOKEN) return null;
+  try {
+    const url = `https://graph.facebook.com/v22.0/${psid}?fields=first_name,last_name,profile_pic&access_token=${encodeURIComponent(PAGE_TOKEN)}`;
+    const r = await fetch(url);
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.error("Graph profile fetch error", JSON.stringify(data?.error || data));
+      return null;
+    }
+    const nombre = [data.first_name, data.last_name].filter(Boolean).join(" ").trim();
+    return { nombre: nombre || null, foto_url: data.profile_pic || null };
+  } catch (e) {
+    console.error("Graph profile fetch exception", e?.message || e);
+    return null;
+  }
+}
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -49,7 +71,7 @@ export default async function handler(req, res) {
 
         const { data: existingContact, error: selectError } = await supabase
           .from("contactos")
-          .select("id,no_leidos")
+          .select("id,no_leidos,nombre")
           .or(`messenger_id.eq.${senderId},telefono.eq.${senderId}`)
           .single();
 
@@ -60,14 +82,25 @@ export default async function handler(req, res) {
         let contactoId = existingContact?.id;
         const previousNoLeidos = existingContact?.no_leidos || 0;
         if (!contactoId) {
+          // Contacto nuevo: traer nombre + foto del perfil de Facebook.
+          const perfil = await obtenerPerfil(senderId);
           contactoId = randomUUID();
           const { error: insertError } = await supabase
             .from("contactos")
-            .insert({ id: contactoId, telefono: senderId, messenger_id: senderId, canal: "messenger", no_leidos: 1, ultimo_in_at: new Date().toISOString() });
+            .insert({ id: contactoId, telefono: senderId, messenger_id: senderId, canal: "messenger", nombre: perfil?.nombre || null, foto_url: perfil?.foto_url || null, no_leidos: 1, ultimo_in_at: new Date().toISOString() });
 
           if (insertError) {
             console.error("Supabase insert contacto error", JSON.stringify(insertError));
             continue;
+          }
+        } else if (!existingContact.nombre) {
+          // Contacto viejo que quedó sin nombre (PSID solo): completarlo ahora.
+          const perfil = await obtenerPerfil(senderId);
+          if (perfil?.nombre || perfil?.foto_url) {
+            const patch = {};
+            if (perfil.nombre) patch.nombre = perfil.nombre;
+            if (perfil.foto_url) patch.foto_url = perfil.foto_url;
+            await supabase.from("contactos").update(patch).eq("id", contactoId);
           }
         }
 
