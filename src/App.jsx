@@ -868,9 +868,13 @@ REGLAS ESTRICTAS:
 4. El bloque <ACCION> va SOLO en la última línea, sin texto después.
 5. Solo un <ACCION> por respuesta.`;
 
+      // NO incluimos niniPrompt acá: ese es el master prompt del BOT que atiende
+      // clientes (ventas), no lo necesita el asistente ejecutivo interno y hace que
+      // el request supere el límite de tokens/minuto de Groq. Limitamos el historial
+      // a los últimos turnos para mantener el request liviano.
       const apiMsgs = [
-        { role: "system", content: GROK_SYSTEM + (niniPrompt ? "\n\n" + niniPrompt : "") + sysExtra },
-        ...historial.map((m) => ({ role: m.from === "user" ? "user" : "assistant", content: m.text })),
+        { role: "system", content: GROK_SYSTEM + sysExtra },
+        ...historial.slice(-6).map((m) => ({ role: m.from === "user" ? "user" : "assistant", content: m.text })),
         { role: "user", content: q },
       ];
       // Misma IA que el botón "Avanzar": Groq server-side vía /api/asistente
@@ -914,7 +918,11 @@ REGLAS ESTRICTAS:
         }
       } else {
         const err = await res.json().catch(() => ({}));
-        setMsgs((p) => [...p, { from: "ai", text: `Error (${res.status}): ${err?.error || "No se pudo consultar el asistente."}` }]);
+        const detalle = err?.error || "";
+        const sinCuota = /rate limit|quota|tokens per|too large|TPM|TPD/i.test(detalle);
+        setMsgs((p) => [...p, { from: "ai", text: sinCuota
+          ? "Estoy a full en este momento (se llegó al límite de la IA gratuita). Probá de nuevo en un ratito 🙏"
+          : `No pude responder: ${detalle || "error del servidor"}.` }]);
       }
     } catch (e) {
       setMsgs((p) => [...p, { from: "ai", text: `Sin conexión: ${e.message}` }]);
