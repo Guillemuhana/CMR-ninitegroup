@@ -840,7 +840,10 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
         sysExtra += `\nCONTACTO ABIERTO: ${contactoActivo.nombre || contactoActivo.telefono} (id: ${contactoActivo.id}) | ${est?.label || contactoActivo.estado} | vendedor: ${contactoActivo.vendedor || "sin asignar"}`;
       }
       if (vozOnRef.current) sysExtra += "\nMODO VOZ ACTIVO: máximo 2 oraciones, sin listas, sin markdown, lenguaje natural hablado.";
-      if (rol === "ceo") {
+      // El reporte por vendedor es MUY pesado en tokens. Solo lo incluimos cuando
+      // la consulta es sobre reportes/desempeño/equipo, para no agotar la cuota de Groq.
+      const pideReporte = /report|resumen|desempe|rendimiento|informe|equipo|vendedor|ranking|compar|c[oó]mo va|como va|productiv|ventas del|pipeline|m[eé]tricas?|kpi/i.test(q);
+      if (rol === "ceo" && pideReporte) {
         if (Date.now() - reporteCEORef.current.ts > 60000) { await cargarReporteCEO(); }
         sysExtra += reporteCEORef.current.texto;
         sysExtra += `\n\n════ REPORTES DE VENDEDORES (sos CEO) ════

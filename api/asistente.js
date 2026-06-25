@@ -6,7 +6,13 @@
 //   Conseguí la key en https://console.groq.com/keys
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+
+// Cadena de modelos: si el principal se queda sin cuota diaria (rate limit),
+// reintenta automáticamente con uno más liviano (cuota propia, más alta y más rápido).
+const MODELOS = (process.env.GROQ_MODEL
+  ? [process.env.GROQ_MODEL, "llama-3.1-8b-instant"]
+  : ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+).filter((m, i, a) => a.indexOf(m) === i);
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -24,25 +30,26 @@ export default async function handler(req, res) {
   const maxTokens = Math.min(Number(req.body?.max_tokens) || 700, 2000);
   const temperature = typeof req.body?.temperature === "number" ? req.body.temperature : 0.5;
 
-  try {
-    const r = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        temperature,
-        max_tokens: maxTokens,
-        messages,
-      }),
-    });
-
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      return res.status(500).json({ error: data?.error?.message || `Groq devolvió ${r.status}` });
+  let ultimoError = "Error al consultar el asistente.";
+  for (const model of MODELOS) {
+    try {
+      const r = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model, temperature, max_tokens: maxTokens, messages }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok) {
+        const contenido = (data?.choices?.[0]?.message?.content || "").trim();
+        return res.status(200).json({ contenido, modelo: model });
+      }
+      ultimoError = data?.error?.message || `Groq devolvió ${r.status}`;
+      // 429 = rate limit / sin cuota → probar el siguiente modelo. Otro error → cortar.
+      const esRateLimit = r.status === 429 || /rate limit|quota|tokens per day|TPD/i.test(ultimoError);
+      if (!esRateLimit) break;
+    } catch (e) {
+      ultimoError = e?.message || "Error de conexión con Groq.";
     }
-    const contenido = (data?.choices?.[0]?.message?.content || "").trim();
-    return res.status(200).json({ contenido });
-  } catch (e) {
-    return res.status(500).json({ error: e?.message || "Error al consultar el asistente." });
   }
+  return res.status(500).json({ error: ultimoError });
 }
