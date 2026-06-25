@@ -6,7 +6,13 @@
 //   Conseguí la key en https://console.groq.com/keys
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+
+// Cadena de modelos: si el principal se queda sin cuota diaria (rate limit / TPD),
+// reintenta automáticamente con uno más liviano para que el resumen no se "agote".
+const MODELOS = (process.env.GROQ_MODEL
+  ? [process.env.GROQ_MODEL, "llama-3.1-8b-instant"]
+  : ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+).filter((m, i, a) => a.indexOf(m) === i);
 
 const DELIM = "|||MENSAJE|||";
 
@@ -106,43 +112,46 @@ export default async function handler(req, res) {
   const vendedor = (req.body?.vendedor || "").trim();
   const idioma = detectarIdioma(mensajes);
 
-  try {
-    const r = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        temperature: 0.6,
-        max_tokens: 1024,
-        messages: [
-          { role: "system", content: buildSystem(vendedor, idioma) },
-          {
-            role: "user",
-            content: `Nombre del cliente: ${clienteNombre || "(desconocido — saludar sin nombre)"}\nVendedor que firma el mensaje: ${vendedor || "(sin especificar)"}\n\nConversación (orden cronológico):\n${transcript}`,
-          },
-        ],
-      }),
-    });
+  const messages = [
+    { role: "system", content: buildSystem(vendedor, idioma) },
+    {
+      role: "user",
+      content: `Nombre del cliente: ${clienteNombre || "(desconocido — saludar sin nombre)"}\nVendedor que firma el mensaje: ${vendedor || "(sin especificar)"}\n\nConversación (orden cronológico):\n${transcript}`,
+    },
+  ];
 
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      const detalle = data?.error?.message || `Groq devolvió ${r.status}`;
-      return res.status(500).json({ error: detalle });
-    }
+  let ultimoError = "Error al generar el resumen.";
+  for (const model of MODELOS) {
+    try {
+      const r = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ model, temperature: 0.6, max_tokens: 1024, messages }),
+      });
 
-    const full = (data?.choices?.[0]?.message?.content || "").trim();
-    let resumen = full;
-    let mensaje = "";
-    const i = full.indexOf(DELIM);
-    if (i >= 0) {
-      resumen = full.slice(0, i).trim();
-      mensaje = full.slice(i + DELIM.length).trim().replace(/^["'*\s]+|["'*\s]+$/g, "");
+      const data = await r.json().catch(() => ({}));
+      if (r.ok) {
+        const full = (data?.choices?.[0]?.message?.content || "").trim();
+        let resumen = full;
+        let mensaje = "";
+        const i = full.indexOf(DELIM);
+        if (i >= 0) {
+          resumen = full.slice(0, i).trim();
+          mensaje = full.slice(i + DELIM.length).trim().replace(/^["'*\s]+|["'*\s]+$/g, "");
+        }
+        return res.status(200).json({ resumen: resumen || "Sin resumen.", mensaje });
+      }
+
+      ultimoError = data?.error?.message || `Groq devolvió ${r.status}`;
+      // 429 = rate limit / sin cuota → probar el siguiente modelo. Otro error → cortar.
+      const esRateLimit = r.status === 429 || /rate limit|quota|tokens per day|TPD/i.test(ultimoError);
+      if (!esRateLimit) break;
+    } catch (e) {
+      ultimoError = e?.message || "Error al generar el resumen.";
     }
-    return res.status(200).json({ resumen: resumen || "Sin resumen.", mensaje });
-  } catch (e) {
-    return res.status(500).json({ error: e?.message || "Error al generar el resumen." });
   }
+  return res.status(500).json({ error: ultimoError });
 }

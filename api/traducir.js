@@ -2,7 +2,14 @@
 // Requiere en Vercel: GROQ_API_KEY.
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+
+// Cadena de modelos: si el principal se queda sin cuota diaria (rate limit / TPD),
+// reintenta automáticamente con uno más liviano (cuota propia, más alta y más rápida),
+// para que la traducción no se "agote".
+const MODELOS = (process.env.GROQ_MODEL
+  ? [process.env.GROQ_MODEL, "llama-3.1-8b-instant"]
+  : ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+).filter((m, i, a) => a.indexOf(m) === i);
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -20,31 +27,34 @@ export default async function handler(req, res) {
 
   const idioma = destino === "en" ? "English" : "español rioplatense (Argentina)";
 
-  try {
-    const r = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        temperature: 0.2,
-        max_tokens: 1024,
-        messages: [
-          {
-            role: "system",
-            content: `Sos un traductor profesional. Traducí el texto del usuario al ${idioma}. Devolvé ÚNICAMENTE la traducción: sin comillas, sin notas, sin explicaciones, sin el texto original. Mantené el tono, el sentido y los emojis. Si el texto ya está en ${idioma}, devolvelo tal cual.`,
-          },
-          { role: "user", content: texto },
-        ],
-      }),
-    });
+  const messages = [
+    {
+      role: "system",
+      content: `Sos un traductor profesional. Traducí el texto del usuario al ${idioma}. Devolvé ÚNICAMENTE la traducción: sin comillas, sin notas, sin explicaciones, sin el texto original. Mantené el tono, el sentido y los emojis. Si el texto ya está en ${idioma}, devolvelo tal cual.`,
+    },
+    { role: "user", content: texto },
+  ];
 
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      return res.status(500).json({ error: data?.error?.message || `Groq devolvió ${r.status}` });
+  let ultimoError = "Error al traducir.";
+  for (const model of MODELOS) {
+    try {
+      const r = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model, temperature: 0.2, max_tokens: 1024, messages }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok) {
+        const traduccion = (data?.choices?.[0]?.message?.content || "").trim();
+        return res.status(200).json({ traduccion });
+      }
+      ultimoError = data?.error?.message || `Groq devolvió ${r.status}`;
+      // 429 = rate limit / sin cuota → probar el siguiente modelo. Otro error → cortar.
+      const esRateLimit = r.status === 429 || /rate limit|quota|tokens per day|TPD/i.test(ultimoError);
+      if (!esRateLimit) break;
+    } catch (e) {
+      ultimoError = e?.message || "Error de conexión con Groq.";
     }
-    const traduccion = (data?.choices?.[0]?.message?.content || "").trim();
-    return res.status(200).json({ traduccion });
-  } catch (e) {
-    return res.status(500).json({ error: e?.message || "Error al traducir." });
   }
+  return res.status(500).json({ error: ultimoError });
 }
