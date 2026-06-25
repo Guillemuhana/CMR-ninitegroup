@@ -589,9 +589,37 @@ const EJECUTAR_ACCION = {
     const { error } = await supabase.from("contactos").delete().eq("id", id);
     return error ? `Error: ${error.message}` : `✅ Contacto eliminado.`;
   },
+
+  // Agenda: crea un evento (reunión, llamada, visita, etc.) en agenda_vendedor.
+  // El front inyecta vendedor_id/vendedor_nombre del usuario logueado por defecto.
+  agregar_evento: async ({ fecha, hora, titulo, tipo = "reunion", cliente_nombre, nota, vendedor_id, vendedor_nombre }) => {
+    if (!fecha || !titulo?.trim()) return "⚠️ Necesito al menos la fecha y el título del evento.";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return "⚠️ La fecha debe ser AAAA-MM-DD.";
+    // Si dieron un nombre de vendedor en vez de id, resolverlo.
+    if (vendedor_nombre && !vendedor_id) {
+      const { data } = await supabase.from("vendedores").select("id,nombre").ilike("nombre", `%${vendedor_nombre}%`).limit(1);
+      if (data && data[0]) { vendedor_id = data[0].id; vendedor_nombre = data[0].nombre; }
+    }
+    if (!vendedor_id) return "⚠️ No pude identificar a quién asignar el evento.";
+    const tiposOk = ["reunion", "llamada", "visita", "seguimiento", "otro"];
+    const horaNorm = hora ? (hora.length === 5 ? `${hora}:00` : hora) : null;
+    const payload = {
+      vendedor_id,
+      vendedor_nombre: vendedor_nombre || null,
+      fecha,
+      hora: horaNorm,
+      tipo: tiposOk.includes(tipo) ? tipo : "otro",
+      titulo: titulo.trim(),
+      cliente_nombre: cliente_nombre || null,
+      nota: nota?.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("agenda_vendedor").insert(payload);
+    return error ? `Error: ${error.message}` : `✅ Agendado en tu Agenda: "${titulo.trim()}" el ${fecha}${hora ? " a las " + hora : ""}.`;
+  },
 };
 
-function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuario = "", rol = "vendedor", onRefrescar, niniPrompt = "" }) {
+function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuario = "", perfilId = null, rol = "vendedor", onRefrescar, niniPrompt = "" }) {
   const isMobile   = useIsMobile();
   const [open, setOpen]           = useState(false);
   const [msgs, setMsgs]           = useState([]);
@@ -850,7 +878,10 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
       // Contexto del CRM
       const sinResp  = contactos.filter((c) => !c.bot_activo && c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at))).length;
       const segVenc  = alertas.filter((a) => a.tipo === "seguimiento").length;
-      let sysExtra = `\n\nUSUARIO ACTUAL: ${nombreUsuario || "Usuario"} (${rol === "ceo" ? "CEO" : "Vendedor"}).`;
+      const _hoy = new Date();
+      const _hoyISO = `${_hoy.getFullYear()}-${String(_hoy.getMonth() + 1).padStart(2, "0")}-${String(_hoy.getDate()).padStart(2, "0")}`;
+      let sysExtra = `\n\nFECHA DE HOY: ${_hoy.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} (ISO: ${_hoyISO}). Usá esta fecha para calcular fechas relativas como "hoy", "mañana" o "el 27 de junio".`;
+      sysExtra += `\nUSUARIO ACTUAL: ${nombreUsuario || "Usuario"} (${rol === "ceo" ? "CEO" : "Vendedor"}).`;
       sysExtra += `\nESTADO ACTUAL DEL CRM: ${contactos.length} contactos totales | ${sinResp} sin respuesta | ${segVenc} seguimientos vencidos | ${alertas.length} alertas activas.`;
       if (contactoActivo) {
         const est = ESTADOS[contactoActivo.estado];
@@ -877,8 +908,10 @@ ACCIONES Y CAMPOS REQUERIDOS:
 - agregar_contacto: { "nombre": "...", "telefono": "...(opcional)", "email": "...(opcional)", "vendedor": "...(opcional)", "estado": "nuevo|contactado|interesado|pendiente|vendido|perdido" }
 - actualizar_contacto: { "id": "uuid del contacto", "estado": "...(opcional)", "vendedor": "...(opcional)", "nombre": "...(opcional)" }
 - eliminar_contacto: { "id": "uuid del contacto" }
+- agregar_evento: { "fecha": "AAAA-MM-DD", "hora": "HH:MM 24hs (opcional)", "titulo": "...", "tipo": "reunion|llamada|visita|seguimiento|otro (opcional, default reunion)", "cliente_nombre": "...(opcional, si es con un cliente)", "nota": "...(opcional)", "vendedor_nombre": "...(opcional; por defecto se agenda para vos)" }
 
 REGLAS ESTRICTAS:
+0. Para agregar_evento SÍ podés cargar reuniones/llamadas/visitas en la Agenda: convertí la fecha y hora que diga el usuario al formato AAAA-MM-DD y HH:MM usando la FECHA DE HOY de arriba, y ejecutá directamente (no digas que no tenés acceso al calendario). Por defecto se agenda para el usuario actual salvo que pidan otro vendedor.
 1. Incluí <ACCION> SIEMPRE que el usuario pida un cambio concreto, aunque te falte algún dato opcional.
 2. Si el dato es REQUERIDO y falta, preguntá PRIMERO y ejecutá cuando lo tengas.
 3. Para ELIMINAR: confirmá en la respuesta antes de incluir <ACCION>.
@@ -914,6 +947,11 @@ REGLAS ESTRICTAS:
           try {
             const accion = JSON.parse(accionMatch[1].trim());
             const { tipo, ...params } = accion;
+            // Agenda: si no especifican vendedor, se agenda para el usuario actual.
+            if (tipo === "agregar_evento" && !params.vendedor_id && !params.vendedor_nombre) {
+              params.vendedor_id = perfilId;
+              params.vendedor_nombre = nombreUsuario;
+            }
             const fn = EJECUTAR_ACCION[tipo];
             if (fn) {
               setMsgs((p) => [...p, { from: "sistema", text: `⏳ Ejecutando: ${tipo}…` }]);
@@ -945,7 +983,7 @@ REGLAS ESTRICTAS:
       setMsgs((p) => [...p, { from: "ai", text: `Sin conexión: ${e.message}` }]);
     }
     setTyping(false);
-  }, [input, msgs, typing, contactoActivo, alertas, contactos, hablar, niniPrompt, rol, cargarReporteCEO]);
+  }, [input, msgs, typing, contactoActivo, alertas, contactos, hablar, niniPrompt, rol, cargarReporteCEO, perfilId, nombreUsuario, onRefrescar]);
 
   // ── Sugerencias contextuales ─────────────────────────────
   const sugerencias = [
@@ -2812,7 +2850,7 @@ export default function App() {
         )}
       </div>
 
-      <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} nombreUsuario={userName} rol={rol} onRefrescar={recargarContactos} niniPrompt={niniPrompt} />
+      <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} nombreUsuario={userName} perfilId={perfil?.id} rol={rol} onRefrescar={recargarContactos} niniPrompt={niniPrompt} />
 
       <RecordatorioDiario perfil={perfil} rol={rol} onIr={() => setVista("diario")} />
       <BienvenidaVendedor perfil={perfil} rol={rol} />
