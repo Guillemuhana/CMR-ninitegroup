@@ -327,7 +327,7 @@ function MobileBack({ title, onBack }) {
 // ============================================================
 // ALERTAS BTN
 // ============================================================
-function AlertasBtn({ alertas, onSelect }) {
+function AlertasBtn({ alertas, onSelect, onDescartar, onDescartarTodas }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -352,18 +352,35 @@ function AlertasBtn({ alertas, onSelect }) {
           <div style={{ padding: "13px 18px", borderBottom: `1px solid ${L.border}`, fontFamily: FONT_DISPLAY, fontWeight: 600, color: L.text, textTransform: "uppercase", fontSize: 12, letterSpacing: 1, display: "flex", alignItems: "center", gap: 8 }}>
             <Bell size={14} color={C.red} /> Alertas
             {alertas.length > 0 && <span style={{ background: C.red, color: "#fff", borderRadius: 10, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>{alertas.length}</span>}
+            {alertas.length > 0 && onDescartarTodas && (
+              <button onClick={(e) => { e.stopPropagation(); onDescartarTodas(); }}
+                title="Marcar todas como vistas"
+                style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: C.red, fontFamily: FONT_BODY, fontWeight: 700, fontSize: 11, textTransform: "none", letterSpacing: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                <Check size={13} /> Marcar todas
+              </button>
+            )}
           </div>
           {alertas.length === 0
             ? <div style={{ padding: 24, color: L.muted, fontSize: 14, textAlign: "center" }}>Sin alertas pendientes ✓</div>
             : alertas.map((a) => (
-              <div key={a.id} onClick={() => { onSelect(a.contacto); setOpen(false); }}
-                style={{ padding: "12px 18px", borderBottom: `1px solid ${L.border}`, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start", transition: "background .12s" }}
+              <div key={a.id}
+                style={{ padding: "12px 18px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 10, alignItems: "flex-start", transition: "background .12s" }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = L.hover; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
                 <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>
                   {a.tipo === "sin_respuesta" ? "⏰" : a.tipo === "lead_sin_asignar" ? "👤" : "📌"}
                 </span>
-                <span style={{ fontSize: 13, color: L.text, lineHeight: 1.45 }}>{a.texto}</span>
+                <span onClick={() => { onSelect(a.contacto); onDescartar?.(a.id); setOpen(false); }}
+                  style={{ flex: 1, fontSize: 13, color: L.text, lineHeight: 1.45, cursor: "pointer" }}>{a.texto}</span>
+                {onDescartar && (
+                  <button onClick={(e) => { e.stopPropagation(); onDescartar(a.id); }}
+                    title="Marcar como vista" aria-label="Descartar alerta"
+                    style={{ flexShrink: 0, background: "none", border: "none", cursor: "pointer", color: L.light, padding: 2, display: "flex", borderRadius: 6 }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; e.currentTarget.style.color = C.red; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = L.light; }}>
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             ))}
         </div>
@@ -1226,7 +1243,7 @@ function NavTabs({ vista, setVista, rol }) {
 // ============================================================
 // SIDEBAR
 // ============================================================
-function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, vista, setVista, alertas, isMobile, rol, perfil }) {
+function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
   const [canal, setCanal]         = useState("todos");
@@ -1257,7 +1274,8 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
       <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.gradAI, borderBottom: `3px solid ${C.redDark}`, boxShadow: "0 4px 18px rgba(58,141,194,.22)" }}>
         <img src={LOGO_URL} alt="NINIT Group" style={{ width: 210, height: 52, objectFit: "cover", objectPosition: "center 38%", filter: "brightness(0) invert(1)", opacity: 0.95 }} />
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }} />
+          <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }}
+            onDescartar={onDescartarAlerta} onDescartarTodas={onDescartarTodasAlertas} />
         </div>
       </div>
 
@@ -2520,6 +2538,7 @@ export default function App() {
   const [vista,     setVista]     = useState("chat");
   const [ready,     setReady]     = useState(false);
   const [niniPrompt, setNiniPrompt] = useState("");
+  const [alertasVistas, setAlertasVistas] = useState(() => new Set()); // ids de alertas ya vistas/descartadas
   const tuvoSesion   = useRef(false);
   const sesionDBId   = useRef(null);
   const heartbeatRef = useRef(null);
@@ -2551,6 +2570,29 @@ export default function App() {
     })();
     return () => { mounted = false; };
   }, []);
+
+  // ── Alertas vistas/descartadas (persisten por usuario en este navegador) ──
+  const vistasKey = session?.user?.id ? `ninit_alertas_vistas_${session.user.id}` : "ninit_alertas_vistas";
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(vistasKey);
+      setAlertasVistas(new Set(raw ? JSON.parse(raw) : []));
+    } catch { setAlertasVistas(new Set()); }
+  }, [vistasKey]);
+
+  // Limpiar de localStorage las alertas descartadas que ya no existen (mantiene el storage chico).
+  useEffect(() => {
+    if (!contactos.length) return;
+    const rawIds = new Set(calcularAlertas(contactos).map((a) => a.id));
+    setAlertasVistas((prev) => {
+      const filtrado = new Set([...prev].filter((id) => rawIds.has(id)));
+      if (filtrado.size !== prev.size) {
+        try { localStorage.setItem(vistasKey, JSON.stringify([...filtrado])); } catch {}
+        return filtrado;
+      }
+      return prev;
+    });
+  }, [contactos, vistasKey]);
 
   // ── Perfil + contactos + tracking al iniciar sesión ──────
   useEffect(() => {
@@ -2664,7 +2706,14 @@ export default function App() {
   const userEmail = session.user.email;
   const userName  = perfil?.nombre || userEmail.split("@")[0].replace(/^\w/, (m) => m.toUpperCase());
   const rol       = getRol(perfil);
-  const alertas   = calcularAlertas(contactos);
+  const alertas   = calcularAlertas(contactos).filter((a) => !alertasVistas.has(a.id));
+
+  const persistVistas = (set) => {
+    setAlertasVistas(new Set(set));
+    try { localStorage.setItem(vistasKey, JSON.stringify([...set])); } catch {}
+  };
+  const descartarAlerta = (id) => { const n = new Set(alertasVistas); n.add(id); persistVistas(n); };
+  const descartarTodasAlertas = () => { const n = new Set(alertasVistas); alertas.forEach((a) => n.add(a.id)); persistVistas(n); };
 
   const mobileInPanel = isMobile && (
     activo !== null ||
@@ -2683,6 +2732,7 @@ export default function App() {
           onLogout={handleLogout}
           userEmail={userEmail} userName={userName}
           vista={vista} setVista={setVista} alertas={alertas}
+          onDescartarAlerta={descartarAlerta} onDescartarTodasAlertas={descartarTodasAlertas}
           isMobile={isMobile} rol={rol} perfil={perfil} />
       </div>
 

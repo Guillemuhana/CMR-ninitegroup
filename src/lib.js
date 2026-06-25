@@ -167,7 +167,9 @@ export function calcularAlertas(contactos) {
       (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at)) &&
       ahora - new Date(c.ultimo_in_at).getTime() > HORA
     ) {
-      alertas.push({ id: `resp-${c.id}`, tipo: "sin_respuesta", contacto: c,
+      // El id incluye ultimo_in_at: si el cliente vuelve a escribir, es una alerta NUEVA
+      // (aunque se haya descartado la anterior).
+      alertas.push({ id: `resp-${c.id}-${c.ultimo_in_at}`, tipo: "sin_respuesta", contacto: c,
         texto: `${nombre} espera respuesta hace más de 1 h`, prioridad: 1 });
     }
     if (c.estado === "nuevo" && !c.vendedor && ahora - new Date(c.created_at).getTime() > 2 * HORA) {
@@ -175,7 +177,8 @@ export function calcularAlertas(contactos) {
         texto: `Lead nuevo sin asignar: ${nombre}`, prioridad: 2 });
     }
     if (c.seguimiento_at && new Date(c.seguimiento_at).getTime() <= ahora) {
-      alertas.push({ id: `seg-${c.id}`, tipo: "seguimiento", contacto: c,
+      // El id incluye seguimiento_at: si se reprograma el seguimiento, es una alerta nueva.
+      alertas.push({ id: `seg-${c.id}-${c.seguimiento_at}`, tipo: "seguimiento", contacto: c,
         texto: `Seguimiento pendiente: ${nombre}${c.nota_seguimiento ? " — " + c.nota_seguimiento : ""}`, prioridad: 1 });
     }
   }
