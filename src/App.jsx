@@ -829,12 +829,6 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
     setMsgs((p) => [...p, { from: "user", text: q }]);
     setInput(""); setTranscrib(""); setTyping(true);
 
-    const GROK_KEY = import.meta.env.VITE_GROK_API_KEY;
-    if (!GROK_KEY) {
-      const t = "Clave de IA no configurada. Agregá VITE_GROK_API_KEY en Vercel.";
-      setMsgs((p) => [...p, { from: "ai", text: t }]);
-      setTyping(false); return;
-    }
     try {
       // Contexto del CRM
       const sinResp  = contactos.filter((c) => !c.bot_activo && c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at))).length;
@@ -876,14 +870,16 @@ REGLAS ESTRICTAS:
         ...historial.map((m) => ({ role: m.from === "user" ? "user" : "assistant", content: m.text })),
         { role: "user", content: q },
       ];
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      // Misma IA que el botón "Avanzar": Groq server-side vía /api/asistente
+      // (usa GROQ_API_KEY, sin exponer la clave en el navegador).
+      const res = await fetch("/api/asistente", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${GROK_KEY}` },
-        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: apiMsgs, max_tokens: vozOnRef.current ? 130 : (rol === "ceo" ? 1400 : 700) }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: apiMsgs, max_tokens: vozOnRef.current ? 130 : (rol === "ceo" ? 1400 : 700) }),
       });
       if (res.ok) {
         const data = await res.json();
-        let resp = data.choices[0].message.content;
+        let resp = data.contenido || "";
 
         // ── Detectar y ejecutar acciones CEO ──────────────────
         const accionMatch = resp.match(/<ACCION>([\s\S]*?)<\/ACCION>/);
@@ -915,7 +911,7 @@ REGLAS ESTRICTAS:
         }
       } else {
         const err = await res.json().catch(() => ({}));
-        setMsgs((p) => [...p, { from: "ai", text: `Error (${res.status}): ${err?.error?.message || "Verificá la clave"}` }]);
+        setMsgs((p) => [...p, { from: "ai", text: `Error (${res.status}): ${err?.error || "No se pudo consultar el asistente."}` }]);
       }
     } catch (e) {
       setMsgs((p) => [...p, { from: "ai", text: `Sin conexión: ${e.message}` }]);
@@ -1140,6 +1136,7 @@ function NavTabs({ vista, setVista, rol }) {
   ];
   const secondary = rol === "ceo"
     ? [
+        ["agenda",     <Calendar size={14} />,  "Agenda"],
         ["directorio", <Users size={14} />,    "Directorio"],
         ["reportes",   <BarChart2 size={14} />, "Reportes"],
         ["admin",      <Shield size={14} />,    "Admin"],
@@ -1588,6 +1585,10 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [resumenLoading, setResumenLoading] = useState(false);
   const [resumenErr, setResumenErr]     = useState("");
   const [resumenCopiado, setResumenCopiado] = useState(false);
+  const [resumenTextoTrad, setResumenTextoTrad] = useState("");  // traducción al español del resumen
+  const [resumenMsgTrad, setResumenMsgTrad] = useState("");      // traducción al español del mensaje sugerido
+  const [resumenTradOn, setResumenTradOn] = useState(false);     // mostrar/ocultar traducción
+  const [resumenTradLoading, setResumenTradLoading] = useState(false);
   const [traducciones, setTraducciones] = useState({});      // { [msgId]: textoTraducido }
   const [tradLoading, setTradLoading] = useState({});        // { [msgId]: bool }
   const [replyTo, setReplyTo] = useState(null); // { id, contenido, esCliente } | null
@@ -1645,6 +1646,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     setResumenLoading(true);
     setResumenTexto("");
     setResumenMensaje("");
+    setResumenTextoTrad("");
+    setResumenMsgTrad("");
+    setResumenTradOn(false);
     try {
       const res = await fetch("/api/resumen", {
         method: "POST",
@@ -1686,6 +1690,24 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     try { const t = await traducirTexto(m.contenido || "", "es"); setTraducciones((p) => ({ ...p, [m.id]: t })); }
     catch (e) { setErr(e.message || "Error al traducir."); }
     setTradLoading((p) => ({ ...p, [m.id]: false }));
+  };
+
+  // Traduce todo el resumen al español (por si salió en inglés) — solo para entender qué dice.
+  // El mensaje original NO se toca: "Copiar mensaje" sigue copiando el texto en el idioma del cliente.
+  const toggleTraducirResumen = async () => {
+    if (resumenTradOn) { setResumenTradOn(false); return; }
+    if (resumenTextoTrad || resumenMsgTrad) { setResumenTradOn(true); return; } // ya traducido (cache)
+    setResumenTradLoading(true);
+    try {
+      const [tTexto, tMsg] = await Promise.all([
+        resumenTexto ? traducirTexto(resumenTexto, "es") : Promise.resolve(""),
+        resumenMensaje ? traducirTexto(resumenMensaje, "es") : Promise.resolve(""),
+      ]);
+      setResumenTextoTrad(tTexto);
+      setResumenMsgTrad(tMsg);
+      setResumenTradOn(true);
+    } catch (e) { setResumenErr(e.message || "Error al traducir."); }
+    setResumenTradLoading(false);
   };
 
   const copiarResumen = async () => {
@@ -2299,17 +2321,37 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               {resumenTexto && !resumenLoading && (
                 <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{resumenTexto}</div>
               )}
+              {resumenTradOn && resumenTextoTrad && !resumenLoading && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed #DDD6FE" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5, color: "#6D28D9", fontWeight: 700, fontSize: 10.5, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    <Languages size={11} /> Traducción al español
+                  </div>
+                  <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{resumenTextoTrad}</div>
+                </div>
+              )}
               {resumenMensaje && !resumenLoading && (
                 <div style={{ marginTop: 14, background: C.aiSoft, border: "1px solid #DDD6FE", borderRadius: 12, padding: "12px 14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, color: "#6D28D9", fontWeight: 700, fontSize: 11.5, textTransform: "uppercase", letterSpacing: 0.5 }}>
                     <MessageSquare size={13} /> Mensaje para el cliente
                   </div>
                   <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{resumenMensaje}</div>
+                  {resumenTradOn && resumenMsgTrad && (
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed #C4B5FD" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5, color: "#6D28D9", fontWeight: 700, fontSize: 10.5, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        <Languages size={11} /> Traducción al español
+                      </div>
+                      <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{resumenMsgTrad}</div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
             {resumenTexto && !resumenLoading && (
-              <div style={{ padding: "12px 18px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <div style={{ padding: "12px 18px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                <button onClick={toggleTraducirResumen} disabled={resumenTradLoading} title="Traducir el resumen al español (solo para entenderlo)"
+                  style={{ background: resumenTradOn ? "#EDE9FE" : L.soft, border: `1.5px solid ${resumenTradOn ? "#C4B5FD" : L.border}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: resumenTradLoading ? "default" : "pointer", color: resumenTradOn ? "#6D28D9" : L.muted, fontFamily: FONT_BODY, display: "flex", alignItems: "center", gap: 6, marginRight: "auto" }}>
+                  <Languages size={14} /> {resumenTradLoading ? "Traduciendo…" : (resumenTradOn ? "Ver original" : "Traducir")}
+                </button>
                 <button onClick={generarResumen}
                   style={{ background: L.soft, border: `1.5px solid ${L.border}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", color: L.muted, fontFamily: FONT_BODY, display: "flex", alignItems: "center", gap: 6 }}>
                   <Sparkles size={13} /> Regenerar
@@ -2664,7 +2706,7 @@ export default function App() {
                 onAbrirChat={(c) => { setActivo(c); setVista("chat"); }} />
             </div>
           </>
-        ) : vista === "agenda" && rol === "vendedor" ? (
+        ) : vista === "agenda" ? (
           <>
             {isMobile && <MobileBack title="Agenda" onBack={() => setVista("chat")} />}
             <div style={{ flex: 1, overflowY: "auto", height: "100%" }}>
