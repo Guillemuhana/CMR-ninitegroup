@@ -40,12 +40,13 @@ export function getRol(perfil) {
 // Carga el perfil del vendedor logueado desde la DB
 export async function cargarPerfil(email) {
   if (!email) return null;
+  // limit(1) en vez de .single() para no devolver null si hay filas duplicadas.
   const { data } = await supabase
     .from("vendedores")
     .select("*")
     .eq("email", email.trim().toLowerCase())
-    .single();
-  return data || null;
+    .limit(1);
+  return (data && data[0]) || null;
 }
 
 // Formatea segundos en texto legible

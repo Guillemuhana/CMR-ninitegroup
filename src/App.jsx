@@ -2639,17 +2639,32 @@ export default function App() {
 
     const init = async () => {
       const email = session.user.email;
+      const emailLc = email.trim().toLowerCase();
       let p = await cargarPerfil(email);
-      // Si no está en vendedores, lo creamos para que tenga un id REAL.
-      // Es imprescindible: la Agenda, las sesiones, etc. referencian vendedores.id
-      // (agenda_vendedor.vendedor_id es NOT NULL + FK), así que sin id no se puede guardar.
+      // El usuario DEBE tener un id real de vendedores: la Agenda, sesiones, etc.
+      // referencian vendedores.id (agenda_vendedor.vendedor_id es NOT NULL + FK).
       if (!p) {
-        const role = email === "ninitgroup@gmail.com" ? "ceo" : "vendedor";
-        const nombre = email === "ninitgroup@gmail.com" ? "Nicolas" : email.split("@")[0];
-        const { data: creado } = await supabase.from("vendedores")
-          .insert({ email: email.trim().toLowerCase(), nombre, role })
-          .select().single();
-        p = creado || { nombre, email, role };
+        // El CEO suele estar sembrado como "Nicolas" pero sin este email → buscarlo
+        // por rol/nombre y vincularle el email para futuros logins.
+        if (emailLc === "ninitgroup@gmail.com") {
+          const { data: existentes } = await supabase.from("vendedores")
+            .select("*").or("role.eq.ceo,nombre.eq.Nicolas").limit(1);
+          if (existentes && existentes[0]) {
+            p = existentes[0];
+            if (p.email !== emailLc) {
+              await supabase.from("vendedores").update({ email: emailLc, role: "ceo" }).eq("id", p.id);
+              p = { ...p, email: emailLc, role: "ceo" };
+            }
+          }
+        }
+        // Si sigue sin encontrarse, crear el registro.
+        if (!p) {
+          const role = emailLc === "ninitgroup@gmail.com" ? "ceo" : "vendedor";
+          const nombre = emailLc === "ninitgroup@gmail.com" ? "Nicolas" : email.split("@")[0];
+          const { data: creado } = await supabase.from("vendedores")
+            .insert({ email: emailLc, nombre, role }).select().single();
+          p = creado || { nombre, email, role };
+        }
       }
       // Asegurar que ninitgroup@gmail.com SIEMPRE sea CEO aunque la DB diga otra cosa,
       // y darle un nombre lindo (en vez de "ninitgroup") si la DB no tiene uno.

@@ -305,8 +305,13 @@ export default function Agenda({ vendedorId, vendedorNombre, isMobile, contactos
 
 // ── Formulario de evento ────────────────────────────────────
 function EventoForm({ ev, contactos, guardando, onCancel, onSave }) {
-  const [f, setF] = useState({ fecha: ev.fecha, hora: ev.hora ? ev.hora.slice(0, 5) : "", tipo: ev.tipo || "reunion", titulo: ev.titulo || "", cliente_id: ev.cliente_id || "", nota: ev.nota || "", id: ev.id });
+  const [f, setF] = useState({ fecha: ev.fecha, hora: ev.hora ? ev.hora.slice(0, 5) : "", tipo: ev.tipo || "reunion", titulo: ev.titulo || "", cliente_id: ev.cliente_id || "", cliente_nombre: ev.cliente_nombre || "", nota: ev.nota || "", id: ev.id });
   const up = (k, v) => setF((p) => ({ ...p, [k]: v }));
+  // El cliente se escribe libremente; si coincide con un contacto, se vincula.
+  const onClienteInput = (val) => {
+    const match = contactos.find((c) => (c.nombre || c.telefono || "").toLowerCase() === val.trim().toLowerCase());
+    setF((p) => ({ ...p, cliente_nombre: val, cliente_id: match ? match.id : "" }));
+  };
   const inputSt = { width: "100%", boxSizing: "border-box", border: `1.5px solid ${L.border}`, borderRadius: 9, padding: "9px 11px", fontSize: 13.5, fontFamily: FONT_BODY, color: L.text, background: L.soft, outline: "none" };
   const lblSt = { fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 5, display: "block" };
 
@@ -339,15 +344,16 @@ function EventoForm({ ev, contactos, guardando, onCancel, onSave }) {
         </div>
       </div>
 
-      {/* Cliente */}
+      {/* Cliente — texto libre, con sugerencias de contactos existentes */}
       <div style={{ marginBottom: 12 }}>
         <label style={lblSt}>Cliente (opcional)</label>
-        <select value={f.cliente_id} onChange={(e) => up("cliente_id", e.target.value)} style={{ ...inputSt, cursor: "pointer" }}>
-          <option value="">— Sin cliente —</option>
+        <input value={f.cliente_nombre} onChange={(e) => onClienteInput(e.target.value)}
+          list="agenda-clientes" placeholder="Escribí el nombre del cliente…" style={inputSt} />
+        <datalist id="agenda-clientes">
           {contactos.map((c) => (
-            <option key={c.id} value={c.id}>{c.nombre || c.telefono || "Sin nombre"}</option>
+            <option key={c.id} value={c.nombre || c.telefono || "Sin nombre"} />
           ))}
-        </select>
+        </datalist>
       </div>
 
       {/* Nota */}
