@@ -79,11 +79,15 @@ export default function Agenda({ vendedorId, vendedorNombre, isMobile, contactos
   // ── Guardar (crear o editar) ──────────────────────────────
   const guardar = async (ev) => {
     if (!ev.titulo?.trim()) return;
+    if (!vendedorId) {
+      alert("No se pudo identificar tu usuario para guardar en la agenda. Cerrá sesión y volvé a entrar.");
+      return;
+    }
     setGuard(true);
     const cli = contactos.find((c) => c.id === ev.cliente_id);
     const payload = {
       vendedor_id: vendedorId,
-      vendedor_nombre: vendedorNombre,
+      vendedor_nombre: vendedorNombre || "",
       fecha: ev.fecha,
       hora: ev.hora || null,
       tipo: ev.tipo || "otro",
@@ -93,12 +97,14 @@ export default function Agenda({ vendedorId, vendedorNombre, isMobile, contactos
       nota: ev.nota?.trim() || null,
       updated_at: new Date().toISOString(),
     };
-    if (ev.id) {
-      await supabase.from("agenda_vendedor").update(payload).eq("id", ev.id);
-    } else {
-      await supabase.from("agenda_vendedor").insert(payload);
-    }
+    const { error } = ev.id
+      ? await supabase.from("agenda_vendedor").update(payload).eq("id", ev.id)
+      : await supabase.from("agenda_vendedor").insert(payload);
     setGuard(false);
+    if (error) {
+      alert("No se pudo guardar el evento: " + error.message);
+      return;
+    }
     setEdit(null);
     cargar();
   };

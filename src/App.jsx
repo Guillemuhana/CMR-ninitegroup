@@ -2640,9 +2640,16 @@ export default function App() {
     const init = async () => {
       const email = session.user.email;
       let p = await cargarPerfil(email);
-      // Si no está en vendedores pero es el dueño, darle acceso CEO completo
+      // Si no está en vendedores, lo creamos para que tenga un id REAL.
+      // Es imprescindible: la Agenda, las sesiones, etc. referencian vendedores.id
+      // (agenda_vendedor.vendedor_id es NOT NULL + FK), así que sin id no se puede guardar.
       if (!p) {
-        p = { nombre: email.split("@")[0], email, role: email === "ninitgroup@gmail.com" ? "ceo" : "vendedor" };
+        const role = email === "ninitgroup@gmail.com" ? "ceo" : "vendedor";
+        const nombre = email === "ninitgroup@gmail.com" ? "Nicolas" : email.split("@")[0];
+        const { data: creado } = await supabase.from("vendedores")
+          .insert({ email: email.trim().toLowerCase(), nombre, role })
+          .select().single();
+        p = creado || { nombre, email, role };
       }
       // Asegurar que ninitgroup@gmail.com SIEMPRE sea CEO aunque la DB diga otra cosa,
       // y darle un nombre lindo (en vez de "ninitgroup") si la DB no tiene uno.
