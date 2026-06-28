@@ -1279,7 +1279,7 @@ function NavTabs({ vista, setVista, rol }) {
 }
 
 // ============================================================
-// CANAL SELECTOR — desplegable compacto (hover)
+// CANAL SELECTOR — flyout horizontal (se despliega desde el costado)
 // ============================================================
 const CANALES = [
   { key: "todos",      label: "Todos",      icon: <Users size={18} />,         color: "#7C3AED", bg: "#F5F3FF" },
@@ -1293,40 +1293,32 @@ function CanalSelector({ canal, setCanal }) {
   const [open, setOpen] = useState(false);
   const closeT = useRef(null);
   const sel = CANALES.find((c) => c.key === canal) || CANALES[0];
+  const otros = CANALES.filter((c) => c.key !== sel.key);
 
-  const abrir   = () => { if (closeT.current) clearTimeout(closeT.current); setOpen(true); };
-  const cerrar  = () => { closeT.current = setTimeout(() => setOpen(false), 160); };
+  const abrir  = () => { if (closeT.current) clearTimeout(closeT.current); setOpen(true); };
+  const cerrar = () => { closeT.current = setTimeout(() => setOpen(false), 160); };
 
   return (
-    <div style={{ position: "relative" }} onMouseEnter={abrir} onMouseLeave={cerrar}>
-      {/* Trigger compacto */}
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }} onMouseEnter={abrir} onMouseLeave={cerrar}>
+      {/* Píldora del canal activo */}
       <button onClick={() => setOpen((o) => !o)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 12px", borderRadius: 11, border: "none", cursor: "pointer", background: sel.bg, boxShadow: `inset 0 0 0 1.5px ${sel.color}33`, transition: "all .2s" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <span style={{ color: sel.color, display: "flex", lineHeight: 1 }}>{sel.icon}</span>
-          <span style={{ fontSize: 12.5, fontWeight: 800, color: sel.color, fontFamily: FONT_DISPLAY, letterSpacing: 0.3, textTransform: "uppercase" }}>{sel.label}</span>
-        </span>
-        <ChevronDown size={16} color={sel.color} style={{ transition: "transform .2s", transform: open ? "rotate(180deg)" : "none" }} />
+        style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", borderRadius: 11, border: "none", cursor: "pointer", background: sel.bg, boxShadow: `inset 0 0 0 1.5px ${sel.color}33`, transition: "all .2s" }}>
+        <span style={{ color: sel.color, display: "flex", lineHeight: 1 }}>{sel.icon}</span>
+        <span style={{ fontSize: 12.5, fontWeight: 800, color: sel.color, fontFamily: FONT_DISPLAY, letterSpacing: 0.3, textTransform: "uppercase", whiteSpace: "nowrap" }}>{sel.label}</span>
+        <ChevronRight size={15} color={sel.color} style={{ transition: "transform .25s", transform: open ? "rotate(90deg)" : "none" }} />
       </button>
 
-      {/* Panel desplegable */}
-      {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 40, background: L.white, borderRadius: 12, border: `1px solid ${L.border}`, boxShadow: "0 12px 32px rgba(0,0,0,.16)", padding: 5, display: "flex", flexDirection: "column", gap: 2 }}>
-          {CANALES.map((c) => {
-            const active = c.key === canal;
-            return (
-              <button key={c.key} onClick={() => { setCanal(c.key); setOpen(false); }}
-                onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = c.bg; }}
-                onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 9, border: "none", cursor: "pointer", background: active ? c.bg : "transparent", boxShadow: active ? `inset 0 0 0 1.5px ${c.color}55` : "none", transition: "background .12s", textAlign: "left" }}>
-                <span style={{ color: c.color, display: "flex", lineHeight: 1, width: 20, justifyContent: "center" }}>{c.icon}</span>
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: active ? c.color : L.text, fontFamily: FONT_DISPLAY, letterSpacing: 0.2 }}>{c.label}</span>
-                {active && <Check size={14} color={c.color} style={{ marginLeft: "auto" }} />}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* Canales que se deslizan desde el costado */}
+      <div style={{ display: "flex", gap: 6, overflow: "hidden", maxWidth: open ? 320 : 0, opacity: open ? 1 : 0, transition: "max-width .32s cubic-bezier(.34,1.2,.4,1), opacity .22s ease" }}>
+        {otros.map((c, i) => (
+          <button key={c.key} onClick={() => { setCanal(c.key); }} title={c.label}
+            onMouseEnter={(e) => { e.currentTarget.style.background = c.color; e.currentTarget.firstChild.style.color = "#fff"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = c.bg; e.currentTarget.firstChild.style.color = c.color; }}
+            style={{ flexShrink: 0, width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 11, border: "none", cursor: "pointer", background: c.bg, boxShadow: `inset 0 0 0 1.5px ${c.color}33`, transform: open ? "translateX(0)" : "translateX(-14px)", transition: `transform .3s cubic-bezier(.34,1.2,.4,1) ${open ? i * 45 : 0}ms, background .15s`, }}>
+            <span style={{ color: c.color, display: "flex", lineHeight: 1, transition: "color .15s" }}>{c.icon}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
