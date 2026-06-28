@@ -239,6 +239,36 @@ function Avatar({ nombre, foto, size = 40, border }) {
 }
 
 // ============================================================
+// WELCOME SPLASH — bienvenida al iniciar sesión (fade + zoom)
+// ============================================================
+function WelcomeSplash({ onDone }) {
+  const [phase, setPhase] = useState("in"); // in → hold → out
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase("hold"), 60);   // disparar entrada
+    const t2 = setTimeout(() => setPhase("out"), 2200);  // empezar salida
+    const t3 = setTimeout(() => onDone(), 3050);         // desmontar
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [onDone]);
+
+  const isIn  = phase === "in";
+  const isOut = phase === "out";
+
+  return (
+    <div onClick={() => setPhase("out")}
+      style={{ position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+        background: "radial-gradient(circle at 50% 42%, #0a1726 0%, #03070e 60%, #000 100%)",
+        opacity: isIn || isOut ? 0 : 1, transition: "opacity .8s ease" }}>
+      <img src="/bienvenida.png" alt="NinitGroup — Sistema de CMR"
+        style={{ width: "min(74vw, 460px)", maxHeight: "82vh", objectFit: "contain",
+          opacity: isIn || isOut ? 0 : 1,
+          transform: isIn ? "scale(.82)" : isOut ? "scale(1.1)" : "scale(1)",
+          transition: "transform 1s cubic-bezier(.22,1,.36,1), opacity .85s ease",
+          filter: "drop-shadow(0 0 55px rgba(56,170,255,.4))" }} />
+    </div>
+  );
+}
+
+// ============================================================
 // LOGIN
 // ============================================================
 function Login() {
@@ -1383,22 +1413,6 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
             </div>
           </div>
 
-          {/* ── Filtros (atención + tipo + estado) ── */}
-          <div style={{ padding: "8px 14px", borderBottom: `1px solid ${L.border}` }}>
-            <select value={filtro} onChange={(e) => setFiltro(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: `1.5px solid ${filtro !== "todos" ? C.red : L.border}`, fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, color: filtro !== "todos" ? C.red : L.muted, background: L.white, cursor: "pointer", outline: "none" }}>
-              <option value="todos">Todos los contactos</option>
-              <optgroup label="Tipo">
-                <option value="t:cliente">★ Clientes</option>
-                <option value="t:prospecto">◎ Prospectos</option>
-              </optgroup>
-              <optgroup label="Estado">
-                {Object.keys(ESTADOS).map((f) => (
-                  <option key={f} value={f}>{ESTADOS[f].label}</option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
 
           {/* ── Lista contactos ── */}
           <div className="scroll-y" style={{ overflowY: "auto", flex: 1 }}>
@@ -2608,7 +2622,9 @@ export default function App() {
   const [ready,     setReady]     = useState(false);
   const [niniPrompt, setNiniPrompt] = useState("");
   const [alertasVistas, setAlertasVistas] = useState(() => new Set()); // ids de alertas ya vistas/descartadas
+  const [welcome,   setWelcome]   = useState(false);
   const tuvoSesion   = useRef(false);
+  const welcomeShown = useRef(false);
   const sesionDBId   = useRef(null);
   const heartbeatRef = useRef(null);
   const sesInicioRef = useRef(null);
@@ -2619,6 +2635,11 @@ export default function App() {
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
         setSession(s);
+      }
+      // Bienvenida solo al iniciar sesión (una vez por carga de la app)
+      if (event === "SIGNED_IN" && s && !welcomeShown.current) {
+        welcomeShown.current = true;
+        setWelcome(true);
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -2816,6 +2837,7 @@ export default function App() {
     <div className={`app-layout${mobileInPanel ? " in-panel" : ""}`}
       style={{ fontFamily: FONT_BODY, background: L.bg }}>
       <FontLoader />
+      {welcome && <WelcomeSplash onDone={() => setWelcome(false)} />}
 
       <div className="app-sidebar">
         <Sidebar contactos={contactos} activo={activo}
