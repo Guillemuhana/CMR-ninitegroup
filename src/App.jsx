@@ -1279,6 +1279,59 @@ function NavTabs({ vista, setVista, rol }) {
 }
 
 // ============================================================
+// CANAL SELECTOR — desplegable compacto (hover)
+// ============================================================
+const CANALES = [
+  { key: "todos",      label: "Todos",      icon: <Users size={18} />,         color: "#7C3AED", bg: "#F5F3FF" },
+  { key: "whatsapp",   label: "WhatsApp",   icon: <FaWhatsapp size={18} />,    color: "#25D366", bg: "#F0FDF4" },
+  { key: "messenger",  label: "Messenger",  icon: <SiMessenger size={17} />,   color: "#0084FF", bg: "#D8EAFF" },
+  { key: "email",      label: "Gmail",      icon: <SiGmail size={17} />,       color: "#EA4335", bg: "#FFF5F5" },
+  { key: "google_ads", label: "Google Ads", icon: <SiGoogleads size={17} />,   color: "#4285F4", bg: "#EFF6FF" },
+];
+
+function CanalSelector({ canal, setCanal }) {
+  const [open, setOpen] = useState(false);
+  const closeT = useRef(null);
+  const sel = CANALES.find((c) => c.key === canal) || CANALES[0];
+
+  const abrir   = () => { if (closeT.current) clearTimeout(closeT.current); setOpen(true); };
+  const cerrar  = () => { closeT.current = setTimeout(() => setOpen(false), 160); };
+
+  return (
+    <div style={{ position: "relative" }} onMouseEnter={abrir} onMouseLeave={cerrar}>
+      {/* Trigger compacto */}
+      <button onClick={() => setOpen((o) => !o)}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 12px", borderRadius: 11, border: "none", cursor: "pointer", background: sel.bg, boxShadow: `inset 0 0 0 1.5px ${sel.color}33`, transition: "all .2s" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <span style={{ color: sel.color, display: "flex", lineHeight: 1 }}>{sel.icon}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 800, color: sel.color, fontFamily: FONT_DISPLAY, letterSpacing: 0.3, textTransform: "uppercase" }}>{sel.label}</span>
+        </span>
+        <ChevronDown size={16} color={sel.color} style={{ transition: "transform .2s", transform: open ? "rotate(180deg)" : "none" }} />
+      </button>
+
+      {/* Panel desplegable */}
+      {open && (
+        <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 40, background: L.white, borderRadius: 12, border: `1px solid ${L.border}`, boxShadow: "0 12px 32px rgba(0,0,0,.16)", padding: 5, display: "flex", flexDirection: "column", gap: 2 }}>
+          {CANALES.map((c) => {
+            const active = c.key === canal;
+            return (
+              <button key={c.key} onClick={() => { setCanal(c.key); setOpen(false); }}
+                onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = c.bg; }}
+                onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 9, border: "none", cursor: "pointer", background: active ? c.bg : "transparent", boxShadow: active ? `inset 0 0 0 1.5px ${c.color}55` : "none", transition: "background .12s", textAlign: "left" }}>
+                <span style={{ color: c.color, display: "flex", lineHeight: 1, width: 20, justifyContent: "center" }}>{c.icon}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: active ? c.color : L.text, fontFamily: FONT_DISPLAY, letterSpacing: 0.2 }}>{c.label}</span>
+                {active && <Check size={14} color={c.color} style={{ marginLeft: "auto" }} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // SIDEBAR
 // ============================================================
 function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
@@ -1323,23 +1376,9 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
 
       {vista === "chat" && (
         <>
-          {/* ── Canal buttons ── */}
-          <div style={{ padding: "10px 12px 8px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 6 }}>
-            {[
-              { key: "whatsapp",   label: "WhatsApp",  icon: <FaWhatsapp size={22} />,   color: "#25D366", bg: "#F0FDF4" },
-              { key: "messenger",  label: "Messenger", icon: <SiMessenger size={20} />, color: "#0084FF", bg: "#D8EAFF" },
-              { key: "email",      label: "Gmail",      icon: <SiGmail size={20} />,       color: "#EA4335", bg: "#FFF5F5" },
-              { key: "google_ads", label: "Google Ads", icon: <SiGoogleads size={20} />,   color: "#4285F4", bg: "#EFF6FF" },
-            ].map(({ key, label, icon, color, bg }) => {
-              const active = canal === key;
-              return (
-                <button key={key} onClick={() => setCanal(active ? "todos" : key)}
-                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, padding: "10px 4px 9px", borderRadius: 14, border: "none", background: active ? color : bg, cursor: "pointer", transition: "all .2s", boxShadow: active ? `0 4px 14px ${color}55` : "inset 0 0 0 1.5px ${L.border}", transform: active ? "translateY(-1px)" : "none" }}>
-                  <span style={{ color: active ? "#fff" : color, display: "flex", lineHeight: 1 }}>{icon}</span>
-                  <span style={{ fontSize: 9.5, fontWeight: 800, color: active ? "#fff" : color, fontFamily: FONT_DISPLAY, letterSpacing: 0.3, textTransform: "uppercase", whiteSpace: "nowrap" }}>{label}</span>
-                </button>
-              );
-            })}
+          {/* ── Canal selector (desplegable) ── */}
+          <div style={{ padding: "10px 12px 8px", borderBottom: `1px solid ${L.border}` }}>
+            <CanalSelector canal={canal} setCanal={setCanal} />
           </div>
 
           {/* ── Búsqueda ── */}
