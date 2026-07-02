@@ -79,6 +79,13 @@ const ACTIVIDAD = [
   { key: "sinresponder24",label: "Sin responder +24h" },
 ];
 
+// Alcance del análisis (backfill): qué antigüedad de chats tocar.
+const SCOPE_DIAS = [
+  { key: "todos", label: "Todos", dias: null },
+  { key: "30",    label: "Últimos 30 días", dias: 30 },
+  { key: "7",     label: "Últimos 7 días",  dias: 7 },
+];
+
 export const FILTROS_INICIAL = {
   ciudad: "",
   estadoProvincia: "",
@@ -190,25 +197,34 @@ export async function analizarContacto(contacto, mensajes) {
   return cambios;
 }
 
-// Cuántos chats faltan analizar (para el banner del modal).
-export async function contarPendientes() {
-  const { count } = await supabase
-    .from("contactos")
-    .select("id", { count: "exact", head: true })
-    .is("ia_analizado_at", null);
+// Aplica el alcance elegido a una query de contactos.
+//   opts.dias       → solo chats con actividad en los últimos N días (null = todos)
+//   opts.reanalizar → true incluye los ya analizados (re-clasifica); false solo los pendientes
+function aplicarScope(q, opts = {}) {
+  if (!opts.reanalizar) q = q.is("ia_analizado_at", null);
+  if (opts.dias) {
+    const desde = new Date(Date.now() - opts.dias * 86400000).toISOString();
+    q = q.gte("updated_at", desde);
+  }
+  return q;
+}
+
+// Cuántos chats entran en el alcance elegido (para el banner del modal).
+export async function contarPendientes(opts) {
+  let q = supabase.from("contactos").select("id", { count: "exact", head: true });
+  const { count } = await aplicarScope(q, opts);
   return count ?? 0;
 }
 
-// Backfill: analiza los chats existentes sin clasificar y llena las columnas ia_*.
+// Backfill: analiza los chats del alcance elegido y llena las columnas ia_*.
 // Throttle de 1.2s entre llamadas para no chocar con el rate limit de Groq
-// (si igual pega 429, el backend cae solo al modelo liviano). Reanudable: solo
-// toca los que tienen ia_analizado_at = null.
-export async function analizarPendientes(onProgress) {
-  const { data: contactos, error } = await supabase
+// (si igual pega 429, el backend cae solo al modelo liviano). Reanudable.
+export async function analizarPendientes(onProgress, opts) {
+  let q = supabase
     .from("contactos")
     .select("id, nombre, telefono, email, canal")
-    .is("ia_analizado_at", null)
     .order("updated_at", { ascending: false });
+  const { data: contactos, error } = await aplicarScope(q, opts);
   if (error) throw error;
 
   let ok = 0, fail = 0;
@@ -291,19 +307,28 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
   const aplicar = () => { setFiltros(f); onClose(); };
   const limpiar = () => setF(FILTROS_INICIAL);
 
-  // ── Backfill: analizar chats viejos que aún no tienen datos de IA ──
-  const [pend, setPend] = useState(null);   // cuántos faltan
+  // ── Backfill: analizar chats para llenar los datos de IA ──
+  const [pend, setPend] = useState(null);   // cuántos entran en el alcance
   const [prog, setProg] = useState(null);   // { hechos, total, ok, fail }
   const [corriendo, setCorriendo] = useState(false);
+  const [scopeKey, setScopeKey] = useState("todos");   // todos | 30 | 7
+  const [reanalizar, setReanalizar] = useState(false); // incluir ya analizados
 
-  useEffect(() => { contarPendientes().then(setPend).catch(() => setPend(0)); }, []);
+  const scopeOpts = { dias: SCOPE_DIAS.find((s) => s.key === scopeKey)?.dias ?? null, reanalizar };
+
+  // Recontar cada vez que cambia el alcance (no mientras corre).
+  useEffect(() => {
+    if (corriendo) return;
+    setPend(null);
+    contarPendientes({ dias: SCOPE_DIAS.find((s) => s.key === scopeKey)?.dias ?? null, reanalizar })
+      .then(setPend).catch(() => setPend(0));
+  }, [scopeKey, reanalizar, corriendo]);
 
   const correrBackfill = async () => {
     setCorriendo(true);
     setProg({ hechos: 0, total: pend || 0, ok: 0, fail: 0 });
     try {
-      const r = await analizarPendientes(setProg);
-      setPend(0);
+      const r = await analizarPendientes(setProg, scopeOpts);
       setProg((p) => ({ ...p, done: true, ...r }));
     } catch (e) {
       alert("No se pudo analizar: " + (e?.message || e));
@@ -332,18 +357,39 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
         {/* Body scrollable */}
         <div className="scroll-y" style={{ overflowY: "auto", padding: "4px 18px", flex: 1 }}>
 
-          {/* Banner: analizar chats viejos (backfill de metadatos IA) */}
-          {(pend === null || pend > 0 || prog) && (
-            <div style={{ margin: "12px 0 6px", padding: "12px 13px", borderRadius: 12, background: C.aiSoft, border: `1px solid ${C.ai}33` }}>
+          {/* Banner: analizar chats para llenar los datos de IA (con alcance elegible) */}
+          <div style={{ margin: "12px 0 6px", padding: "12px 13px", borderRadius: 12, background: C.aiSoft, border: `1px solid ${C.ai}33` }}>
               {!corriendo && !prog?.done && (
                 <>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: P.text, marginBottom: 2 }}>
-                    {pend === null ? "Revisando chats…"
-                      : pend === 0 ? "Todos los chats están analizados ✓"
-                      : `Hay ${pend} chat${pend === 1 ? "" : "s"} sin analizar por IA`}
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: P.text, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Sparkles size={14} color={C.ai} /> Analizar chats con IA
                   </div>
+
+                  {/* Selector de antigüedad */}
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: P.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 5 }}>Qué chats analizar</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 9 }}>
+                    {SCOPE_DIAS.map((s) => {
+                      const sel = scopeKey === s.key;
+                      return (
+                        <button key={s.key} onClick={() => setScopeKey(s.key)}
+                          style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONT_BODY,
+                            border: sel ? `1.5px solid ${C.ai}` : `1.5px solid ${P.border}`, background: sel ? P.white : P.white, color: sel ? C.ai : P.muted, boxShadow: sel ? `0 1px 4px ${C.ai}22` : "none" }}>
+                          {sel && <Check size={12} />}{s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Reanalizar los ya hechos */}
+                  <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", marginBottom: 10, fontSize: 11.5, color: P.muted, userSelect: "none" }}>
+                    <input type="checkbox" checked={reanalizar} onChange={(e) => setReanalizar(e.target.checked)} style={{ accentColor: C.ai, width: 15, height: 15, cursor: "pointer" }} />
+                    Volver a analizar los ya clasificados (reprocesa todo)
+                  </label>
+
                   <div style={{ fontSize: 11, color: P.muted, marginBottom: pend > 0 ? 9 : 0 }}>
-                    Los filtros (ciudad, urgencia, etc.) solo alcanzan a los chats analizados, incluidos los viejos.
+                    {pend === null ? "Contando chats…"
+                      : pend === 0 ? (reanalizar ? "No hay chats en este alcance." : "Todos los chats de este alcance ya están analizados ✓")
+                      : `${pend} chat${pend === 1 ? "" : "s"} entran en este alcance. Los filtros solo alcanzan a los chats analizados.`}
                   </div>
                   {pend > 0 && (
                     <button onClick={correrBackfill}
@@ -364,10 +410,15 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
                     <div style={{ height: "100%", width: `${prog.total ? Math.round((prog.hechos / prog.total) * 100) : 0}%`, background: C.gradAI, borderRadius: 99, transition: "width .3s" }} />
                   </div>
                   {!prog.done && <div style={{ fontSize: 10.5, color: P.muted, marginTop: 6 }}>Podés seguir usando la app; dejá el modal abierto hasta que termine.</div>}
+                  {prog.done && (
+                    <button onClick={() => setProg(null)}
+                      style={{ marginTop: 9, display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${C.ai}`, background: P.white, color: C.ai, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
+                      <Wand2 size={13} /> Analizar otro alcance
+                    </button>
+                  )}
                 </>
               )}
-            </div>
-          )}
+          </div>
 
           <Seccion icon={<MapPin size={16} />} titulo="Ubicación geográfica" abiertoInit
             activo={!!(f.ciudad.trim() || f.estadoProvincia.trim())}>
