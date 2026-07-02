@@ -6,7 +6,7 @@ import {
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
-  Image as ImageIcon, Languages, Reply,
+  Image as ImageIcon, Languages, Reply, SlidersHorizontal,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
@@ -22,6 +22,7 @@ import DiarioVendedor from "./DiarioVendedor";
 import CEODashboard from "./CEODashboard";
 import Agenda from "./Agenda";
 import Directorio from "./Directorio";
+import FiltrosModal, { FILTROS_INICIAL, contarActivos, aplicaFiltrosIA } from "./FiltrosModal";
 
 // ============================================================
 // PALETA LIGHT — tema claro profesional
@@ -1360,6 +1361,8 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
   const [canal, setCanal]         = useState("todos");
+  const [filtrosIA, setFiltrosIA] = useState(FILTROS_INICIAL);
+  const [modalFiltros, setModalFiltros] = useState(false);
   const [now, setNow]             = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
@@ -1377,7 +1380,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
     else if (filtro === "t:cliente")      porFiltro = c.tipo === "cliente";
     else if (filtro === "t:prospecto")    porFiltro = !c.tipo || c.tipo === "prospecto";
     else porFiltro = c.estado === filtro;
-    return porBusq && porCanal && porFiltro;
+    return porBusq && porCanal && porFiltro && aplicaFiltrosIA(c, filtrosIA);
   });
 
   return (
@@ -1403,15 +1406,29 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
             <CanalSelector canal={canal} setCanal={setCanal} />
           </div>
 
-          {/* ── Búsqueda ── */}
-          <div style={{ padding: "12px 14px", borderBottom: `1px solid ${L.border}` }}>
-            <div style={{ position: "relative" }}>
+          {/* ── Búsqueda + Filtros IA ── */}
+          <div style={{ padding: "12px 14px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 8 }}>
+            <div style={{ position: "relative", flex: 1 }}>
               <Search size={15} color={L.light} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
               <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
                 placeholder="Buscar contacto o número…"
                 style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px 9px 34px", borderRadius: 10, border: `1.5px solid ${L.border}`, fontSize: 13.5, fontFamily: FONT_BODY, background: L.soft, color: L.text, outline: "none" }} />
             </div>
+            <button onClick={() => setModalFiltros(true)} title="Filtrado inteligente"
+              style={{ position: "relative", flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "0 12px", borderRadius: 10, cursor: "pointer", fontFamily: FONT_DISPLAY, fontSize: 12.5, fontWeight: 800, letterSpacing: 0.2,
+                border: contarActivos(filtrosIA) > 0 ? `1.5px solid ${C.ai}` : `1.5px solid ${L.border}`,
+                background: contarActivos(filtrosIA) > 0 ? C.aiSoft : L.white,
+                color: contarActivos(filtrosIA) > 0 ? C.ai : L.muted, transition: "all .15s" }}>
+              <SlidersHorizontal size={15} />
+              {contarActivos(filtrosIA) > 0 && (
+                <span style={{ background: C.ai, color: "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 9, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{contarActivos(filtrosIA)}</span>
+              )}
+            </button>
           </div>
+
+          {modalFiltros && (
+            <FiltrosModal filtros={filtrosIA} setFiltros={setFiltrosIA} onClose={() => setModalFiltros(false)} />
+          )}
 
 
           {/* ── Lista contactos ── */}
