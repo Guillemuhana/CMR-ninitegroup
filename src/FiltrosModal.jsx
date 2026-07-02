@@ -15,10 +15,10 @@
 //
 // Estilo: inline styles + tokens del proyecto (C, FONT_DISPLAY, FONT_BODY de ./lib).
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X, MapPin, TrendingUp, PhoneCall, Zap, Smile, GitBranch,
-  DollarSign, Radio, Clock, ChevronDown, RotateCcw, Sparkles, Check,
+  DollarSign, Radio, Clock, ChevronDown, RotateCcw, Sparkles, Check, Wand2,
 } from "lucide-react";
 import { supabase, C, FONT_DISPLAY, FONT_BODY } from "./lib";
 
@@ -190,6 +190,53 @@ export async function analizarContacto(contacto, mensajes) {
   return cambios;
 }
 
+// Cuántos chats faltan analizar (para el banner del modal).
+export async function contarPendientes() {
+  const { count } = await supabase
+    .from("contactos")
+    .select("id", { count: "exact", head: true })
+    .is("ia_analizado_at", null);
+  return count ?? 0;
+}
+
+// Backfill: analiza los chats existentes sin clasificar y llena las columnas ia_*.
+// Throttle de 1.2s entre llamadas para no chocar con el rate limit de Groq
+// (si igual pega 429, el backend cae solo al modelo liviano). Reanudable: solo
+// toca los que tienen ia_analizado_at = null.
+export async function analizarPendientes(onProgress) {
+  const { data: contactos, error } = await supabase
+    .from("contactos")
+    .select("id, nombre, telefono, email, canal")
+    .is("ia_analizado_at", null)
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+
+  let ok = 0, fail = 0;
+  const total = (contactos || []).length;
+  for (let i = 0; i < total; i++) {
+    const c = contactos[i];
+    try {
+      const { data: mensajes } = await supabase
+        .from("mensajes")
+        .select("direccion, origen, agente, contenido, created_at")
+        .eq("contacto_id", c.id)
+        .order("created_at", { ascending: true });
+      if (mensajes && mensajes.length) {
+        await analizarContacto(c, mensajes);
+        ok++;
+      } else {
+        // Sin mensajes: marcar como analizado para no reintentarlo eternamente.
+        await supabase.from("contactos").update({ ia_analizado_at: new Date().toISOString() }).eq("id", c.id);
+      }
+    } catch (e) {
+      fail++;
+    }
+    onProgress?.({ hechos: i + 1, total, ok, fail });
+    if (i < total - 1) await new Promise((r) => setTimeout(r, 1200));
+  }
+  return { ok, fail, total };
+}
+
 // ── UI primitives ───────────────────────────────────────────
 
 function Seccion({ icon, titulo, activo, children, abiertoInit = false }) {
@@ -244,6 +291,28 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
   const aplicar = () => { setFiltros(f); onClose(); };
   const limpiar = () => setF(FILTROS_INICIAL);
 
+  // ── Backfill: analizar chats viejos que aún no tienen datos de IA ──
+  const [pend, setPend] = useState(null);   // cuántos faltan
+  const [prog, setProg] = useState(null);   // { hechos, total, ok, fail }
+  const [corriendo, setCorriendo] = useState(false);
+
+  useEffect(() => { contarPendientes().then(setPend).catch(() => setPend(0)); }, []);
+
+  const correrBackfill = async () => {
+    setCorriendo(true);
+    setProg({ hechos: 0, total: pend || 0, ok: 0, fail: 0 });
+    try {
+      const r = await analizarPendientes(setProg);
+      setPend(0);
+      setProg((p) => ({ ...p, done: true, ...r }));
+    } catch (e) {
+      alert("No se pudo analizar: " + (e?.message || e));
+      setCorriendo(false);
+      return;
+    }
+    setCorriendo(false);
+  };
+
   return (
     <div onClick={onClose}
       style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.55)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
@@ -262,6 +331,43 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
 
         {/* Body scrollable */}
         <div className="scroll-y" style={{ overflowY: "auto", padding: "4px 18px", flex: 1 }}>
+
+          {/* Banner: analizar chats viejos (backfill de metadatos IA) */}
+          {(pend === null || pend > 0 || prog) && (
+            <div style={{ margin: "12px 0 6px", padding: "12px 13px", borderRadius: 12, background: C.aiSoft, border: `1px solid ${C.ai}33` }}>
+              {!corriendo && !prog?.done && (
+                <>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: P.text, marginBottom: 2 }}>
+                    {pend === null ? "Revisando chats…"
+                      : pend === 0 ? "Todos los chats están analizados ✓"
+                      : `Hay ${pend} chat${pend === 1 ? "" : "s"} sin analizar por IA`}
+                  </div>
+                  <div style={{ fontSize: 11, color: P.muted, marginBottom: pend > 0 ? 9 : 0 }}>
+                    Los filtros (ciudad, urgencia, etc.) solo alcanzan a los chats analizados, incluidos los viejos.
+                  </div>
+                  {pend > 0 && (
+                    <button onClick={correrBackfill}
+                      style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 13px", borderRadius: 9, border: "none", background: C.gradAI, color: "#fff", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: FONT_DISPLAY, letterSpacing: 0.2 }}>
+                      <Wand2 size={14} /> Analizar {pend} chat{pend === 1 ? "" : "s"} ahora
+                    </button>
+                  )}
+                </>
+              )}
+              {(corriendo || prog?.done) && prog && (
+                <>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: P.text, marginBottom: 7 }}>
+                    {prog.done
+                      ? `Listo · ${prog.ok} analizados${prog.fail ? `, ${prog.fail} con error` : ""} ✓`
+                      : `Analizando ${prog.hechos}/${prog.total}…`}
+                  </div>
+                  <div style={{ height: 7, borderRadius: 99, background: "#E4E8ED", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${prog.total ? Math.round((prog.hechos / prog.total) * 100) : 0}%`, background: C.gradAI, borderRadius: 99, transition: "width .3s" }} />
+                  </div>
+                  {!prog.done && <div style={{ fontSize: 10.5, color: P.muted, marginTop: 6 }}>Podés seguir usando la app; dejá el modal abierto hasta que termine.</div>}
+                </>
+              )}
+            </div>
+          )}
 
           <Seccion icon={<MapPin size={16} />} titulo="Ubicación geográfica" abiertoInit
             activo={!!(f.ciudad.trim() || f.estadoProvincia.trim())}>
