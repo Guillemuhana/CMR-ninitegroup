@@ -84,6 +84,7 @@ const SCOPE_DIAS = [
   { key: "todos", label: "Todos", dias: null },
   { key: "30",    label: "Últimos 30 días", dias: 30 },
   { key: "7",     label: "Últimos 7 días",  dias: 7 },
+  { key: "hoy",   label: "Hoy", hoy: true },
 ];
 
 export const FILTROS_INICIAL = {
@@ -198,14 +199,19 @@ export async function analizarContacto(contacto, mensajes) {
 }
 
 // Aplica el alcance elegido a una query de contactos.
+//   opts.hoy        → solo chats con actividad desde la medianoche de hoy
 //   opts.dias       → solo chats con actividad en los últimos N días (null = todos)
 //   opts.reanalizar → true incluye los ya analizados (re-clasifica); false solo los pendientes
 function aplicarScope(q, opts = {}) {
   if (!opts.reanalizar) q = q.is("ia_analizado_at", null);
-  if (opts.dias) {
-    const desde = new Date(Date.now() - opts.dias * 86400000).toISOString();
-    q = q.gte("updated_at", desde);
+  let desde = null;
+  if (opts.hoy) {
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    desde = d.toISOString();
+  } else if (opts.dias) {
+    desde = new Date(Date.now() - opts.dias * 86400000).toISOString();
   }
+  if (desde) q = q.gte("updated_at", desde);
   return q;
 }
 
@@ -314,13 +320,14 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
   const [scopeKey, setScopeKey] = useState("todos");   // todos | 30 | 7
   const [reanalizar, setReanalizar] = useState(false); // incluir ya analizados
 
-  const scopeOpts = { dias: SCOPE_DIAS.find((s) => s.key === scopeKey)?.dias ?? null, reanalizar };
+  const scopeSel = SCOPE_DIAS.find((s) => s.key === scopeKey) || SCOPE_DIAS[0];
+  const scopeOpts = { dias: scopeSel.dias ?? null, hoy: !!scopeSel.hoy, reanalizar };
 
   // Recontar cada vez que cambia el alcance (no mientras corre).
   useEffect(() => {
     if (corriendo) return;
     setPend(null);
-    contarPendientes({ dias: SCOPE_DIAS.find((s) => s.key === scopeKey)?.dias ?? null, reanalizar })
+    contarPendientes({ dias: scopeSel.dias ?? null, hoy: !!scopeSel.hoy, reanalizar })
       .then(setPend).catch(() => setPend(0));
   }, [scopeKey, reanalizar, corriendo]);
 
