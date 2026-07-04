@@ -6,7 +6,7 @@ import {
   Sparkles, Phone, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
-  Image as ImageIcon, Languages, Reply, SlidersHorizontal,
+  Image as ImageIcon, Languages, Reply, SlidersHorizontal, Star,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
@@ -1357,9 +1357,10 @@ function CanalSelector({ canal, setCanal }) {
 // ============================================================
 // SIDEBAR
 // ============================================================
-function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
+function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
+  const [soloDestacados, setSoloDestacados] = useState(false);
   const [canal, setCanal]         = useState("todos");
   const [filtrosIA, setFiltrosIA] = useState(FILTROS_INICIAL);
   const [modalFiltros, setModalFiltros] = useState(false);
@@ -1372,6 +1373,7 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
   const lista = contactos.filter((c) => {
     const porBusq   = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
     const porCanal  = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
+    const porDest   = !soloDestacados || c.destacado;
     let porFiltro = true;
     if (filtro === "todos") porFiltro = true;
     else if (filtro === "q:sinrevisar")   porFiltro = calcSinRevisar(c) != null;
@@ -1380,8 +1382,10 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
     else if (filtro === "t:cliente")      porFiltro = c.tipo === "cliente";
     else if (filtro === "t:prospecto")    porFiltro = !c.tipo || c.tipo === "prospecto";
     else porFiltro = c.estado === filtro;
-    return porBusq && porCanal && porFiltro && aplicaFiltrosIA(c, filtrosIA);
-  });
+    return porBusq && porCanal && porDest && porFiltro && aplicaFiltrosIA(c, filtrosIA);
+  })
+  // Los destacados (importantes) siempre arriba, respetando el orden por fecha
+  .sort((a, b) => (b.destacado ? 1 : 0) - (a.destacado ? 1 : 0));
 
   return (
     <div style={{ width: "100%", height: "100%", background: L.white, borderRight: `1px solid ${L.border}`, display: "flex", flexDirection: "column" }}>
@@ -1423,6 +1427,13 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
               {contarActivos(filtrosIA) > 0 && (
                 <span style={{ background: C.ai, color: "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 9, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{contarActivos(filtrosIA)}</span>
               )}
+            </button>
+            <button onClick={() => setSoloDestacados(v => !v)}
+              title={soloDestacados ? "Mostrar todos" : "Mostrar solo importantes"}
+              style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 40, borderRadius: 10, cursor: "pointer",
+                border: soloDestacados ? "1.5px solid #F59E0B" : `1.5px solid ${L.border}`,
+                background: soloDestacados ? "#FFFBEB" : L.white, transition: "all .15s" }}>
+              <Star size={16} fill={soloDestacados ? "#F59E0B" : "none"} color={soloDestacados ? "#F59E0B" : L.muted} />
             </button>
           </div>
 
@@ -1471,6 +1482,12 @@ function Sidebar({ contactos, activo, onSelect, onLogout, userEmail, userName, v
                         {c.nombre || c.telefono || c.email}
                       </span>
                       <div style={{ display: "flex", gap: 5, alignItems: "center", flexShrink: 0 }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onToggleDestacado?.(c); }}
+                          title={c.destacado ? "Quitar de importantes" : "Marcar como importante"}
+                          style={{ background: "transparent", border: "none", padding: 2, cursor: "pointer", display: "flex", alignItems: "center", lineHeight: 0 }}>
+                          <Star size={15} fill={c.destacado ? "#F59E0B" : "none"} color={c.destacado ? "#F59E0B" : L.light} />
+                        </button>
                         <span style={{ fontSize: 11, color: L.light }}>{hora}</span>
                         {c.no_leidos > 0 && (
                           <span style={{ background: "#22C55E", color: "#fff", fontSize: 10, borderRadius: 10, minWidth: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", fontWeight: 800 }}>{c.no_leidos}</span>
@@ -2814,6 +2831,12 @@ export default function App() {
     if (activo?.id === c.id) setActivo(c);
   };
 
+  const toggleDestacado = async (c) => {
+    const nuevo = !c.destacado;
+    updateContacto({ ...c, destacado: nuevo });          // optimista
+    await supabase.from("contactos").update({ destacado: nuevo }).eq("id", c.id);
+  };
+
   const deleteContacto = (id) => {
     setContactos((prev) => prev.filter((x) => x.id !== id));
     setActivo(null);
@@ -2859,6 +2882,7 @@ export default function App() {
       <div className="app-sidebar">
         <Sidebar contactos={contactos} activo={activo}
           onSelect={(c) => setActivo(c)}
+          onToggleDestacado={toggleDestacado}
           onLogout={handleLogout}
           userEmail={userEmail} userName={userName}
           vista={vista} setVista={setVista} alertas={alertas}
