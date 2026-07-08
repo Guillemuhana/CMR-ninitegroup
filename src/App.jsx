@@ -1544,6 +1544,25 @@ const COTIZACIONES = [
 ];
 
 // ============================================================
+// ASISTENTE "AVANZAR" — etiquetas de visualización
+// ============================================================
+const AV_NIVEL = {
+  frio:     { label: "Frío",     color: "#0369A1", bg: "#E0F2FE" },
+  tibio:    { label: "Tibio",    color: "#B45309", bg: "#FEF3C7" },
+  caliente: { label: "Caliente", color: "#B91C1C", bg: "#FEE2E2" },
+};
+const AV_ETAPA = {
+  primer_contacto: "Primer contacto", interesado: "Interesado", calificacion: "Calificación",
+  cotizacion: "Cotización", objecion: "Objeción", seguimiento: "Seguimiento",
+  cierre: "Cierre", perdido: "Perdido",
+};
+const AV_OBJECION = {
+  precio: "Precio", envio: "Envío", tiempo: "Tiempo", modelo: "Modelo",
+  necesita_pensarlo: "Necesita pensarlo", comparando_proveedores: "Comparando proveedores",
+  falta_informacion: "Falta información", sin_objecion: "Sin objeción",
+};
+
+// ============================================================
 // FOTOS POR MODELO (links de imagen para enviar al cliente)
 // ============================================================
 const FOTO_PREFIX = "https://ninitgroup.com/wp-content/uploads/";
@@ -1736,6 +1755,13 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [resumenMsgTrad, setResumenMsgTrad] = useState("");      // traducción al español del mensaje sugerido
   const [resumenTradOn, setResumenTradOn] = useState(false);     // mostrar/ocultar traducción
   const [resumenTradLoading, setResumenTradLoading] = useState(false);
+  // ── Botón "Avanzar": asistente de ventas IA (JSON estructurado) ──
+  const [avOpen, setAvOpen]       = useState(false);
+  const [avData, setAvData]       = useState(null);   // resultado estructurado
+  const [avLoading, setAvLoading] = useState(false);
+  const [avErr, setAvErr]         = useState("");
+  const [avCopiado, setAvCopiado] = useState(false);
+  const [avEtapaOk, setAvEtapaOk] = useState(false);
   const [traducciones, setTraducciones] = useState({});      // { [msgId]: textoTraducido }
   const [tradLoading, setTradLoading] = useState({});        // { [msgId]: bool }
   const [replyTo, setReplyTo] = useState(null); // { id, contenido, esCliente } | null
@@ -1819,6 +1845,67 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     }
     setResumenLoading(false);
   };
+
+  // ── Botón "Avanzar": llama al asistente de ventas IA ──────────
+  const avanzarIA = async () => {
+    setAvOpen(true);
+    setAvErr("");
+    setAvCopiado(false);
+    setAvEtapaOk(false);
+    if (!mensajes.length) { setAvErr("Todavía no hay mensajes en esta conversación."); return; }
+    setAvLoading(true);
+    setAvData(null);
+    try {
+      const res = await fetch("/api/avanzar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contacto: {
+            nombre: contacto.nombre, telefono: contacto.telefono, email: contacto.email,
+            estado: contacto.estado, empresa: contacto.empresa, direccion: contacto.direccion,
+            canal: contacto.canal,
+          },
+          vendedor: userName,
+          mensajes: mensajes.map((m) => ({
+            direccion: m.direccion, origen: m.origen, agente: m.agente,
+            contenido: m.contenido, created_at: m.created_at,
+          })),
+        }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || "No se pudo analizar la conversación.");
+      setAvData(out);
+    } catch (e) {
+      setAvErr(e.message || "Error al analizar la conversación.");
+    }
+    setAvLoading(false);
+  };
+
+  const copiarMensajeAv = async () => {
+    if (!avData?.mensaje_whatsapp) return;
+    try { await navigator.clipboard.writeText(avData.mensaje_whatsapp); }
+    catch { /* clipboard no disponible */ }
+    // Además lo dejo cargado en el input para enviarlo directo.
+    setTexto(avData.mensaje_whatsapp);
+    setAvCopiado(true);
+    setTimeout(() => setAvCopiado(false), 2200);
+  };
+
+  // Mapea la etapa del embudo IA → estado del CRM y lo aplica al contacto.
+  const ETAPA_A_ESTADO = {
+    primer_contacto: "contactado", interesado: "interesado", calificacion: "interesado",
+    cotizacion: "cotizacion", objecion: "negociando", seguimiento: "pendiente",
+    cierre: "negociando", perdido: "perdido",
+  };
+  const aplicarEtapaAv = () => {
+    const nuevo = ETAPA_A_ESTADO[avData?.etapa_embudo];
+    if (!nuevo) return;
+    upd({ estado: nuevo });
+    setAvEtapaOk(true);
+    setTimeout(() => setAvEtapaOk(false), 2200);
+  };
+
+  const avLbl = { fontSize: 10.5, fontWeight: 800, color: L.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 };
 
   const traducirTexto = async (txt, destino) => {
     const res = await fetch("/api/traducir", {
@@ -2071,7 +2158,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.color = L.muted; }}>
                 <Pencil size={14} /> Editar
               </button>
-              <button onClick={generarResumen} title="Resumen IA de la conversación + mensaje sugerido para el cliente"
+              <button onClick={avanzarIA} title="Asistente de ventas IA: diagnóstico del cliente + próximo paso + mensaje sugerido"
                 style={{ background: C.gradBtn, border: "none", color: "#fff", borderRadius: 999, padding: "11px 24px", cursor: "pointer", fontSize: 14.5, fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: 0.2, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 22px rgba(99,102,241,.34)", flexShrink: 0 }}>
                 <Sparkles size={17} /> Avanzar
               </button>
@@ -2092,7 +2179,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 11px", background: L.soft, color: L.muted, borderColor: L.border }}>
                 <Pencil size={13} /> Editar
               </button>
-              <button onClick={generarResumen}
+              <button onClick={avanzarIA}
                 style={{ ...btnSt, flexShrink: 0, fontSize: 13, padding: "8px 18px", borderRadius: 999, fontWeight: 700, gap: 7, background: C.gradBtn, color: "#fff", borderColor: "transparent", boxShadow: "0 6px 16px rgba(99,102,241,.3)" }}>
                 <Sparkles size={15} /> Avanzar
               </button>
@@ -2522,6 +2609,121 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 <button onClick={copiarResumen} disabled={!resumenMensaje}
                   style={{ background: resumenCopiado ? "#15803D" : (resumenMensaje ? "#7C3AED" : L.light), color: "#fff", border: "none", borderRadius: 9, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: resumenMensaje ? "pointer" : "default", fontFamily: FONT_DISPLAY, display: "flex", alignItems: "center", gap: 6 }}>
                   {resumenCopiado ? <><Check size={14} /> Copiado</> : <><FileText size={14} /> Copiar mensaje</>}
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── Tarjeta "Avanzar": asistente de ventas IA ── */}
+      {avOpen && (
+        <>
+          <div onClick={() => setAvOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 600 }} />
+          <div style={{
+            position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+            width: isMobile ? "calc(100% - 24px)" : 500, maxHeight: "86vh",
+            background: L.white, borderRadius: 18, zIndex: 601,
+            boxShadow: "0 24px 80px rgba(0,0,0,.3)", fontFamily: FONT_BODY,
+            display: "flex", flexDirection: "column", overflow: "hidden",
+          }}>
+            {/* Cabecera */}
+            <div style={{ padding: "15px 18px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 9, background: C.gradBtn, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Sparkles size={17} color="#fff" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 16, color: L.text }}>Asistente de ventas</div>
+                <div style={{ fontSize: 11.5, color: L.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contacto.nombre || contacto.telefono || contacto.email}</div>
+              </div>
+              <button onClick={() => setAvOpen(false)} style={{ background: L.soft, border: "none", borderRadius: 8, width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: L.muted }}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="scroll-y" style={{ padding: "16px 18px", overflowY: "auto", flex: 1 }}>
+              {avLoading && (
+                <div style={{ textAlign: "center", color: C.red, fontSize: 13.5, padding: "30px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                  <style>{`.spin-slow{animation:spinSlow 1.4s linear infinite}@keyframes spinSlow{to{transform:rotate(360deg)}}`}</style>
+                  <Sparkles size={26} className="spin-slow" />
+                  Analizando la conversación…
+                </div>
+              )}
+              {avErr && !avLoading && (
+                <div style={{ padding: "10px 13px", background: "#FEF2F2", borderRadius: 8, color: C.red, fontSize: 13, display: "flex", gap: 7, alignItems: "center" }}>
+                  <AlertCircle size={14} /> {avErr}
+                </div>
+              )}
+              {avData && !avLoading && (
+                <>
+                  {/* Badges: nivel + etapa + objeción */}
+                  <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 14 }}>
+                    {(() => { const n = AV_NIVEL[avData.nivel_interes] || AV_NIVEL.tibio; return (
+                      <span style={{ fontSize: 11.5, fontWeight: 800, padding: "4px 11px", borderRadius: 20, background: n.bg, color: n.color, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                        <Zap size={12} /> {n.label}
+                      </span>
+                    ); })()}
+                    <span style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 20, background: "#EEF2FF", color: "#4338CA" }}>
+                      {AV_ETAPA[avData.etapa_embudo] || avData.etapa_embudo}
+                    </span>
+                    {avData.objecion_detectada && avData.objecion_detectada !== "sin_objecion" && (
+                      <span style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 20, background: "#FEF2F2", color: "#B91C1C", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                        <AlertCircle size={12} /> {AV_OBJECION[avData.objecion_detectada] || avData.objecion_detectada}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Resumen del cliente */}
+                  {avData.resumen_cliente && (
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={avLbl}>Resumen del cliente</div>
+                      <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.55 }}>{avData.resumen_cliente}</div>
+                    </div>
+                  )}
+
+                  {/* Próximo paso */}
+                  {avData.proximo_paso_recomendado && (
+                    <div style={{ marginBottom: 12, background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 10, padding: "10px 13px" }}>
+                      <div style={{ ...avLbl, color: "#15803D" }}>Próximo paso recomendado</div>
+                      <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.55 }}>{avData.proximo_paso_recomendado}</div>
+                    </div>
+                  )}
+
+                  {/* Nota para el vendedor */}
+                  {avData.nota_para_vendedor && (
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={avLbl}>Consejo</div>
+                      <div style={{ fontSize: 12.5, color: L.muted, lineHeight: 1.55, fontStyle: "italic" }}>{avData.nota_para_vendedor}</div>
+                    </div>
+                  )}
+
+                  {/* Mensaje sugerido para WhatsApp */}
+                  {avData.mensaje_whatsapp && (
+                    <div style={{ background: C.aiSoft, border: "1px solid #DDD6FE", borderRadius: 12, padding: "12px 14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, color: "#6D28D9", fontWeight: 700, fontSize: 11.5, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        <MessageSquare size={13} /> Mensaje sugerido (WhatsApp)
+                      </div>
+                      <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{avData.mensaje_whatsapp}</div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Acciones */}
+            {avData && !avLoading && (
+              <div style={{ padding: "12px 18px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                <button onClick={aplicarEtapaAv} title="Cambiar el estado del cliente al sugerido por la IA"
+                  style={{ background: avEtapaOk ? "#15803D" : L.soft, border: `1.5px solid ${avEtapaOk ? "#15803D" : L.border}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", color: avEtapaOk ? "#fff" : L.muted, fontFamily: FONT_BODY, display: "flex", alignItems: "center", gap: 6, marginRight: "auto" }}>
+                  {avEtapaOk ? <><Check size={14} /> Etapa aplicada</> : <>Aplicar etapa: {AV_ETAPA[avData.etapa_embudo] || avData.etapa_embudo}</>}
+                </button>
+                <button onClick={avanzarIA}
+                  style={{ background: L.soft, border: `1.5px solid ${L.border}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", color: L.muted, fontFamily: FONT_BODY, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Sparkles size={13} /> Regenerar
+                </button>
+                <button onClick={copiarMensajeAv} disabled={!avData.mensaje_whatsapp}
+                  style={{ background: avCopiado ? "#15803D" : (avData.mensaje_whatsapp ? "#7C3AED" : L.light), color: "#fff", border: "none", borderRadius: 9, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: avData.mensaje_whatsapp ? "pointer" : "default", fontFamily: FONT_DISPLAY, display: "flex", alignItems: "center", gap: 6 }}>
+                  {avCopiado ? <><Check size={14} /> Copiado</> : <><FileText size={14} /> Copiar mensaje</>}
                 </button>
               </div>
             )}
