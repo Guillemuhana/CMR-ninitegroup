@@ -1537,8 +1537,8 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onLogout, use
 // ============================================================
 const COTIZACIONES = [
   {
-    label: "2-Stall White Marble",
-    texto: `Here's your custom quote for the 2-Stall White Marble unit 👇\nhttps://ninitgroup.com/ninit_quote/`,
+    label: "Cotización completa (todos los modelos)",
+    texto: `Here's our full quote with all our restroom trailer models, specs and pricing 👇\nhttps://ninitgroup.com/ninit_quote/`,
   },
 ];
 
