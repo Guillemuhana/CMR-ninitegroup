@@ -1539,7 +1539,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onLogout, use
 const COTIZACIONES = [
   {
     label: "Cotización completa (todos los modelos)",
-    texto: `Here's our full quote with all our restroom trailer models, specs and pricing 👇\nhttps://ninitgroup.com/ninit_quote/`,
+    texto: `Thank you for your interest in NINIT Group. Please find our full quote below, including all restroom trailer models, specifications and pricing:\n\nhttps://ninitgroup.com/ninit_quote/\n\nWe remain at your disposal for any questions.`,
   },
 ];
 
@@ -2290,28 +2290,23 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
         <div ref={cotizacionesRef} style={{ position: "relative", flexShrink: 0 }}>
           <button onClick={() => setShowCotizaciones((v) => !v)} title="Enviar link de cotización"
             style={{
-              background: showCotizaciones
-                ? "linear-gradient(135deg, #B8860B 0%, #D4A017 100%)"
-                : `linear-gradient(135deg, ${C.gold} 0%, #E6B84D 100%)`,
-              color: "#fff",
-              border: "none",
-              borderRadius: 11,
+              background: showCotizaciones ? C.red : L.white,
+              color: showCotizaciones ? "#fff" : C.red,
+              border: `1.5px solid ${showCotizaciones ? C.red : C.red + "40"}`,
+              borderRadius: 10,
               padding: "10px 14px",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 7,
               fontSize: 13,
-              fontWeight: 800,
-              letterSpacing: 0.2,
-              boxShadow: showCotizaciones
-                ? `0 0 0 3px ${C.gold}33, 0 4px 14px ${C.gold}55`
-                : `0 3px 10px ${C.gold}44`,
+              fontWeight: 600,
+              letterSpacing: 0.1,
+              boxShadow: showCotizaciones ? `0 2px 8px ${C.red}33` : "none",
               transition: "all .15s",
               flexShrink: 0,
-              transform: showCotizaciones ? "translateY(-1px)" : "none",
             }}>
-            <Receipt size={17} weight="duotone" />
+            <Receipt size={17} weight={showCotizaciones ? "fill" : "regular"} />
             {!isMobile && <span>Cotizaciones</span>}
           </button>
           {showCotizaciones && (
