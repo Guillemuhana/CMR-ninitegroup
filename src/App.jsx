@@ -287,61 +287,55 @@ function Login() {
     setLoad(false);
   };
 
-  const inputSt = { width: "100%", boxSizing: "border-box", padding: "13px 15px", borderRadius: 10, border: `1px solid ${L.border}`, fontSize: 14.5, fontFamily: FONT_BODY, color: L.text, outline: "none", background: L.white, transition: "border-color .15s, box-shadow .15s" };
-  const labelSt = { display: "block", fontSize: 11.5, fontWeight: 600, color: L.muted, marginBottom: 7, letterSpacing: 0.2 };
-  const onFocus = (e) => { e.target.style.borderColor = C.red; e.target.style.boxShadow = `0 0 0 3px ${C.red}1f`; };
-  const onBlur  = (e) => { e.target.style.borderColor = L.border; e.target.style.boxShadow = "none"; };
+  const inputSt = { width: "100%", boxSizing: "border-box", padding: "13px 16px", borderRadius: 12, border: `1.5px solid ${L.border}`, fontSize: 14, fontFamily: FONT_BODY, color: L.text, outline: "none", background: L.soft, transition: "border-color .2s" };
+  const labelSt = { display: "block", fontSize: 11, fontWeight: 700, color: L.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.8 };
 
   return (
-    <div className="login-scroll" style={{ minHeight: "100%", overflowY: "auto", WebkitOverflowScrolling: "touch", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: `radial-gradient(1200px 600px at 50% -10%, ${C.red}14, transparent), linear-gradient(160deg, #F7F9FB 0%, #EEF3F7 100%)`, fontFamily: FONT_BODY, padding: "40px 20px" }}>
+    <div className="login-scroll" style={{ minHeight: "100%", overflowY: "auto", WebkitOverflowScrolling: "touch", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#fff", fontFamily: FONT_BODY, padding: "40px 20px" }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
-        {/* Marca */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 26 }}>
-          <div style={{ width: 62, height: 62, borderRadius: 16, background: `linear-gradient(150deg, ${C.red}, ${C.redDark})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 10px 24px ${C.red}45`, marginBottom: 16 }}>
-            <img src={LOGO_URL} alt="" style={{ width: 40, height: 40, objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 36 }}>
+          <img src={LOGO_URL} alt="NINIT Group"
+            style={{ width: "100%", maxWidth: 320, height: "auto", objectFit: "contain", display: "block", filter: "drop-shadow(0 2px 14px rgba(58,141,194,0.45))" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
+            <div style={{ height: 1, width: 28, background: L.border }} />
+            <span style={{ fontFamily: FONT_DISPLAY, fontSize: 11, fontWeight: 700, letterSpacing: 4, color: L.light, textTransform: "uppercase" }}>CRM</span>
+            <div style={{ height: 1, width: 28, background: L.border }} />
           </div>
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 20, fontWeight: 800, color: L.text, letterSpacing: -0.3 }}>NINIT Group</div>
-          <div style={{ fontSize: 12.5, color: L.muted, marginTop: 3 }}>Sistema de gestión comercial</div>
         </div>
 
-        {/* Tarjeta */}
-        <div style={{ background: L.white, borderRadius: 16, border: `1px solid ${L.border}`, boxShadow: "0 18px 50px rgba(15,23,42,.10), 0 2px 8px rgba(15,23,42,.04)", padding: "30px 28px" }}>
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 17, fontWeight: 700, color: L.text, marginBottom: 20 }}>Iniciar sesión</div>
-
+        <div>
           {/* Email */}
-          <div style={{ marginBottom: 15 }}>
+          <div style={{ marginBottom: 14 }}>
             <label style={labelSt}>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} onFocus={onFocus} onBlur={onBlur}
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLogin()} placeholder="tu@ninitgroup.com"
               style={inputSt} />
           </div>
 
           {/* Contraseña con ojo */}
-          <div style={{ marginBottom: 15 }}>
+          <div style={{ marginBottom: 14 }}>
             <label style={labelSt}>Contraseña</label>
             <div style={{ position: "relative" }}>
-              <input type={showPass ? "text" : "password"} value={pass} onChange={(e) => setPass(e.target.value)} onFocus={onFocus} onBlur={onBlur}
+              <input type={showPass ? "text" : "password"} value={pass} onChange={(e) => setPass(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogin()} placeholder="••••••••"
                 style={{ ...inputSt, paddingRight: 46 }} />
               <button type="button" onClick={() => setShowPass((v) => !v)}
-                style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: L.light, display: "flex", alignItems: "center", padding: 0 }}>
+                style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: L.muted, display: "flex", alignItems: "center", padding: 0 }}>
                 {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
           {err && (
-            <div style={{ color: "#B91C1C", fontSize: 13, marginBottom: 14, padding: "10px 14px", background: "#FEF2F2", borderRadius: 10, border: "1px solid #FECACA", display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ color: C.red, fontSize: 13, marginBottom: 14, padding: "10px 14px", background: "#FEF2F2", borderRadius: 10, border: "1px solid #FECACA", display: "flex", alignItems: "center", gap: 8 }}>
               <AlertCircle size={15} /> {err}
             </div>
           )}
           <button onClick={handleLogin} disabled={loading}
-            style={{ width: "100%", marginTop: 8, background: loading ? L.light : C.red, color: "#fff", border: "none", borderRadius: 10, padding: "13px", fontSize: 14.5, fontWeight: 700, cursor: loading ? "default" : "pointer", fontFamily: FONT_DISPLAY, letterSpacing: 0.3, boxShadow: loading ? "none" : `0 8px 20px ${C.red}40`, transition: "all .2s" }}>
-            {loading ? "Entrando…" : "Entrar"}
+            style={{ width: "100%", marginTop: 8, background: loading ? L.light : C.red, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 700, cursor: loading ? "default" : "pointer", fontFamily: FONT_DISPLAY, letterSpacing: 1.5, boxShadow: loading ? "none" : "0 4px 16px rgba(156,27,27,.3)", transition: "all .2s" }}>
+            {loading ? "Entrando…" : "ENTRAR"}
           </button>
         </div>
-
-        <div style={{ textAlign: "center", marginTop: 20, fontSize: 11.5, color: L.light }}>© {new Date().getFullYear()} NINIT Group · Luxury Restroom Trailers</div>
       </div>
     </div>
   );
