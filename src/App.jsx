@@ -1762,6 +1762,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [avErr, setAvErr]         = useState("");
   const [avCopiado, setAvCopiado] = useState(false);
   const [avEtapaOk, setAvEtapaOk] = useState(false);
+  const [avMsgTrad, setAvMsgTrad]     = useState("");    // traducción al español del mensaje sugerido
+  const [avTradOn, setAvTradOn]       = useState(false); // mostrar/ocultar traducción
+  const [avTradLoading, setAvTradLoading] = useState(false);
   const [traducciones, setTraducciones] = useState({});      // { [msgId]: textoTraducido }
   const [tradLoading, setTradLoading] = useState({});        // { [msgId]: bool }
   const [replyTo, setReplyTo] = useState(null); // { id, contenido, esCliente } | null
@@ -1852,6 +1855,8 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     setAvErr("");
     setAvCopiado(false);
     setAvEtapaOk(false);
+    setAvMsgTrad("");
+    setAvTradOn(false);
     if (!mensajes.length) { setAvErr("Todavía no hay mensajes en esta conversación."); return; }
     setAvLoading(true);
     setAvData(null);
@@ -1906,6 +1911,18 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   };
 
   const avLbl = { fontSize: 10.5, fontWeight: 800, color: L.muted, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 };
+
+  // Traduce el mensaje sugerido (inglés) al español para que el vendedor lo entienda.
+  // El mensaje original NO se toca: "Copiar mensaje" sigue copiando el texto en inglés.
+  const toggleTraducirAv = async () => {
+    if (avTradOn) { setAvTradOn(false); return; }
+    if (avMsgTrad) { setAvTradOn(true); return; }         // ya traducido (cache)
+    if (!avData?.mensaje_whatsapp) return;
+    setAvTradLoading(true);
+    try { setAvMsgTrad(await traducirTexto(avData.mensaje_whatsapp, "es")); setAvTradOn(true); }
+    catch { /* traducción no disponible */ }
+    setAvTradLoading(false);
+  };
 
   const traducirTexto = async (txt, destino) => {
     const res = await fetch("/api/traducir", {
@@ -2659,8 +2676,8 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                   {/* Badges: nivel + etapa + objeción */}
                   <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 14 }}>
                     {(() => { const n = AV_NIVEL[avData.nivel_interes] || AV_NIVEL.tibio; return (
-                      <span style={{ fontSize: 11.5, fontWeight: 800, padding: "4px 11px", borderRadius: 20, background: n.bg, color: n.color, display: "inline-flex", alignItems: "center", gap: 5 }}>
-                        <Zap size={12} /> {n.label}
+                      <span style={{ fontSize: 11.5, fontWeight: 800, padding: "4px 11px", borderRadius: 20, background: n.bg, color: n.color, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: n.color }} /> {n.label}
                       </span>
                     ); })()}
                     <span style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 20, background: "#EEF2FF", color: "#4338CA" }}>
@@ -2673,37 +2690,58 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                     )}
                   </div>
 
-                  {/* Resumen del cliente */}
+                  {/* Situación del cliente — una línea clara */}
                   {avData.resumen_cliente && (
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={avLbl}>Resumen del cliente</div>
-                      <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.55 }}>{avData.resumen_cliente}</div>
-                    </div>
+                    <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.55, marginBottom: 16 }}>{avData.resumen_cliente}</div>
                   )}
 
-                  {/* Próximo paso */}
-                  {avData.proximo_paso_recomendado && (
-                    <div style={{ marginBottom: 12, background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 10, padding: "10px 13px" }}>
-                      <div style={{ ...avLbl, color: "#15803D" }}>Próximo paso recomendado</div>
-                      <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.55 }}>{avData.proximo_paso_recomendado}</div>
-                    </div>
-                  )}
-
-                  {/* Nota para el vendedor */}
-                  {avData.nota_para_vendedor && (
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={avLbl}>Consejo</div>
-                      <div style={{ fontSize: 12.5, color: L.muted, lineHeight: 1.55, fontStyle: "italic" }}>{avData.nota_para_vendedor}</div>
-                    </div>
-                  )}
-
-                  {/* Mensaje sugerido para WhatsApp */}
+                  {/* Mensaje sugerido — protagonista */}
                   {avData.mensaje_whatsapp && (
-                    <div style={{ background: C.aiSoft, border: "1px solid #DDD6FE", borderRadius: 12, padding: "12px 14px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, color: "#6D28D9", fontWeight: 700, fontSize: 11.5, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                        <MessageSquare size={13} /> Mensaje sugerido (WhatsApp)
+                    <div style={{ background: C.aiSoft, border: "1px solid #DDD6FE", borderRadius: 14, padding: "13px 15px", marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 9 }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6D28D9", fontWeight: 800, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.6 }}>
+                          <MessageSquare size={13} /> Mensaje para enviar
+                        </span>
+                        <button onClick={toggleTraducirAv} disabled={avTradLoading} title="Traducir el mensaje al español (el original en inglés no se toca)"
+                          style={{ background: "none", border: "none", cursor: avTradLoading ? "default" : "pointer", color: "#7C3AED", fontSize: 11.5, fontWeight: 700, fontFamily: FONT_BODY, display: "inline-flex", alignItems: "center", gap: 4, padding: 0, flexShrink: 0 }}>
+                          <Languages size={13} /> {avTradLoading ? "Traduciendo…" : (avTradOn ? "Ver original" : "Traducir")}
+                        </button>
                       </div>
-                      <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{avData.mensaje_whatsapp}</div>
+                      <div style={{ fontSize: 14, color: L.text, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{avData.mensaje_whatsapp}</div>
+                      {avTradOn && avMsgTrad && (
+                        <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed #C4B5FD" }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: "#6D28D9", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                            <Languages size={10} /> En español
+                          </div>
+                          <div style={{ fontSize: 13.5, color: L.muted, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{avMsgTrad}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Próximo paso — fila compacta con ícono */}
+                  {avData.proximo_paso_recomendado && (
+                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: avData.nota_para_vendedor ? 11 : 0 }}>
+                      <div style={{ width: 24, height: 24, borderRadius: 8, background: "#DCFCE7", color: "#15803D", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                        <ChevronRight size={15} />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={avLbl}>Próximo paso</div>
+                        <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.5 }}>{avData.proximo_paso_recomendado}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Consejo — fila compacta con ícono */}
+                  {avData.nota_para_vendedor && (
+                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <div style={{ width: 24, height: 24, borderRadius: 8, background: "#EEF2FF", color: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                        <Sparkles size={13} />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={avLbl}>Consejo</div>
+                        <div style={{ fontSize: 12.5, color: L.muted, lineHeight: 1.5 }}>{avData.nota_para_vendedor}</div>
+                      </div>
                     </div>
                   )}
                 </>
