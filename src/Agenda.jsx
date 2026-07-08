@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase, C, FONT_DISPLAY, FONT_BODY } from "./lib";
 import {
   ChevronLeft, ChevronRight, Plus, X, Clock, Trash2, Check,
-  CalendarDays, Phone, Users, MapPin, RefreshCw, CircleDot, Pencil,
+  CalendarDays, Phone, Users, MapPin, RefreshCw, CircleDot, Pencil, Share2,
 } from "lucide-react";
 
 const L = {
@@ -113,6 +113,23 @@ export default function Agenda({ vendedorId, vendedorNombre, isMobile, contactos
     await supabase.from("agenda_vendedor").delete().eq("id", id);
     setEdit(null);
     cargar();
+  };
+
+  // ── Compartir evento por WhatsApp ─────────────────────────
+  const compartir = (e) => {
+    const t = TIPOS[e.tipo] || TIPOS.otro;
+    const fechaTxt = new Date(e.fecha + "T12:00:00").toLocaleDateString("es-AR", {
+      weekday: "long", day: "numeric", month: "long",
+    });
+    const lineas = [
+      `📅 *${t.label}* — ${fechaTxt}`,
+      e.hora ? `🕒 ${e.hora.slice(0, 5)} hs` : null,
+      `📌 ${e.titulo}`,
+      e.cliente_nombre ? `👤 Cliente: ${e.cliente_nombre}` : null,
+      e.nota ? `📝 ${e.nota}` : null,
+    ].filter(Boolean);
+    const texto = lineas.join("\n");
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
   };
 
   const toggleCompletado = async (e) => {
@@ -265,12 +282,15 @@ export default function Agenda({ vendedorId, vendedorNombre, isMobile, contactos
                       )}
                       {e.nota && <div style={{ fontSize: 12.5, color: L.muted, marginTop: 4, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{e.nota}</div>}
                     </div>
-                    {!readOnly && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
-                        <button onClick={() => setEdit({ ...e })} title="Editar" style={iconBtn}><Pencil size={14} /></button>
-                        <button onClick={() => borrar(e.id)} title="Borrar" style={{ ...iconBtn, color: "#DC2626" }}><Trash2 size={14} /></button>
-                      </div>
-                    )}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
+                      <button onClick={() => compartir(e)} title="Compartir por WhatsApp" style={{ ...iconBtn, color: "#25D366", borderColor: "#25D36655" }}><Share2 size={14} /></button>
+                      {!readOnly && (
+                        <>
+                          <button onClick={() => setEdit({ ...e })} title="Editar" style={iconBtn}><Pencil size={14} /></button>
+                          <button onClick={() => borrar(e.id)} title="Borrar" style={{ ...iconBtn, color: "#DC2626" }}><Trash2 size={14} /></button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })}
