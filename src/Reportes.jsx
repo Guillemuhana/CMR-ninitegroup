@@ -329,7 +329,7 @@ export default function Reportes() {
     const { inicio, fin } = rangoFechas(periodo);
     const iso = inicio.toISOString();
 
-    const [msgsRes, contRes, pedRes] = await Promise.all([
+    const [msgsRes, contRes, pedRes, vendRes] = await Promise.all([
       supabase.from("mensajes")
         .select("id,direccion,origen,agente,created_at,contacto_id")
         .gte("created_at", iso),
@@ -338,11 +338,14 @@ export default function Reportes() {
       supabase.from("pedidos")
         .select("vendedor,total,estado,created_at")
         .gte("created_at", iso),
+      supabase.from("vendedores")
+        .select("nombre,role,activo"),
     ]);
 
     const msgs      = msgsRes.data || [];
     const contactos = contRes.data || [];
     const pedidos   = pedRes.data  || [];
+    const vendData  = vendRes.data || [];
 
     // Nuevos contactos en el período
     const nuevos = contactos.filter((c) => new Date(c.created_at) >= inicio);
@@ -388,8 +391,20 @@ export default function Reportes() {
     const botPct      = botCount + agenteCount > 0
       ? Math.round(botCount / (botCount + agenteCount) * 100) : 0;
 
+    // ── Lista de vendedores: tabla `vendedores` + cualquiera con actividad real ──
+    // (así aparecen todos los del equipo aunque el array fijo esté desactualizado)
+    const noVendedor = new Set(["bot", "sistema", "system", ""]);
+    const nombresVend = new Set([...VENDEDORES]);
+    vendData
+      .filter((v) => (v.role || "vendedor") !== "ceo")
+      .forEach((v) => v.nombre && nombresVend.add(v.nombre));
+    contactos.forEach((c) => c.vendedor && nombresVend.add(c.vendedor));
+    msgs.forEach((m) => m.agente && nombresVend.add(m.agente));
+    pedidos.forEach((p) => p.vendedor && nombresVend.add(p.vendedor));
+    const listaVendedores = [...nombresVend].filter((n) => !noVendedor.has(String(n).trim().toLowerCase()));
+
     // ── Por vendedor ──
-    const porVendedor = VENDEDORES.map((v) => {
+    const porVendedor = listaVendedores.map((v) => {
       const cont     = contactos.filter((c) => c.vendedor === v);
       const ped      = pedidos.filter((p) => p.vendedor === v);
       const msgsV    = msgs.filter((m) => m.agente === v).length;
