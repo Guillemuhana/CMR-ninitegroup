@@ -108,6 +108,45 @@ export default function Directorio() {
     exportarCSV(filas, "campania-ninit-group.csv");
   };
 
+  // Exportar a vCard (.vcf) — se abre en el teléfono y agenda todos los contactos de una.
+  const exportarVCF = () => {
+    const conTel = lista.filter((c) => (c.telefono || "").trim());
+    if (conTel.length === 0) {
+      alert("No hay contactos con teléfono para exportar.");
+      return;
+    }
+    // Normaliza a formato internacional para que WhatsApp lo reconozca.
+    const normTel = (t) => {
+      let n = String(t).replace(/[^\d+]/g, "");
+      if (!n.startsWith("+")) n = "+" + n;
+      return n;
+    };
+    const esc = (s) => String(s || "").replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
+    const vcards = conTel.map((c) => {
+      const nombre = esc(c.nombre || c.telefono);
+      const tel = normTel(c.telefono);
+      const email = (c.email || "").trim();
+      return [
+        "BEGIN:VCARD",
+        "VERSION:3.0",
+        `N:;${nombre};;;`,
+        `FN:${nombre}`,
+        `TEL;TYPE=CELL:${tel}`,
+        email ? `EMAIL:${esc(email)}` : null,
+        "END:VCARD",
+      ].filter(Boolean).join("\r\n");
+    }).join("\r\n");
+    const blob = new Blob([vcards], { type: "text/vcard;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "contactos-ninit-group.vcf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const toggleSel = (id) => setSeleccionados((prev) => {
     const s = new Set(prev);
     s.has(id) ? s.delete(id) : s.add(id);
@@ -150,6 +189,10 @@ export default function Directorio() {
                 <Download size={14} /> Exportar {seleccionados.size} seleccionados
               </button>
             )}
+            <button onClick={exportarVCF} title="Descarga un archivo .vcf para agendar todos los contactos en el teléfono"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 9, border: "none", background: "#25D366", color: "#fff", fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+              <FaWhatsapp size={15} /> Contactos para el teléfono
+            </button>
             <button onClick={exportar}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 9, border: `1.5px solid ${C.red}`, background: L.white, color: C.red, fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
               <Download size={14} /> Exportar CSV
