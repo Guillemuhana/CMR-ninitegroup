@@ -118,16 +118,27 @@ export default function Agenda({ vendedorId, vendedorNombre, isMobile, contactos
   // ── Compartir evento por WhatsApp ─────────────────────────
   const compartir = (e) => {
     const t = TIPOS[e.tipo] || TIPOS.otro;
-    const fechaTxt = new Date(e.fecha + "T12:00:00").toLocaleDateString("es-AR", {
-      weekday: "long", day: "numeric", month: "long",
-    });
+    const emoji = { reunion: "🤝", llamada: "📞", visita: "📍", seguimiento: "🔄", otro: "📌" }[e.tipo] || "📌";
+    const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+    const fechaTxt = cap(new Date(e.fecha + "T12:00:00").toLocaleDateString("es-AR", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric",
+    }));
+
+    const sep = "━━━━━━━━━━━━━━";
     const lineas = [
-      `📅 *${t.label}* — ${fechaTxt}`,
-      e.hora ? `🕒 ${e.hora.slice(0, 5)} hs` : null,
-      `📌 ${e.titulo}`,
+      "📆 *NINIT GROUP · Agenda*",
+      sep,
+      `${emoji} *${t.label.toUpperCase()}*`,
+      "",
+      `🗓 ${fechaTxt}`,
+      e.hora ? `🕐 ${e.hora.slice(0, 5)} hs` : null,
+      "",
+      `📝 *${e.titulo}*`,
       e.cliente_nombre ? `👤 Cliente: ${e.cliente_nombre}` : null,
-      e.nota ? `📝 ${e.nota}` : null,
-    ].filter(Boolean);
+      e.nota ? `🗒 ${e.nota}` : null,
+      sep,
+      `_Agendado por ${e.vendedor_nombre || vendedorNombre || "NINIT Group"}_`,
+    ].filter((l) => l !== null);
     const texto = lineas.join("\n");
     window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
   };
