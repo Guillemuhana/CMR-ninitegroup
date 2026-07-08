@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
+import { Receipt } from "@phosphor-icons/react";
 import PedidosPanel, { NuevoPedidoModal, imprimirPedido } from "./Pedidos";
 import {
   supabase, N8N_SEND_WEBHOOK, N8N_EMAIL_REPLY_WEBHOOK, MESSENGER_SEND_ENDPOINT, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
@@ -2288,14 +2289,35 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
         {/* Cotizaciones */}
         <div ref={cotizacionesRef} style={{ position: "relative", flexShrink: 0 }}>
           <button onClick={() => setShowCotizaciones((v) => !v)} title="Enviar link de cotización"
-            style={{ background: showCotizaciones ? C.gold : L.soft, color: showCotizaciones ? "#fff" : C.gold, border: `1.5px solid ${showCotizaciones ? C.gold : C.gold + "55"}`, borderRadius: 11, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, transition: "all .15s", flexShrink: 0 }}>
-            <FileText size={15} />
+            style={{
+              background: showCotizaciones
+                ? "linear-gradient(135deg, #B8860B 0%, #D4A017 100%)"
+                : `linear-gradient(135deg, ${C.gold} 0%, #E6B84D 100%)`,
+              color: "#fff",
+              border: "none",
+              borderRadius: 11,
+              padding: "10px 14px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 13,
+              fontWeight: 800,
+              letterSpacing: 0.2,
+              boxShadow: showCotizaciones
+                ? `0 0 0 3px ${C.gold}33, 0 4px 14px ${C.gold}55`
+                : `0 3px 10px ${C.gold}44`,
+              transition: "all .15s",
+              flexShrink: 0,
+              transform: showCotizaciones ? "translateY(-1px)" : "none",
+            }}>
+            <Receipt size={17} weight="duotone" />
             {!isMobile && <span>Cotizaciones</span>}
           </button>
           {showCotizaciones && (
             <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: isMobile ? "calc(100vw - 24px)" : 320, maxHeight: 460, overflowY: "auto", background: L.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", border: `1px solid ${L.border}`, zIndex: 200 }}>
               <div style={{ padding: "12px 16px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-                <FileText size={14} color={C.gold} />
+                <Receipt size={16} weight="duotone" color={C.gold} />
                 <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.8 }}>Cotizaciones</span>
               </div>
               {COTIZACIONES.map((item) => (
