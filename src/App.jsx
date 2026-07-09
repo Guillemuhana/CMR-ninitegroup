@@ -1573,7 +1573,7 @@ function CanalSelector({ canal, setCanal }) {
 // ============================================================
 // SIDEBAR
 // ============================================================
-function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContacto, requiereLlamada, onToggleLlamada, onMarcarLlamada, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
+function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContacto, onToggleLlamada, onMarcarLlamada, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
   const [soloDestacados, setSoloDestacados] = useState(false);
@@ -1712,7 +1712,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
             {lista.map((c) => {
               const est  = ESTADOS[c.estado] || ESTADOS.nuevo;
               const sel  = activo?.id === c.id;
-              const llamar = requiereLlamada?.has(c.id) || c.requiere_llamada;
+              const llamar = c.requiere_llamada;
               const pc = pideContacto(c);
               const hora = c.updated_at ? (() => {
                 const d = new Date(c.updated_at);
@@ -1827,7 +1827,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
               <Calendar size={iconSz} color={C.red} /> Agendar llamada
             </button>
             <button onClick={() => { onToggleLlamada?.(c); setMenu(null); }} style={itemSt} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
-              <Phone size={iconSz} color={C.red} /> {requiereLlamada?.has(c.id) ? "Quitar aviso de llamada" : "Marcar: hay que llamar"}
+              <Phone size={iconSz} color={C.red} /> {c.requiere_llamada ? "Quitar aviso de llamada" : "Marcar: hay que llamar"}
             </button>
             <button onClick={() => { onToggleDestacado?.(c); setMenu(null); }} style={itemSt} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
               <Star size={iconSz} color="#F59E0B" fill={c.destacado ? "#F59E0B" : "none"} /> {c.destacado ? "Quitar de importantes" : "Marcar importante"}
@@ -3707,20 +3707,14 @@ export default function App() {
     if (error) console.warn("patchContacto:", error.message);
   };
 
-  // Aviso "hay que llamar" — se guarda en el navegador (no requiere columna en la DB)
-  const LLAMAR_KEY = "ninit_requiere_llamada";
-  const [requiereLlamada, setRequiereLlamada] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem(LLAMAR_KEY) || "[]")); } catch { return new Set(); }
-  });
-  const persistLlamar = (set) => { try { localStorage.setItem(LLAMAR_KEY, JSON.stringify([...set])); } catch {} };
-  const toggleLlamada = (c) => setRequiereLlamada((prev) => {
-    const n = new Set(prev);
-    if (n.has(c.id)) n.delete(c.id); else n.add(c.id);
-    persistLlamar(n); return n;
-  });
-  const marcarLlamada = (c) => setRequiereLlamada((prev) => {
-    const n = new Set(prev); n.add(c.id); persistLlamar(n); return n;
-  });
+  // Aviso "hay que llamar" — se guarda en la DB (columna requiere_llamada) para compartirlo entre vendedores
+  const setLlamada = async (c, valor) => {
+    updateContacto({ ...c, requiere_llamada: valor });        // optimista
+    const { error } = await supabase.from("contactos").update({ requiere_llamada: valor }).eq("id", c.id);
+    if (error) console.warn("setLlamada:", error.message);
+  };
+  const toggleLlamada = (c) => setLlamada(c, !c.requiere_llamada);
+  const marcarLlamada = (c) => setLlamada(c, true);
 
   const deleteContacto = (id) => {
     setContactos((prev) => prev.filter((x) => x.id !== id));
@@ -3769,7 +3763,7 @@ export default function App() {
           onSelect={(c) => setActivo(c)}
           onToggleDestacado={toggleDestacado}
           onPatchContacto={patchContacto}
-          requiereLlamada={requiereLlamada} onToggleLlamada={toggleLlamada} onMarcarLlamada={marcarLlamada}
+          onToggleLlamada={toggleLlamada} onMarcarLlamada={marcarLlamada}
           onLogout={handleLogout}
           userEmail={userEmail} userName={userName}
           vista={vista} setVista={setVista} alertas={alertas}
