@@ -1373,6 +1373,29 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
     return () => clearInterval(t);
   }, []);
 
+  // Long-press (mantener presionado) para abrir el menú contextual en celular,
+  // donde no existe el click derecho.
+  const longPress = useRef({ timer: null, x: 0, y: 0, fired: false });
+  const cancelLongPress = () => { clearTimeout(longPress.current.timer); };
+  const handleTouchStart = (c) => (e) => {
+    const t = e.touches[0];
+    longPress.current.fired = false;
+    longPress.current.x = t.clientX;
+    longPress.current.y = t.clientY;
+    cancelLongPress();
+    longPress.current.timer = setTimeout(() => {
+      longPress.current.fired = true;
+      if (navigator.vibrate) navigator.vibrate(10);
+      setMenu({ x: longPress.current.x, y: longPress.current.y, c });
+    }, 550);
+  };
+  const handleTouchMove = (e) => {
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - longPress.current.x) > 10 || Math.abs(t.clientY - longPress.current.y) > 10) {
+      cancelLongPress();
+    }
+  };
+
   const lista = contactos.filter((c) => {
     const porBusq   = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
     const porCanal  = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
@@ -1467,9 +1490,14 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                 return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", ...(mismoAnio ? {} : { year: "2-digit" }) });
               })() : "";
               return (
-                <div key={c.id} onClick={() => onSelect(c)}
+                <div key={c.id}
+                  onClick={() => { if (longPress.current.fired) { longPress.current.fired = false; return; } onSelect(c); }}
                   onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, c }); }}
-                  style={{ padding: "13px 14px", borderBottom: `1px solid ${L.border}`, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start", background: sel ? L.active : (llamar ? "#FEF2F2" : "transparent"), borderLeft: sel ? `4px solid ${C.red}` : (llamar ? `3px solid ${C.red}` : "3px solid transparent"), transform: sel ? "translateX(10px)" : "translateX(0)", boxShadow: sel ? `-2px 0 0 ${C.red}, 0 2px 10px rgba(0,0,0,.06)` : "none", borderRadius: sel ? "0 10px 10px 0" : 0, transition: "transform .18s ease, background .12s, box-shadow .18s" }}
+                  onTouchStart={handleTouchStart(c)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={cancelLongPress}
+                  onTouchCancel={cancelLongPress}
+                  style={{ padding: "13px 14px", borderBottom: `1px solid ${L.border}`, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start", background: sel ? L.active : (llamar ? "#FEF2F2" : "transparent"), borderLeft: sel ? `4px solid ${C.red}` : (llamar ? `3px solid ${C.red}` : "3px solid transparent"), transform: sel ? "translateX(10px)" : "translateX(0)", boxShadow: sel ? `-2px 0 0 ${C.red}, 0 2px 10px rgba(0,0,0,.06)` : "none", borderRadius: sel ? "0 10px 10px 0" : 0, transition: "transform .18s ease, background .12s, box-shadow .18s", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}
                   onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = L.hover; }}
                   onMouseLeave={(e) => { if (!sel) e.currentTarget.style.background = llamar ? "#FEF2F2" : "transparent"; }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
