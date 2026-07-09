@@ -1361,7 +1361,7 @@ function NavDropdown({ vista, setVista, rol }) {
 // ============================================================
 // NAV TABS (con hamburguesa para secciones secundarias)
 // ============================================================
-function NavTabs({ vista, setVista, rol }) {
+function NavTabs({ vista, setVista, rol, contactos = [] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -1372,9 +1372,11 @@ function NavTabs({ vista, setVista, rol }) {
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
 
+  const nPide = contactos.reduce((n, c) => n + (pideContacto(c).pide ? 1 : 0), 0);
+
   const primary = [
-    ["chat",    <MessageSquare size={13} />, "Chats"],
-    ["pedidos", <Package size={13} />,       "Pedidos"],
+    ["chat",      <MessageSquare size={13} />, "Chats"],
+    ["prioridad", <PhoneCall size={13} />,     "Piden contacto"],
   ];
   const secondary = rol === "ceo"
     ? [
@@ -1408,6 +1410,9 @@ function NavTabs({ vista, setVista, rol }) {
       {primary.map(([k, icon, l]) => (
         <button key={k} onClick={() => setVista(k)} style={tabSt(k)}>
           {icon} {l}
+          {k === "prioridad" && nPide > 0 && (
+            <span style={{ background: C.red, color: "#fff", fontSize: 9.5, fontWeight: 800, borderRadius: 9, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", marginLeft: 2 }}>{nPide}</span>
+          )}
         </button>
       ))}
 
@@ -1450,6 +1455,72 @@ function NavTabs({ vista, setVista, rol }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// PANTALLA "PIDEN CONTACTO" — clientes que solicitan que los llamen
+// o hablar con un vendedor (filtro inteligente en su propia vista).
+// ============================================================
+function PrioridadPanel({ contactos = [], isMobile, onAbrirChat }) {
+  const ORDEN = { llamada: 0, urgente: 1, ventas: 2 };
+  const lista = contactos
+    .map((c) => ({ c, pc: pideContacto(c) }))
+    .filter((x) => x.pc.pide)
+    .sort((a, b) => new Date(b.c.updated_at || 0) - new Date(a.c.updated_at || 0))
+    .sort((a, b) => (ORDEN[a.pc.motivo] ?? 3) - (ORDEN[b.pc.motivo] ?? 3));
+
+  return (
+    <div style={{ height: "100%", overflowY: "auto", background: L.bg, fontFamily: FONT_BODY }}>
+      {/* Cabecera */}
+      <div style={{ padding: isMobile ? "14px 16px" : "20px 26px", background: L.white, borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 13 }}>
+        <div style={{ width: 46, height: 46, borderRadius: 13, background: "#FEF2F2", color: C.red, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <PhoneCall size={22} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: isMobile ? 18 : 22, color: L.text, letterSpacing: 0.2 }}>Piden contacto</div>
+          <div style={{ fontSize: 12.5, color: L.muted, marginTop: 1 }}>
+            {lista.length === 0 ? "Ningún cliente esperando por ahora" : `${lista.length} cliente${lista.length === 1 ? "" : "s"} quiere${lista.length === 1 ? "" : "n"} que los contacten`}
+          </div>
+        </div>
+      </div>
+
+      {/* Lista */}
+      {lista.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "70px 24px", color: L.light }}>
+          <div style={{ width: 68, height: 68, borderRadius: "50%", background: L.white, border: `1px solid ${L.border}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#CBD5E1" }}>
+            <PhoneCall size={30} />
+          </div>
+          <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 16, color: L.muted }}>Todo al día ✓</div>
+          <div style={{ fontSize: 13.5, color: L.light, marginTop: 5 }}>Acá van a aparecer los clientes que pidan que los llames o hablar con ventas.</div>
+        </div>
+      ) : (
+        <div style={{ padding: isMobile ? "12px 12px 24px" : "16px 22px 26px", display: "flex", flexDirection: "column", gap: 10 }}>
+          {lista.map(({ c, pc }) => {
+            const b = PIDE_BADGE[pc.motivo] || PIDE_BADGE.ventas;
+            return (
+              <div key={c.id} onClick={() => onAbrirChat?.(c)}
+                style={{ display: "flex", alignItems: "center", gap: 13, background: L.white, border: `1px solid ${L.border}`, borderLeft: `4px solid ${b.color}`, borderRadius: 13, padding: isMobile ? "12px 13px" : "13px 16px", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,.04)", transition: "box-shadow .15s, transform .1s" }}
+                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 6px 18px rgba(0,0,0,.09)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.04)"; }}>
+                <Avatar nombre={c.nombre || c.telefono || c.email} foto={c.foto_url} size={46} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 3 }}>
+                    <span style={{ fontWeight: 800, fontSize: 14.5, color: L.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: isMobile ? "55%" : "60%" }}>{c.nombre || c.telefono || c.email}</span>
+                    <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 5, background: b.bg, color: b.color, border: `1px solid ${b.border}`, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.3, display: "inline-flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+                      <PhoneCall size={9} /> {b.label}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12.5, color: L.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.ultimo_msg || "—"}</div>
+                  {c.telefono && <div style={{ fontSize: 11.5, color: L.light, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}><Phone size={11} /> {c.telefono}</div>}
+                </div>
+                <ChevronRight size={20} color={L.light} style={{ flexShrink: 0 }} />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -1578,7 +1649,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
 
 
       {/* ── Tabs ── */}
-      <NavTabs vista={vista} setVista={setVista} rol={rol} />
+      <NavTabs vista={vista} setVista={setVista} rol={rol} contactos={contactos} />
 
       {vista === "chat" && (
         <>
@@ -3683,7 +3754,7 @@ export default function App() {
 
   const mobileInPanel = isMobile && (
     activo !== null ||
-    vista === "pedidos" || vista === "reportes" || vista === "admin" ||
+    vista === "prioridad" || vista === "pedidos" || vista === "reportes" || vista === "admin" ||
     vista === "control" || vista === "diario" || vista === "agenda" || vista === "directorio"
   );
 
@@ -3742,6 +3813,14 @@ export default function App() {
             {isMobile && <MobileBack title="Agenda" onBack={() => setVista("chat")} />}
             <div style={{ flex: 1, overflowY: "auto", height: "100%" }}>
               <Agenda vendedorId={perfil?.id} vendedorNombre={perfil?.nombre} isMobile={isMobile} contactos={contactos}
+                onAbrirChat={(c) => { setActivo(c); setVista("chat"); }} />
+            </div>
+          </>
+        ) : vista === "prioridad" ? (
+          <>
+            {isMobile && <MobileBack title="Piden contacto" onBack={() => setVista("chat")} />}
+            <div style={{ flex: 1, overflowY: "auto", height: "100%" }}>
+              <PrioridadPanel contactos={contactos} isMobile={isMobile}
                 onAbrirChat={(c) => { setActivo(c); setVista("chat"); }} />
             </div>
           </>
