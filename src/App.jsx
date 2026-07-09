@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Bell, Search, LogOut, MessageSquare, BarChart2, Package,
   Pencil, Bot, User, Calendar, Send, X, Check, Plus,
-  Sparkles, Phone, Mail, Building2, MapPin, FileText,
+  Sparkles, Phone, PhoneCall, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
   Image as ImageIcon, Languages, Reply, SlidersHorizontal, Star,
@@ -86,6 +86,35 @@ function calcSinRevisar(c) {
   if (revisada) return null;
   return Date.now() - new Date(c.ultimo_in_at).getTime();
 }
+
+// ── Filtro inteligente: clientes que piden contacto humano ──────
+// Detecta a los que piden que los llamen o quieren hablar con un vendedor/ventas.
+// Combina las señales de IA (columnas ia_* si el chat fue analizado) con una
+// heurística instantánea sobre el último mensaje del cliente (sin análisis previo).
+const RE_PIDE_LLAMADA = /(ll[aá]m(a|e)me|me\s+llam(en|e|an|as|ás)|(quiero|necesito|puede[ns]?|podr[ií]a[ns]?)\s+(una\s+)?llam(ada|arme|en)|ll[aá]menme|call\s+me|give\s+me\s+a\s+call|can\s+you\s+call|phone\s+call|reach\s+me\s+by\s+phone|mi\s+(n[uú]mero|tel[eé]fono)\s+(es|:))/i;
+const RE_PIDE_HUMANO = /(hablar\s+con\s+(un[oa]?\s+)?(humano|persona|alguien|vendedor|agente|representante|asesor|ventas)|con\s+un\s+(humano|vendedor|asesor|agente|representante)|talk\s+to\s+(a\s+)?(human|person|someone|sales|agent|representative|rep)|speak\s+(to|with)\s+(a\s+)?(human|sales|someone|agent|representative)|quiero\s+hablar\s+con\s+ventas|atenci[oó]n\s+humana)/i;
+
+// Devuelve { pide, motivo } donde motivo ∈ "llamada" | "ventas" | "urgente".
+function pideContacto(c) {
+  if (!c) return { pide: false };
+  if (c.ia_intencion === "llamada_telefonica") return { pide: true, motivo: "llamada" };
+  if (c.ia_intencion === "agente_ventas")      return { pide: true, motivo: "ventas" };
+  if (c.ia_urgencia === "alta_prioridad")       return { pide: true, motivo: "urgente" };
+  // Heurística solo si el ÚLTIMO mensaje es del cliente (entrante), para no
+  // matchear cuando el que escribió "te llamo" fue el vendedor.
+  const ultimoEsEntrante = c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) >= new Date(c.ultimo_out_at));
+  if (ultimoEsEntrante) {
+    const t = c.ultimo_msg || "";
+    if (RE_PIDE_LLAMADA.test(t)) return { pide: true, motivo: "llamada" };
+    if (RE_PIDE_HUMANO.test(t))  return { pide: true, motivo: "ventas" };
+  }
+  return { pide: false };
+}
+const PIDE_BADGE = {
+  llamada: { label: "Pide llamada", color: "#B91C1C", bg: "#FEE2E2", border: "#FCA5A5" },
+  ventas:  { label: "Quiere hablar", color: "#6D28D9", bg: "#F3E8FF", border: "#DDD6FE" },
+  urgente: { label: "Urgente",      color: "#B45309", bg: "#FEF3C7", border: "#FDE68A" },
+};
 
 // ============================================================
 // MOBILE HOOK
@@ -649,6 +678,79 @@ const EJECUTAR_ACCION = {
     const { error } = await supabase.from("agenda_vendedor").insert(payload);
     return error ? `Error: ${error.message}` : `✅ Agendado en tu Agenda: "${titulo.trim()}" el ${fecha}${hora ? " a las " + hora : ""}.`;
   },
+
+  // Modifica un evento existente de la agenda (por id).
+  actualizar_evento: async ({ id, fecha, hora, titulo, tipo, cliente_nombre, nota }) => {
+    if (!id) return "⚠️ Falta el id del evento (buscalo primero con buscar_agenda).";
+    const cambios = { updated_at: new Date().toISOString() };
+    if (fecha) { if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return "⚠️ La fecha debe ser AAAA-MM-DD."; cambios.fecha = fecha; }
+    if (hora !== undefined) cambios.hora = hora ? (hora.length === 5 ? `${hora}:00` : hora) : null;
+    if (titulo) cambios.titulo = titulo.trim();
+    if (tipo) cambios.tipo = ["reunion", "llamada", "visita", "seguimiento", "otro"].includes(tipo) ? tipo : "otro";
+    if (cliente_nombre !== undefined) cambios.cliente_nombre = cliente_nombre || null;
+    if (nota !== undefined) cambios.nota = nota || null;
+    const { error } = await supabase.from("agenda_vendedor").update(cambios).eq("id", id);
+    return error ? `Error: ${error.message}` : `✅ Evento actualizado.`;
+  },
+
+  // Marca un evento como hecho / pendiente.
+  completar_evento: async ({ id, completado = true }) => {
+    if (!id) return "⚠️ Falta el id del evento.";
+    const { error } = await supabase.from("agenda_vendedor").update({ completado: !!completado, updated_at: new Date().toISOString() }).eq("id", id);
+    return error ? `Error: ${error.message}` : `✅ Evento marcado como ${completado ? "hecho" : "pendiente"}.`;
+  },
+
+  eliminar_evento: async ({ id }) => {
+    if (!id) return "⚠️ Falta el id del evento.";
+    const { error } = await supabase.from("agenda_vendedor").delete().eq("id", id);
+    return error ? `Error: ${error.message}` : `✅ Evento eliminado de la Agenda.`;
+  },
+};
+
+// ── Consultas de solo lectura (para TODOS los roles) ──────────
+// Devuelven texto con los datos reales para que la IA arme la respuesta.
+const CONSULTAR_ACCION = {
+  // Busca eventos en la agenda (llamadas, reuniones, visitas, seguimientos).
+  buscar_agenda: async ({ vendedor_id, vendedor_nombre, desde, hasta, tipo_evento, solo_pendientes, todos }) => {
+    let q = supabase.from("agenda_vendedor")
+      .select("id,fecha,hora,tipo,titulo,cliente_nombre,nota,completado,vendedor_nombre")
+      .order("fecha", { ascending: true }).order("hora", { ascending: true, nullsFirst: true }).limit(40);
+    if (!todos && vendedor_id) q = q.eq("vendedor_id", vendedor_id);
+    else if (!todos && vendedor_nombre) q = q.ilike("vendedor_nombre", `%${vendedor_nombre}%`);
+    if (desde) q = q.gte("fecha", desde);
+    if (hasta) q = q.lte("fecha", hasta);
+    if (tipo_evento) q = q.eq("tipo", tipo_evento);
+    if (solo_pendientes) q = q.or("completado.is.null,completado.eq.false");
+    const { data, error } = await q;
+    if (error) return `Error consultando la agenda: ${error.message}`;
+    if (!data?.length) return "No hay eventos que coincidan con esa búsqueda.";
+    return data.map((e) =>
+      `• [id ${e.id}] ${e.fecha}${e.hora ? " " + e.hora.slice(0, 5) : ""} — ${e.tipo}: ${e.titulo}` +
+      `${e.cliente_nombre ? ` (cliente: ${e.cliente_nombre})` : ""}${e.completado ? " ✔hecho" : ""}` +
+      `${todos && e.vendedor_nombre ? ` — ${e.vendedor_nombre}` : ""}`
+    ).join("\n");
+  },
+
+  // Busca contactos/clientes por nombre, teléfono, email, estado o vendedor.
+  buscar_contactos: async ({ texto, estado, vendedor, limit = 10 }) => {
+    let q = supabase.from("contactos")
+      .select("id,nombre,telefono,email,estado,vendedor,ultimo_msg,seguimiento_at")
+      .order("updated_at", { ascending: false }).limit(Math.min(Number(limit) || 10, 20));
+    if (estado) q = q.eq("estado", estado);
+    if (vendedor) q = q.ilike("vendedor", `%${vendedor}%`);
+    if (texto) {
+      const t = String(texto).replace(/[%,()]/g, " ").trim();
+      if (t) q = q.or(`nombre.ilike.%${t}%,telefono.ilike.%${t}%,email.ilike.%${t}%`);
+    }
+    const { data, error } = await q;
+    if (error) return `Error consultando contactos: ${error.message}`;
+    if (!data?.length) return "No encontré contactos que coincidan.";
+    return data.map((c) =>
+      `• [id ${c.id}] ${c.nombre || c.telefono || c.email || "Sin nombre"} — estado: ${c.estado || "?"}` +
+      `${c.vendedor ? ` — vendedor: ${c.vendedor}` : ""}${c.telefono ? ` — tel: ${c.telefono}` : ""}` +
+      `${c.seguimiento_at ? ` — seguimiento: ${String(c.seguimiento_at).slice(0, 10)}` : ""}`
+    ).join("\n");
+  },
 };
 
 function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuario = "", perfilId = null, rol = "vendedor", onRefrescar, niniPrompt = "" }) {
@@ -929,6 +1031,15 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
         sysExtra += `\n\n════ REPORTES DE VENDEDORES (sos CEO) ════
 Cuando Nicolás pida un REPORTE, RESUMEN o el DESEMPEÑO de un vendedor (ej: "dame un reporte de Fernando") o de todo el equipo, armá un informe PROFESIONAL, completo y ordenado usando los DATOS POR VENDEDOR de arriba. Incluí: pipeline y leads activos, pendientes sin responder, ventas del mes, actividad (mensajes/tiempo), estado del diario (si lo completó y su ánimo), tu última valoración, y la agenda próxima. Estructuralo con secciones o viñetas claras, destacá lo positivo y lo que hay que mejorar, y cerrá con 1-2 recomendaciones concretas. Si comparás vendedores, hacelo de forma objetiva. NUNCA inventes números: usá solo los datos provistos; si falta un dato, decí "sin datos".`;
       }
+      // Consultas de solo lectura — disponibles para TODOS (vendedores y CEO).
+      sysExtra += `\n\n════ CONSULTAR EL CRM (podés buscar datos reales) ════
+Cuando el usuario quiera VER o BUSCAR algo del CRM (su agenda, llamadas, seguimientos, clientes), NO digas que no tenés acceso: pedí los datos con UNA SOLA LÍNEA final:
+<ACCION>{"tipo":"buscar_agenda", ...}</ACCION>   o   <ACCION>{"tipo":"buscar_contactos", ...}</ACCION>
+Yo ejecuto la consulta y te devuelvo los datos reales para que armes la respuesta. Nunca inventes: usá SOLO lo que te devuelvo.
+- buscar_agenda: { "desde":"AAAA-MM-DD (opcional)", "hasta":"AAAA-MM-DD (opcional)", "tipo_evento":"llamada|reunion|visita|seguimiento (opcional)", "solo_pendientes":true (opcional), "vendedor_nombre":"(opcional; por defecto TU agenda)", "todos":true (opcional; solo CEO, agenda de todo el equipo) }
+- buscar_contactos: { "texto":"nombre/tel/email (opcional)", "estado":"(opcional)", "vendedor":"(opcional)", "limit":10 }
+Calculá "hoy", "mañana", "esta semana" con la FECHA DE HOY de arriba. Ej: "¿qué llamadas tengo hoy?" → buscar_agenda con tipo_evento "llamada", desde y hasta = hoy.`;
+
       if (rol === "ceo") sysExtra += `\n\n════ ACCIONES DISPONIBLES (sos CEO) ════
 Podés ejecutar cambios REALES en la base de datos del CRM. Cuando el usuario pida hacer algo, incluí AL FINAL de tu respuesta un bloque exactamente así (JSON válido, una sola línea):
 <ACCION>{"tipo":"nombre_accion","campo":"valor"}</ACCION>
@@ -941,9 +1052,12 @@ ACCIONES Y CAMPOS REQUERIDOS:
 - actualizar_contacto: { "id": "uuid del contacto", "estado": "...(opcional)", "vendedor": "...(opcional)", "nombre": "...(opcional)" }
 - eliminar_contacto: { "id": "uuid del contacto" }
 - agregar_evento: { "fecha": "AAAA-MM-DD", "hora": "HH:MM 24hs (opcional)", "titulo": "...", "tipo": "reunion|llamada|visita|seguimiento|otro (opcional, default reunion)", "cliente_nombre": "...(opcional, si es con un cliente)", "nota": "...(opcional)", "vendedor_nombre": "...(opcional; por defecto se agenda para vos)" }
+- actualizar_evento: { "id": "id del evento (buscalo con buscar_agenda)", "fecha": "...(opcional)", "hora": "...(opcional)", "titulo": "...(opcional)", "tipo": "...(opcional)", "nota": "...(opcional)" }
+- completar_evento: { "id": "id del evento", "completado": true }
+- eliminar_evento: { "id": "id del evento" }
 
 REGLAS ESTRICTAS:
-0. Para agregar_evento SÍ podés cargar reuniones/llamadas/visitas en la Agenda: convertí la fecha y hora que diga el usuario al formato AAAA-MM-DD y HH:MM usando la FECHA DE HOY de arriba, y ejecutá directamente (no digas que no tenés acceso al calendario). Por defecto se agenda para el usuario actual salvo que pidan otro vendedor.
+0. Para agenda SÍ tenés acceso: agregar/modificar/completar/eliminar eventos y buscar_agenda. Convertí fecha/hora al formato AAAA-MM-DD y HH:MM con la FECHA DE HOY. Para modificar/completar/eliminar un evento, PRIMERO buscalo con buscar_agenda para obtener su id.
 1. Incluí <ACCION> SIEMPRE que el usuario pida un cambio concreto, aunque te falte algún dato opcional.
 2. Si el dato es REQUERIDO y falta, preguntá PRIMERO y ejecutá cuando lo tengas.
 3. Para ELIMINAR: confirmá en la respuesta antes de incluir <ACCION>.
@@ -970,36 +1084,66 @@ REGLAS ESTRICTAS:
         const data = await res.json();
         let resp = data.contenido || "";
 
-        // ── Detectar y ejecutar acciones CEO ──────────────────
+        // ── Detectar acción: consulta (todos) o cambio (CEO) ──
         const accionMatch = resp.match(/<ACCION>([\s\S]*?)<\/ACCION>/);
-        if (accionMatch && rol === "ceo") {
+        let accion = null;
+        if (accionMatch) { try { accion = JSON.parse(accionMatch[1].trim()); } catch { accion = null; } }
+        const tipo = accion?.tipo;
+        const params = accion ? (() => { const { tipo: _t, ...r } = accion; return r; })() : {};
+
+        if (tipo && CONSULTAR_ACCION[tipo]) {
+          // ── Consulta de solo lectura (vendedores y CEO) ──
           resp = resp.replace(/<ACCION>[\s\S]*?<\/ACCION>/, "").trim();
-          setMsgs((p) => [...p, { from: "ai", text: resp }]);
-          if (resp && !vozOnRef.current) {} else if (resp) hablar(resp);
-          try {
-            const accion = JSON.parse(accionMatch[1].trim());
-            const { tipo, ...params } = accion;
-            // Agenda: si no especifican vendedor, se agenda para el usuario actual.
-            if (tipo === "agregar_evento" && !params.vendedor_id && !params.vendedor_nombre) {
-              params.vendedor_id = perfilId;
-              params.vendedor_nombre = nombreUsuario;
-            }
-            const fn = EJECUTAR_ACCION[tipo];
-            if (fn) {
-              setMsgs((p) => [...p, { from: "sistema", text: `⏳ Ejecutando: ${tipo}…` }]);
-              const resultado = await fn(params);
-              setMsgs((p) => [
-                ...p.filter((m) => !m.text?.startsWith("⏳ Ejecutando")),
-                { from: "sistema", text: `✅ ${resultado}` },
-              ]);
-              onRefrescar?.();
-            } else {
-              setMsgs((p) => [...p, { from: "sistema", text: `⚠️ Acción desconocida: ${tipo}` }]);
-            }
-          } catch {
-            setMsgs((p) => [...p, { from: "sistema", text: "⚠️ Error al parsear la acción." }]);
+          if (resp) setMsgs((p) => [...p, { from: "ai", text: resp }]);
+          // Por defecto la agenda es la del usuario actual (salvo "todos" o un vendedor pedido).
+          if (tipo === "buscar_agenda" && !params.vendedor_id && !params.vendedor_nombre && !params.todos) {
+            params.vendedor_id = perfilId;
           }
+          if (params.todos && rol !== "ceo") delete params.todos; // solo el CEO ve todo el equipo
+          setMsgs((p) => [...p, { from: "sistema", text: "🔎 Buscando en el CRM…" }]);
+          let datos;
+          try { datos = await CONSULTAR_ACCION[tipo](params); }
+          catch (e) { datos = `Error: ${e.message}`; }
+          setMsgs((p) => p.filter((m) => !m.text?.startsWith("🔎 Buscando")));
+          // Segunda pasada: la IA arma la respuesta usando SOLO los datos reales.
+          try {
+            const seg = [
+              { role: "system", content: GROK_SYSTEM + sysExtra + `\n\n════ RESULTADO DE LA CONSULTA (usá SOLO estos datos, no inventes) ════\n${datos}\n\nRespondé al usuario de forma clara y concisa en español, listando de forma ordenada. NO incluyas ningún bloque <ACCION>.` },
+              { role: "user", content: q },
+            ];
+            const r2 = await fetch("/api/asistente", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ messages: seg, max_tokens: vozOnRef.current ? 140 : 900 }),
+            });
+            const d2 = await r2.json().catch(() => ({}));
+            const ans = (d2.contenido || "").replace(/<ACCION>[\s\S]*?<\/ACCION>/, "").trim() || datos;
+            setMsgs((p) => [...p, { from: "ai", text: ans }]);
+            hablar(ans);
+          } catch {
+            setMsgs((p) => [...p, { from: "ai", text: datos }]);
+          }
+        } else if (tipo && EJECUTAR_ACCION[tipo] && rol === "ceo") {
+          // ── Cambio real en la base (solo CEO) ──
+          resp = resp.replace(/<ACCION>[\s\S]*?<\/ACCION>/, "").trim();
+          if (resp) { setMsgs((p) => [...p, { from: "ai", text: resp }]); hablar(resp); }
+          if (tipo === "agregar_evento" && !params.vendedor_id && !params.vendedor_nombre) {
+            params.vendedor_id = perfilId; params.vendedor_nombre = nombreUsuario;
+          }
+          setMsgs((p) => [...p, { from: "sistema", text: `⏳ Ejecutando: ${tipo}…` }]);
+          const resultado = await EJECUTAR_ACCION[tipo](params);
+          setMsgs((p) => [
+            ...p.filter((m) => !m.text?.startsWith("⏳ Ejecutando")),
+            { from: "sistema", text: `✅ ${resultado}` },
+          ]);
+          onRefrescar?.();
+        } else if (tipo && EJECUTAR_ACCION[tipo] && rol !== "ceo") {
+          // Vendedor pidió un cambio que requiere CEO.
+          resp = resp.replace(/<ACCION>[\s\S]*?<\/ACCION>/, "").trim();
+          setMsgs((p) => [...p, { from: "ai", text: resp || "Esa acción la puede hacer solo Nicolás (CEO)." }]);
+          hablar(resp || "Esa acción la puede hacer solo el CEO.");
         } else {
+          // Respuesta normal (sin acción).
+          resp = resp.replace(/<ACCION>[\s\S]*?<\/ACCION>/, "").trim();
           setMsgs((p) => [...p, { from: "ai", text: resp }]);
           hablar(resp);
         }
@@ -1362,6 +1506,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
   const [soloDestacados, setSoloDestacados] = useState(false);
+  const [soloPide, setSoloPide]   = useState(false);   // solo los que piden contacto
   const [canal, setCanal]         = useState("todos");
   const [filtrosIA, setFiltrosIA] = useState(FILTROS_INICIAL);
   const [modalFiltros, setModalFiltros] = useState(false);
@@ -1397,10 +1542,14 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
     return () => clearInterval(t);
   }, []);
 
+  // Clientes que piden contacto (para el contador y el filtro de prioridad).
+  const nPide = contactos.reduce((n, c) => n + (pideContacto(c).pide ? 1 : 0), 0);
+
   const lista = contactos.filter((c) => {
     const porBusq   = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
     const porCanal  = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
     const porDest   = !soloDestacados || c.destacado;
+    const porPide   = !soloPide || pideContacto(c).pide;
     let porFiltro = true;
     if (filtro === "todos") porFiltro = true;
     else if (filtro === "q:sinrevisar")   porFiltro = calcSinRevisar(c) != null;
@@ -1409,9 +1558,10 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
     else if (filtro === "t:cliente")      porFiltro = c.tipo === "cliente";
     else if (filtro === "t:prospecto")    porFiltro = !c.tipo || c.tipo === "prospecto";
     else porFiltro = c.estado === filtro;
-    return porBusq && porCanal && porDest && porFiltro && aplicaFiltrosIA(c, filtrosIA);
+    return porBusq && porCanal && porDest && porPide && porFiltro && aplicaFiltrosIA(c, filtrosIA);
   })
-  // Los destacados (importantes) siempre arriba, respetando el orden por fecha
+  // Prioridad: primero los que piden contacto, luego los destacados; respeta el orden por fecha.
+  .sort((a, b) => (pideContacto(b).pide ? 1 : 0) - (pideContacto(a).pide ? 1 : 0))
   .sort((a, b) => (b.destacado ? 1 : 0) - (a.destacado ? 1 : 0));
 
   return (
@@ -1464,6 +1614,28 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
             </button>
           </div>
 
+          {/* ── Prioridad: clientes que piden contacto (llamada / hablar con ventas) ── */}
+          <div style={{ padding: "8px 14px", borderBottom: `1px solid ${L.border}` }}>
+            <button onClick={() => setSoloPide((v) => !v)}
+              title="Clientes que piden que los llamen o quieren hablar con un vendedor"
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderRadius: 11, cursor: "pointer", fontFamily: FONT_BODY, transition: "all .15s",
+                border: soloPide ? `1.5px solid ${C.red}` : `1.5px solid ${nPide > 0 ? "#FCA5A5" : L.border}`,
+                background: soloPide ? C.red : (nPide > 0 ? "#FEF2F2" : L.white) }}>
+              <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, flexShrink: 0,
+                background: soloPide ? "rgba(255,255,255,.2)" : (nPide > 0 ? C.red : L.soft), color: soloPide ? "#fff" : (nPide > 0 ? "#fff" : L.light) }}>
+                <PhoneCall size={14} />
+              </span>
+              <span style={{ flex: 1, textAlign: "left", fontSize: 13, fontWeight: 800, color: soloPide ? "#fff" : (nPide > 0 ? C.red : L.muted) }}>
+                Piden contacto
+              </span>
+              {nPide > 0 && (
+                <span style={{ fontSize: 11.5, fontWeight: 800, borderRadius: 20, padding: "2px 9px", flexShrink: 0,
+                  background: soloPide ? "#fff" : C.red, color: soloPide ? C.red : "#fff" }}>{nPide}</span>
+              )}
+              {nPide > 0 && <ChevronRight size={15} color={soloPide ? "#fff" : C.red} style={{ flexShrink: 0 }} />}
+            </button>
+          </div>
+
           {modalFiltros && (
             <FiltrosModal filtros={filtrosIA} setFiltros={setFiltrosIA} onClose={() => setModalFiltros(false)} />
           )}
@@ -1481,6 +1653,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
               const est  = ESTADOS[c.estado] || ESTADOS.nuevo;
               const sel  = activo?.id === c.id;
               const llamar = requiereLlamada?.has(c.id) || c.requiere_llamada;
+              const pc = pideContacto(c);
               const hora = c.updated_at ? (() => {
                 const d = new Date(c.updated_at);
                 const hoy = new Date();
@@ -1538,6 +1711,11 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                       {c.ultimo_msg || "—"}
                     </div>
                     <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
+                      {pc.pide && (() => { const b = PIDE_BADGE[pc.motivo] || PIDE_BADGE.ventas; return (
+                        <span style={{ fontSize: 9.5, padding: "2px 8px", borderRadius: 4, background: b.bg, color: b.color, border: `1px solid ${b.border}`, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.3, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                          <PhoneCall size={9} /> {b.label}
+                        </span>
+                      ); })()}
                       <span style={{ fontSize: 9.5, padding: "2px 8px", borderRadius: 4, background: est.bg, color: est.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.3 }}>{est.label}</span>
                       {c.tipo === "cliente" && <span style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 4, background: "#DCFCE7", color: "#16A34A", fontWeight: 700 }}>★ Cliente</span>}
                       {c.vendedor && <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>{c.vendedor}</span>}
@@ -1844,6 +2022,22 @@ const AV_OBJECION = {
   precio: "Precio", envio: "Envío", tiempo: "Tiempo", modelo: "Modelo",
   necesita_pensarlo: "Necesita pensarlo", comparando_proveedores: "Comparando proveedores",
   falta_informacion: "Falta información", sin_objecion: "Sin objeción",
+};
+const AV_URGENCIA = {
+  alta:  { label: "Actuar ya", color: "#B91C1C", bg: "#FEE2E2" },
+  media: { label: "Pronto",    color: "#B45309", bg: "#FEF3C7" },
+  baja:  { label: "Sin apuro", color: "#15803D", bg: "#DCFCE7" },
+};
+// Ícono/etiqueta por acción sugerida (para el CTA del próximo paso)
+const AV_ACCION = {
+  agendar_llamada:     "Agendar llamada",
+  enviar_catalogo:     "Enviar catálogo",
+  pedir_ubicacion:     "Pedir ubicación",
+  pedir_modelo:        "Pedir modelo",
+  preparar_cotizacion: "Preparar cotización",
+  hacer_seguimiento:   "Hacer seguimiento",
+  marcar_caliente:     "Marcar caliente",
+  marcar_perdido:      "Marcar perdido",
 };
 
 // ============================================================
@@ -2459,8 +2653,19 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.color = L.muted; }}>
                 <Pencil size={14} /> Editar
               </button>
+              <button onClick={() => setPanelSeg((v) => !v)} title="Programar seguimiento"
+                style={{ background: panelSeg ? C.gold : L.soft, border: `1.5px solid ${panelSeg ? C.gold : L.border}`, color: panelSeg ? "#fff" : L.muted, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, transition: "all .15s", flexShrink: 0 }}>
+                <Calendar size={14} /> Seguimiento
+              </button>
+              <button onClick={() => upd({ bot_activo: !contacto.bot_activo })} title={contacto.bot_activo ? "El bot atiende este chat — tocá para atenderlo vos" : "Vos atendés este chat — tocá para que lo tome el bot"}
+                style={{ background: contacto.bot_activo ? "#DCFCE7" : "#FEF2F2", border: `1.5px solid ${contacto.bot_activo ? "#86EFAC" : "#FECACA"}`, color: contacto.bot_activo ? "#15803D" : C.red, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, transition: "all .15s", flexShrink: 0 }}>
+                {contacto.bot_activo ? <><Bot size={14} /> Bot</> : <><User size={14} /> Yo atiendo</>}
+              </button>
               <button onClick={avanzarIA} title="Asistente de ventas IA: diagnóstico del cliente + próximo paso + mensaje sugerido"
-                style={{ background: C.gradBtn, border: "none", color: "#fff", borderRadius: 999, padding: "11px 24px", cursor: "pointer", fontSize: 14.5, fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: 0.2, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 22px rgba(99,102,241,.34)", flexShrink: 0 }}>
+                onMouseDown={(e) => { e.currentTarget.style.transform = "scale(.94)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(99,102,241,.3)"; }}
+                onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 8px 22px rgba(99,102,241,.34)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 8px 22px rgba(99,102,241,.34)"; }}
+                style={{ background: C.gradBtn, border: "none", color: "#fff", borderRadius: 13, padding: "11px 24px", cursor: "pointer", fontSize: 14.5, fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: 0.2, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 22px rgba(99,102,241,.34)", transition: "transform .1s ease, box-shadow .12s ease", flexShrink: 0 }}>
                 <Sparkles size={17} /> Avanzar
               </button>
               <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
@@ -2472,44 +2677,33 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
             </>
           )}
         </div>
-        {/* Fila 2: acciones (scrollable en mobile) */}
-        <div className={isMobile ? "strip" : ""} style={{ display: "flex", gap: 7, alignItems: "center", marginTop: isMobile ? 9 : 10, overflowX: isMobile ? "auto" : "visible", flexWrap: isMobile ? "nowrap" : "wrap", paddingBottom: isMobile ? 2 : 0 }}>
-          {isMobile && (
-            <>
-              <button onClick={() => setDrawer(true)}
-                style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 11px", background: L.soft, color: L.muted, borderColor: L.border }}>
-                <Pencil size={13} /> Editar
-              </button>
-              <button onClick={avanzarIA}
-                style={{ ...btnSt, flexShrink: 0, fontSize: 13, padding: "8px 18px", borderRadius: 999, fontWeight: 700, gap: 7, background: C.gradBtn, color: "#fff", borderColor: "transparent", boxShadow: "0 6px 16px rgba(99,102,241,.3)" }}>
-                <Sparkles size={15} /> Avanzar
-              </button>
-              <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
-                style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 10px", background: confirmElim ? "#FEF2F2" : L.soft, color: confirmElim ? C.red : L.muted, borderColor: confirmElim ? "#FECACA" : L.border }}>
-                <Trash2 size={13} />
-              </button>
-            </>
-          )}
-          <button onClick={() => upd({ tipo: (contacto.tipo || "prospecto") === "cliente" ? "prospecto" : "cliente" })}
-            style={{ ...btnSt, flexShrink: 0, fontSize: 12, background: contacto.tipo === "cliente" ? "#DCFCE7" : "#EEF2FF", color: contacto.tipo === "cliente" ? "#16A34A" : "#6366F1", borderColor: contacto.tipo === "cliente" ? "#86EFAC" : "#C7D2FE" }}>
-            {contacto.tipo === "cliente" ? "★ Cliente" : "◎ Prospecto"}
-          </button>
-          <select value={contacto.vendedor || ""} onChange={(e) => upd({ vendedor: e.target.value })} style={{ ...selSt, flexShrink: 0, fontSize: 12 }}>
-            <option value="">Sin vendedor</option>
-            {VENDEDORES.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
-          <select value={contacto.estado} onChange={(e) => upd({ estado: e.target.value })} style={{ ...selSt, flexShrink: 0, fontSize: 12 }}>
-            {Object.entries(ESTADOS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
-          <button onClick={() => setPanelSeg((v) => !v)}
-            style={{ ...btnSt, flexShrink: 0, fontSize: 12, background: panelSeg ? C.gold : L.soft, color: panelSeg ? "#fff" : L.muted, borderColor: panelSeg ? C.gold : L.border }}>
-            <Calendar size={13} /> {isMobile ? "" : "Seguimiento"}
-          </button>
-          <button onClick={() => upd({ bot_activo: !contacto.bot_activo })}
-            style={{ ...btnSt, flexShrink: 0, fontSize: 12, background: contacto.bot_activo ? "#DCFCE7" : "#FEF2F2", color: contacto.bot_activo ? "#15803D" : C.red, borderColor: contacto.bot_activo ? "#86EFAC" : "#FECACA" }}>
-            {contacto.bot_activo ? <><Bot size={13} /> Bot</> : <><User size={13} /> {isMobile ? "Agente" : "Yo atiendo"}</>}
-          </button>
-        </div>
+        {/* Fila 2: acciones (solo móvil; en desktop ya están arriba) */}
+        {isMobile && (
+          <div className="strip" style={{ display: "flex", gap: 7, alignItems: "center", marginTop: 9, overflowX: "auto", flexWrap: "nowrap", paddingBottom: 2 }}>
+            <button onClick={() => setDrawer(true)}
+              style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 11px", background: L.soft, color: L.muted, borderColor: L.border }}>
+              <Pencil size={13} /> Editar
+            </button>
+            <button onClick={avanzarIA}
+              onTouchStart={(e) => { e.currentTarget.style.transform = "scale(.94)"; }}
+              onTouchEnd={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+              style={{ ...btnSt, flexShrink: 0, fontSize: 13, padding: "8px 18px", borderRadius: 12, fontWeight: 700, gap: 7, background: C.gradBtn, color: "#fff", borderColor: "transparent", boxShadow: "0 6px 16px rgba(99,102,241,.3)", transition: "transform .1s ease" }}>
+              <Sparkles size={15} /> Avanzar
+            </button>
+            <button onClick={() => setPanelSeg((v) => !v)}
+              style={{ ...btnSt, flexShrink: 0, fontSize: 12, background: panelSeg ? C.gold : L.soft, color: panelSeg ? "#fff" : L.muted, borderColor: panelSeg ? C.gold : L.border }}>
+              <Calendar size={13} /> Seguimiento
+            </button>
+            <button onClick={() => upd({ bot_activo: !contacto.bot_activo })}
+              style={{ ...btnSt, flexShrink: 0, fontSize: 12, fontWeight: 700, background: contacto.bot_activo ? "#DCFCE7" : "#FEF2F2", color: contacto.bot_activo ? "#15803D" : C.red, borderColor: contacto.bot_activo ? "#86EFAC" : "#FECACA" }}>
+              {contacto.bot_activo ? <><Bot size={13} /> Bot</> : <><User size={13} /> Yo atiendo</>}
+            </button>
+            <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
+              style={{ ...btnSt, flexShrink: 0, fontSize: 12, padding: "6px 10px", background: confirmElim ? "#FEF2F2" : L.soft, color: confirmElim ? C.red : L.muted, borderColor: confirmElim ? "#FECACA" : L.border }}>
+              <Trash2 size={13} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Panel seguimiento ── */}
@@ -2957,26 +3151,75 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               )}
               {avData && !avLoading && (
                 <>
-                  {/* Badges: nivel + etapa + objeción */}
-                  <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 14 }}>
-                    {(() => { const n = AV_NIVEL[avData.nivel_interes] || AV_NIVEL.tibio; return (
-                      <span style={{ fontSize: 11.5, fontWeight: 800, padding: "4px 11px", borderRadius: 20, background: n.bg, color: n.color, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: n.color }} /> {n.label}
-                      </span>
-                    ); })()}
-                    <span style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 20, background: "#EEF2FF", color: "#4338CA" }}>
-                      {AV_ETAPA[avData.etapa_embudo] || avData.etapa_embudo}
-                    </span>
-                    {avData.objecion_detectada && avData.objecion_detectada !== "sin_objecion" && (
-                      <span style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 20, background: "#FEF2F2", color: "#B91C1C", display: "inline-flex", alignItems: "center", gap: 5 }}>
-                        <AlertCircle size={12} /> {AV_OBJECION[avData.objecion_detectada] || avData.objecion_detectada}
-                      </span>
-                    )}
-                  </div>
+                  {/* ── Termómetro del negocio: probabilidad + nivel + urgencia ── */}
+                  {(() => {
+                    const n = AV_NIVEL[avData.nivel_interes] || AV_NIVEL.tibio;
+                    const prob = typeof avData.probabilidad_cierre === "number" ? avData.probabilidad_cierre : null;
+                    const barColor = prob == null ? L.light : prob >= 66 ? "#15803D" : prob >= 33 ? "#B45309" : "#B91C1C";
+                    const u = AV_URGENCIA[avData.urgencia] || AV_URGENCIA.media;
+                    return (
+                      <div style={{ background: L.soft, border: `1px solid ${L.border}`, borderRadius: 14, padding: "13px 15px", marginBottom: 14 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: prob == null ? 0 : 9, flexWrap: "wrap", gap: 8 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 11.5, fontWeight: 800, padding: "4px 11px", borderRadius: 20, background: n.bg, color: n.color, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <span style={{ width: 7, height: 7, borderRadius: "50%", background: n.color }} /> {n.label}
+                            </span>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 20, background: "#EEF2FF", color: "#4338CA" }}>
+                              {AV_ETAPA[avData.etapa_embudo] || avData.etapa_embudo}
+                            </span>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 20, background: u.bg, color: u.color, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                              <Zap size={11} /> {u.label}
+                            </span>
+                          </div>
+                          {prob != null && (
+                            <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 20, color: barColor, flexShrink: 0 }}>{prob}%</span>
+                          )}
+                        </div>
+                        {prob != null && (
+                          <>
+                            <div style={{ height: 8, borderRadius: 6, background: "#E5E7EB", overflow: "hidden" }}>
+                              <div style={{ width: `${prob}%`, height: "100%", background: barColor, borderRadius: 6, transition: "width .5s ease" }} />
+                            </div>
+                            <div style={{ fontSize: 10.5, fontWeight: 700, color: L.light, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 6 }}>Probabilidad de cierre</div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
 
-                  {/* Situación del cliente — una línea clara */}
+                  {/* Situación del cliente */}
                   {avData.resumen_cliente && (
-                    <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.55, marginBottom: 16 }}>{avData.resumen_cliente}</div>
+                    <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.55, marginBottom: 14 }}>{avData.resumen_cliente}</div>
+                  )}
+
+                  {/* Señales detectadas — chips */}
+                  {avData.senales_compra?.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={avLbl}>Señales detectadas</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {avData.senales_compra.map((s, i) => (
+                          <span key={i} style={{ fontSize: 12, fontWeight: 600, color: "#166534", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: "4px 9px", lineHeight: 1.3 }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Objeción + cómo responderla — bloque de acción */}
+                  {avData.objecion_detectada && avData.objecion_detectada !== "sin_objecion" && (
+                    <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 14, padding: "12px 15px", marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#B91C1C", fontWeight: 800, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: avData.objecion_respuesta ? 8 : 0 }}>
+                        <AlertCircle size={13} /> Objeción: {AV_OBJECION[avData.objecion_detectada] || avData.objecion_detectada}
+                      </div>
+                      {avData.objecion_respuesta && (
+                        <>
+                          <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{avData.objecion_respuesta}</div>
+                          <button onClick={() => { setTexto(avData.objecion_respuesta); setAvCopiado(true); setTimeout(() => setAvCopiado(false), 1600); }}
+                            style={{ marginTop: 9, background: "#fff", border: "1px solid #FCA5A5", color: "#B91C1C", borderRadius: 8, padding: "6px 11px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONT_BODY, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            <FileText size={12} /> Usar esta respuesta
+                          </button>
+                        </>
+                      )}
+                    </div>
                   )}
 
                   {/* Mensaje sugerido — protagonista */}
@@ -3000,30 +3243,49 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                           <div style={{ fontSize: 13.5, color: L.muted, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{avMsgTrad}</div>
                         </div>
                       )}
+                      {avData.tecnica_aplicada && (
+                        <div style={{ marginTop: 10, fontSize: 11.5, color: "#6D28D9", display: "flex", alignItems: "center", gap: 5, fontWeight: 600 }}>
+                          <Sparkles size={12} /> {avData.tecnica_aplicada}
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Próximo paso — fila compacta con ícono */}
+                  {/* Próximo paso — destacado con acción */}
                   {avData.proximo_paso_recomendado && (
-                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: avData.nota_para_vendedor ? 11 : 0 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: 8, background: "#DCFCE7", color: "#15803D", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-                        <ChevronRight size={15} />
+                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: "11px 13px", marginBottom: 14 }}>
+                      <div style={{ width: 26, height: 26, borderRadius: 8, background: "#15803D", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                        <ChevronRight size={16} />
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={avLbl}>Próximo paso</div>
+                        <div style={{ ...avLbl, color: "#15803D", marginBottom: 3 }}>Próximo paso · {AV_ACCION[avData.accion_crm_sugerida] || "Avanzar"}</div>
                         <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.5 }}>{avData.proximo_paso_recomendado}</div>
                       </div>
                     </div>
                   )}
 
-                  {/* Consejo — fila compacta con ícono */}
+                  {/* Preguntas clave — checklist */}
+                  {avData.preguntas_clave?.length > 0 && (
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={avLbl}>Preguntas clave para avanzar</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {avData.preguntas_clave.map((q, i) => (
+                          <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, color: L.text, lineHeight: 1.45 }}>
+                            <span style={{ color: C.red, fontWeight: 800, flexShrink: 0 }}>?</span> {q}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Consejo del coach */}
                   {avData.nota_para_vendedor && (
                     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                       <div style={{ width: 24, height: 24, borderRadius: 8, background: "#EEF2FF", color: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
                         <Sparkles size={13} />
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={avLbl}>Consejo</div>
+                        <div style={avLbl}>Consejo del coach</div>
                         <div style={{ fontSize: 12.5, color: L.muted, lineHeight: 1.5 }}>{avData.nota_para_vendedor}</div>
                       </div>
                     </div>
