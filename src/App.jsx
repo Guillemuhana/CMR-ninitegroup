@@ -1605,34 +1605,23 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                 <span style={{ background: C.ai, color: "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 9, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{contarActivos(filtrosIA)}</span>
               )}
             </button>
+            <button onClick={() => setSoloPide((v) => !v)}
+              title={`Piden contacto (llamada / hablar con ventas)${nPide ? ` — ${nPide}` : ""}`}
+              style={{ position: "relative", flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "0 11px", borderRadius: 10, cursor: "pointer", transition: "all .15s",
+                border: (soloPide || nPide > 0) ? `1.5px solid ${C.red}` : `1.5px solid ${L.border}`,
+                background: soloPide ? C.red : (nPide > 0 ? "#FEF2F2" : L.white),
+                color: soloPide ? "#fff" : (nPide > 0 ? C.red : L.muted) }}>
+              <PhoneCall size={16} />
+              {nPide > 0 && (
+                <span style={{ background: soloPide ? "#fff" : C.red, color: soloPide ? C.red : "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 9, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{nPide}</span>
+              )}
+            </button>
             <button onClick={() => setSoloDestacados(v => !v)}
               title={soloDestacados ? "Mostrar todos" : "Mostrar solo importantes"}
               style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 40, borderRadius: 10, cursor: "pointer",
                 border: soloDestacados ? "1.5px solid #F59E0B" : `1.5px solid ${L.border}`,
                 background: soloDestacados ? "#FFFBEB" : L.white, transition: "all .15s" }}>
               <Star size={16} fill={soloDestacados ? "#F59E0B" : "none"} color={soloDestacados ? "#F59E0B" : L.muted} />
-            </button>
-          </div>
-
-          {/* ── Prioridad: clientes que piden contacto (llamada / hablar con ventas) ── */}
-          <div style={{ padding: "8px 14px", borderBottom: `1px solid ${L.border}` }}>
-            <button onClick={() => setSoloPide((v) => !v)}
-              title="Clientes que piden que los llamen o quieren hablar con un vendedor"
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", borderRadius: 11, cursor: "pointer", fontFamily: FONT_BODY, transition: "all .15s",
-                border: soloPide ? `1.5px solid ${C.red}` : `1.5px solid ${nPide > 0 ? "#FCA5A5" : L.border}`,
-                background: soloPide ? C.red : (nPide > 0 ? "#FEF2F2" : L.white) }}>
-              <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, flexShrink: 0,
-                background: soloPide ? "rgba(255,255,255,.2)" : (nPide > 0 ? C.red : L.soft), color: soloPide ? "#fff" : (nPide > 0 ? "#fff" : L.light) }}>
-                <PhoneCall size={14} />
-              </span>
-              <span style={{ flex: 1, textAlign: "left", fontSize: 13, fontWeight: 800, color: soloPide ? "#fff" : (nPide > 0 ? C.red : L.muted) }}>
-                Piden contacto
-              </span>
-              {nPide > 0 && (
-                <span style={{ fontSize: 11.5, fontWeight: 800, borderRadius: 20, padding: "2px 9px", flexShrink: 0,
-                  background: soloPide ? "#fff" : C.red, color: soloPide ? C.red : "#fff" }}>{nPide}</span>
-              )}
-              {nPide > 0 && <ChevronRight size={15} color={soloPide ? "#fff" : C.red} style={{ flexShrink: 0 }} />}
             </button>
           </div>
 
