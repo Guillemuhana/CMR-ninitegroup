@@ -1358,13 +1358,15 @@ function CanalSelector({ canal, setCanal }) {
 // ============================================================
 // SIDEBAR
 // ============================================================
-function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
+function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContacto, requiereLlamada, onToggleLlamada, onMarcarLlamada, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
   const [soloDestacados, setSoloDestacados] = useState(false);
   const [canal, setCanal]         = useState("todos");
   const [filtrosIA, setFiltrosIA] = useState(FILTROS_INICIAL);
   const [modalFiltros, setModalFiltros] = useState(false);
+  const [menu, setMenu]           = useState(null);   // menú contextual: { x, y, c }
+  const [agendar, setAgendar]     = useState(null);   // contacto a agendar llamada
   const [now, setNow]             = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
@@ -1444,6 +1446,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onLogout, use
 
 
           {/* ── Lista contactos ── */}
+          <style>{`@keyframes ninitPhonePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(220,38,38,.5)}50%{transform:scale(1.12);box-shadow:0 0 0 5px rgba(220,38,38,0)}}`}</style>
           <div className="scroll-y" style={{ overflowY: "auto", flex: 1 }}>
             {lista.length === 0 && (
               <div style={{ padding: 36, color: L.light, fontSize: 13.5, textAlign: "center" }}>
@@ -1453,6 +1456,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onLogout, use
             {lista.map((c) => {
               const est  = ESTADOS[c.estado] || ESTADOS.nuevo;
               const sel  = activo?.id === c.id;
+              const llamar = requiereLlamada?.has(c.id) || c.requiere_llamada;
               const hora = c.updated_at ? (() => {
                 const d = new Date(c.updated_at);
                 const hoy = new Date();
@@ -1464,9 +1468,10 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onLogout, use
               })() : "";
               return (
                 <div key={c.id} onClick={() => onSelect(c)}
-                  style={{ padding: "13px 14px", borderBottom: `1px solid ${L.border}`, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start", background: sel ? L.active : "transparent", borderLeft: sel ? `3px solid ${C.red}` : "3px solid transparent", transition: "background .12s" }}
+                  onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, c }); }}
+                  style={{ padding: "13px 14px", borderBottom: `1px solid ${L.border}`, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start", background: sel ? L.active : (llamar ? "#FEF2F2" : "transparent"), borderLeft: sel ? `4px solid ${C.red}` : (llamar ? `3px solid ${C.red}` : "3px solid transparent"), transform: sel ? "translateX(10px)" : "translateX(0)", boxShadow: sel ? `-2px 0 0 ${C.red}, 0 2px 10px rgba(0,0,0,.06)` : "none", borderRadius: sel ? "0 10px 10px 0" : 0, transition: "transform .18s ease, background .12s, box-shadow .18s" }}
                   onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = L.hover; }}
-                  onMouseLeave={(e) => { if (!sel) e.currentTarget.style.background = "transparent"; }}>
+                  onMouseLeave={(e) => { if (!sel) e.currentTarget.style.background = llamar ? "#FEF2F2" : "transparent"; }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <Avatar nombre={c.nombre || c.telefono || c.email} foto={c.foto_url} size={46} />
                     {c.canal === "email" ? (
@@ -1479,8 +1484,13 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onLogout, use
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                      <span style={{ fontWeight: 700, color: L.text, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "62%" }}>
-                        {c.nombre || c.telefono || c.email}
+                      <span style={{ fontWeight: 700, color: L.text, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "62%", display: "flex", alignItems: "center", gap: 6 }}>
+                        {(sel || llamar) && (
+                          <span title="Hay que llamar a este cliente" style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: C.red, color: "#fff", animation: "ninitPhonePulse 1.4s ease-in-out infinite" }}>
+                            <Phone size={11} />
+                          </span>
+                        )}
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.nombre || c.telefono || c.email}</span>
                       </span>
                       <div style={{ display: "flex", gap: 5, alignItems: "center", flexShrink: 0 }}>
                         <button
@@ -1528,6 +1538,232 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onLogout, use
           onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = L.muted; }}>
           <LogOut size={16} />
         </button>
+      </div>
+
+      {/* ── Menú contextual (click derecho sobre un chat) ── */}
+      {menu && (
+        <>
+          <div onClick={() => setMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMenu(null); }}
+            style={{ position: "fixed", inset: 0, zIndex: 7000 }} />
+          <div style={{
+            position: "fixed",
+            left: Math.min(menu.x, window.innerWidth - 258),
+            top: Math.min(menu.y, window.innerHeight - 320),
+            zIndex: 7001, width: 244, background: L.white, borderRadius: 12,
+            border: `1px solid ${L.border}`, boxShadow: "0 12px 40px rgba(15,23,42,.22)",
+            padding: 6, fontFamily: FONT_BODY, overflow: "hidden",
+          }}>
+            <div style={{ padding: "7px 10px 8px", borderBottom: `1px solid ${L.border}`, marginBottom: 5 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: L.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {menu.c.nombre || menu.c.telefono || menu.c.email}
+              </div>
+              <div style={{ fontSize: 10.5, color: L.light, marginTop: 1 }}>Acciones rápidas</div>
+            </div>
+
+            <button onClick={() => { setAgendar(menu.c); setMenu(null); }} style={menuItemSt}
+              onMouseEnter={(e) => e.currentTarget.style.background = L.hover}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+              <Calendar size={15} color={C.red} /> Agendar llamada
+            </button>
+
+            <button onClick={() => { onToggleLlamada?.(menu.c); setMenu(null); }} style={menuItemSt}
+              onMouseEnter={(e) => e.currentTarget.style.background = L.hover}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+              <Phone size={15} color={C.red} /> {requiereLlamada?.has(menu.c.id) ? "Quitar aviso de llamada" : "Marcar: hay que llamar"}
+            </button>
+
+            <button onClick={() => { onToggleDestacado?.(menu.c); setMenu(null); }} style={menuItemSt}
+              onMouseEnter={(e) => e.currentTarget.style.background = L.hover}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+              <Star size={15} color="#F59E0B" fill={menu.c.destacado ? "#F59E0B" : "none"} /> {menu.c.destacado ? "Quitar de importantes" : "Marcar importante"}
+            </button>
+
+            <button onClick={() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); onPatchContacto?.(menu.c, { seguimiento_at: d.toISOString() }); setMenu(null); }} style={menuItemSt}
+              onMouseEnter={(e) => e.currentTarget.style.background = L.hover}
+              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
+              <Clock size={15} color="#0EA5E9" /> Recordar seguimiento mañana
+            </button>
+
+            <div style={{ borderTop: `1px solid ${L.border}`, margin: "5px 0", paddingTop: 7 }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: L.light, textTransform: "uppercase", letterSpacing: 0.4, padding: "0 8px 5px" }}>Estado</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "0 6px 4px" }}>
+                {["nuevo", "contactado", "interesado", "negociando", "vendido", "perdido"].map((k) => {
+                  const est = ESTADOS[k]; const activo = menu.c.estado === k;
+                  return (
+                    <button key={k} onClick={() => { onPatchContacto?.(menu.c, { estado: k }); setMenu(null); }}
+                      style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 5, cursor: "pointer",
+                        border: `1px solid ${activo ? est.color : "transparent"}`, background: est.bg, color: est.color }}>
+                      {est.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Modal: agendar llamada ── */}
+      {agendar && (
+        <QuickLlamadaModal contacto={agendar} perfil={perfil} userName={userName}
+          onFlagLlamada={(c) => onMarcarLlamada?.(c)}
+          onClose={() => setAgendar(null)} />
+      )}
+    </div>
+  );
+}
+
+// Estilo de cada ítem del menú contextual
+const menuItemSt = {
+  display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left",
+  padding: "9px 10px", border: "none", background: "transparent", borderRadius: 8,
+  fontSize: 13, fontWeight: 600, color: L.text, cursor: "pointer", fontFamily: FONT_BODY,
+  transition: "background .1s",
+};
+
+// ── Modal rápido para agendar una llamada en el calendario ──
+function QuickLlamadaModal({ contacto, perfil, userName, onFlagLlamada, onClose }) {
+  const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const hoy = new Date();
+  const manana = new Date(hoy); manana.setDate(hoy.getDate() + 1);
+
+  const [vendedores, setVendedores] = useState([]);
+  const [fecha, setFecha]   = useState(ymd(hoy));
+  const [hora, setHora]     = useState("10:00");
+  const [resp, setResp]     = useState(perfil ? { id: perfil.id, nombre: perfil.nombre } : null);
+  const [nota, setNota]     = useState("");
+  const [guardando, setGuard] = useState(false);
+
+  const nombreCliente = contacto.nombre || contacto.telefono || contacto.email || "Cliente";
+
+  // Cargar vendedores activos para elegir responsable de la llamada
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("vendedores")
+        .select("id,nombre,role,activo").eq("activo", true).order("nombre");
+      const lista = data || [];
+      setVendedores(lista);
+      // Responsable por defecto: el usuario actual si está en la lista
+      if (perfil?.id) {
+        const yo = lista.find((v) => v.id === perfil.id);
+        if (yo) setResp({ id: yo.id, nombre: yo.nombre });
+        else if (lista[0]) setResp({ id: lista[0].id, nombre: lista[0].nombre });
+      } else if (lista[0]) setResp({ id: lista[0].id, nombre: lista[0].nombre });
+    })();
+  }, [perfil]);
+
+  const textoWhatsApp = () => {
+    const fechaTxt = new Date(fecha + "T12:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+    const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+    return [
+      "*NINIT GROUP — Agenda*", "",
+      `*Llamada: ${nombreCliente}*`,
+      `Fecha: ${cap(fechaTxt)}${hora ? `, ${hora} hs` : ""}`,
+      resp?.nombre ? `Responsable: ${resp.nombre}` : null,
+      contacto.telefono ? `Tel: ${contacto.telefono}` : null,
+      nota.trim() ? `Nota: ${nota.trim()}` : null,
+      "", `Agendado por ${userName || "NINIT Group"}`,
+    ].filter((l) => l !== null).join("\n");
+  };
+
+  const guardar = async (compartir) => {
+    if (!resp?.id) { alert("Elegí quién hará la llamada."); return; }
+    setGuard(true);
+    const payload = {
+      vendedor_id: resp.id,
+      vendedor_nombre: resp.nombre || "",
+      fecha,
+      hora: hora || null,
+      tipo: "llamada",
+      titulo: `Llamar a ${nombreCliente}`,
+      cliente_id: contacto.id || null,
+      cliente_nombre: nombreCliente,
+      nota: nota.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("agenda_vendedor").insert(payload);
+    setGuard(false);
+    if (error) { alert("No se pudo agendar: " + error.message); return; }
+    onFlagLlamada?.(contacto);   // marca el chat con el aviso de llamada
+    if (compartir) window.open(`https://wa.me/?text=${encodeURIComponent(textoWhatsApp())}`, "_blank");
+    onClose();
+  };
+
+  const inputSt = { width: "100%", boxSizing: "border-box", border: `1.5px solid ${L.border}`, borderRadius: 9, padding: "9px 11px", fontSize: 13.5, fontFamily: FONT_BODY, color: L.text, background: L.soft, outline: "none" };
+  const lblSt = { fontSize: 11, fontWeight: 800, color: L.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6, display: "block" };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.45)", zIndex: 8000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ background: L.white, borderRadius: 18, width: "min(440px, 100%)", boxShadow: "0 20px 60px rgba(0,0,0,.3)", fontFamily: FONT_BODY, overflow: "hidden" }}>
+        {/* Cabecera */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", background: C.red }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9, color: "#fff" }}>
+            <Phone size={18} />
+            <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 16 }}>Agendar llamada</span>
+          </div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,.2)", border: "none", cursor: "pointer", color: "#fff", padding: 5, borderRadius: 7, display: "flex" }}><X size={17} /></button>
+        </div>
+
+        <div style={{ padding: "18px 20px" }}>
+          <div style={{ fontSize: 14.5, fontWeight: 700, color: L.text, marginBottom: 16 }}>
+            Llamar a <span style={{ color: C.red }}>{nombreCliente}</span>
+          </div>
+
+          {/* Fecha */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={lblSt}>¿Cuándo?</label>
+            <div style={{ display: "flex", gap: 7, marginBottom: 8 }}>
+              {[{ k: ymd(hoy), t: "Hoy" }, { k: ymd(manana), t: "Mañana" }].map((o) => {
+                const sel = fecha === o.k;
+                return (
+                  <button key={o.k} onClick={() => setFecha(o.k)}
+                    style={{ padding: "7px 14px", borderRadius: 8, border: `1.5px solid ${sel ? C.red : L.border}`, background: sel ? "#FEF2F2" : "#fff", color: sel ? C.red : L.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
+                    {o.t}
+                  </button>
+                );
+              })}
+              <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} style={{ ...inputSt, width: "auto", flex: 1 }} />
+            </div>
+            <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} style={inputSt} />
+          </div>
+
+          {/* Responsable */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={lblSt}>¿Quién hace la llamada?</label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+              {vendedores.length === 0 && <span style={{ fontSize: 12.5, color: L.light }}>Cargando…</span>}
+              {vendedores.map((v) => {
+                const sel = resp?.id === v.id;
+                return (
+                  <button key={v.id} onClick={() => setResp({ id: v.id, nombre: v.nombre })}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 9, border: `1.5px solid ${sel ? C.red : L.border}`, background: sel ? "#FEF2F2" : "#fff", color: sel ? C.red : L.text, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
+                    {sel && <Check size={13} />} {v.nombre}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Nota */}
+          <div style={{ marginBottom: 18 }}>
+            <label style={lblSt}>Nota (opcional)</label>
+            <textarea value={nota} onChange={(e) => setNota(e.target.value)} rows={2} placeholder="Ej: recordar cotización enviada…" style={{ ...inputSt, resize: "vertical", lineHeight: 1.5 }} />
+          </div>
+
+          {/* Acciones */}
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+            <button onClick={onClose} style={{ padding: "9px 16px", borderRadius: 9, border: `1.5px solid ${L.border}`, background: "#fff", color: L.muted, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY }}>Cancelar</button>
+            <button onClick={() => guardar(true)} disabled={guardando}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 9, border: `1.5px solid #25D366`, background: "#fff", color: "#128C4A", fontSize: 13, fontWeight: 700, cursor: guardando ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: guardando ? 0.6 : 1 }}>
+              <FaWhatsapp size={14} /> Agendar y compartir
+            </button>
+            <button onClick={() => guardar(false)} disabled={guardando}
+              style={{ padding: "9px 18px", borderRadius: 9, border: "none", background: C.red, color: "#fff", fontSize: 13, fontWeight: 700, cursor: guardando ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: guardando ? 0.6 : 1 }}>
+              {guardando ? "Guardando…" : "Agendar"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -3094,6 +3330,28 @@ export default function App() {
     await supabase.from("contactos").update({ destacado: nuevo }).eq("id", c.id);
   };
 
+  // Actualiza uno o varios campos de un contacto (optimista + persistencia)
+  const patchContacto = async (c, campos) => {
+    updateContacto({ ...c, ...campos });                 // optimista
+    const { error } = await supabase.from("contactos").update(campos).eq("id", c.id);
+    if (error) console.warn("patchContacto:", error.message);
+  };
+
+  // Aviso "hay que llamar" — se guarda en el navegador (no requiere columna en la DB)
+  const LLAMAR_KEY = "ninit_requiere_llamada";
+  const [requiereLlamada, setRequiereLlamada] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(LLAMAR_KEY) || "[]")); } catch { return new Set(); }
+  });
+  const persistLlamar = (set) => { try { localStorage.setItem(LLAMAR_KEY, JSON.stringify([...set])); } catch {} };
+  const toggleLlamada = (c) => setRequiereLlamada((prev) => {
+    const n = new Set(prev);
+    if (n.has(c.id)) n.delete(c.id); else n.add(c.id);
+    persistLlamar(n); return n;
+  });
+  const marcarLlamada = (c) => setRequiereLlamada((prev) => {
+    const n = new Set(prev); n.add(c.id); persistLlamar(n); return n;
+  });
+
   const deleteContacto = (id) => {
     setContactos((prev) => prev.filter((x) => x.id !== id));
     setActivo(null);
@@ -3140,6 +3398,8 @@ export default function App() {
         <Sidebar contactos={contactos} activo={activo}
           onSelect={(c) => setActivo(c)}
           onToggleDestacado={toggleDestacado}
+          onPatchContacto={patchContacto}
+          requiereLlamada={requiereLlamada} onToggleLlamada={toggleLlamada} onMarcarLlamada={marcarLlamada}
           onLogout={handleLogout}
           userEmail={userEmail} userName={userName}
           vista={vista} setVista={setVista} alertas={alertas}
