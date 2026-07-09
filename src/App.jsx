@@ -1368,33 +1368,34 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
   const [menu, setMenu]           = useState(null);   // menú contextual: { x, y, c }
   const [agendar, setAgendar]     = useState(null);   // contacto a agendar llamada
   const [now, setNow]             = useState(Date.now());
+  // Long-press (mantener presionado) para abrir el menú en celular, donde no
+  // existe el click derecho. Se cancela si el dedo se mueve (>10px = scroll).
+  const press = useRef({ timer: null, x: 0, y: 0 });
+  const pressFired = useRef(false);
+  const abrirMenu = (c, x, y) => setMenu({ x, y, c });
+  const iniciarPress = (c, e) => {
+    const t = e.touches?.[0];
+    pressFired.current = false;
+    press.current.x = t?.clientX || 0;
+    press.current.y = t?.clientY || 0;
+    clearTimeout(press.current.timer);
+    press.current.timer = setTimeout(() => {
+      pressFired.current = true;
+      if (navigator.vibrate) navigator.vibrate(15);
+      abrirMenu(c, press.current.x, press.current.y);
+    }, 450);
+  };
+  const moverPress = (e) => {
+    const t = e.touches?.[0];
+    if (t && (Math.abs(t.clientX - press.current.x) > 10 || Math.abs(t.clientY - press.current.y) > 10)) {
+      clearTimeout(press.current.timer);
+    }
+  };
+  const cancelarPress = () => clearTimeout(press.current.timer);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
-
-  // Long-press (mantener presionado) para abrir el menú contextual en celular,
-  // donde no existe el click derecho.
-  const longPress = useRef({ timer: null, x: 0, y: 0, fired: false });
-  const cancelLongPress = () => { clearTimeout(longPress.current.timer); };
-  const handleTouchStart = (c) => (e) => {
-    const t = e.touches[0];
-    longPress.current.fired = false;
-    longPress.current.x = t.clientX;
-    longPress.current.y = t.clientY;
-    cancelLongPress();
-    longPress.current.timer = setTimeout(() => {
-      longPress.current.fired = true;
-      if (navigator.vibrate) navigator.vibrate(10);
-      setMenu({ x: longPress.current.x, y: longPress.current.y, c });
-    }, 550);
-  };
-  const handleTouchMove = (e) => {
-    const t = e.touches[0];
-    if (Math.abs(t.clientX - longPress.current.x) > 10 || Math.abs(t.clientY - longPress.current.y) > 10) {
-      cancelLongPress();
-    }
-  };
 
   const lista = contactos.filter((c) => {
     const porBusq   = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
@@ -1469,7 +1470,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
 
 
           {/* ── Lista contactos ── */}
-          <style>{`@keyframes ninitPhonePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(220,38,38,.5)}50%{transform:scale(1.12);box-shadow:0 0 0 5px rgba(220,38,38,0)}}`}</style>
+          <style>{`@keyframes ninitPhonePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(220,38,38,.5)}50%{transform:scale(1.12);box-shadow:0 0 0 5px rgba(220,38,38,0)}}@keyframes ninitSheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
           <div className="scroll-y" style={{ overflowY: "auto", flex: 1 }}>
             {lista.length === 0 && (
               <div style={{ padding: 36, color: L.light, fontSize: 13.5, textAlign: "center" }}>
@@ -1491,12 +1492,12 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
               })() : "";
               return (
                 <div key={c.id}
-                  onClick={() => { if (longPress.current.fired) { longPress.current.fired = false; return; } onSelect(c); }}
-                  onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, c }); }}
-                  onTouchStart={handleTouchStart(c)}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={cancelLongPress}
-                  onTouchCancel={cancelLongPress}
+                  onClick={() => { if (pressFired.current) { pressFired.current = false; return; } onSelect(c); }}
+                  onContextMenu={(e) => { e.preventDefault(); abrirMenu(c, e.clientX, e.clientY); }}
+                  onTouchStart={(e) => iniciarPress(c, e)}
+                  onTouchMove={(e) => moverPress(e)}
+                  onTouchEnd={cancelarPress}
+                  onTouchCancel={cancelarPress}
                   style={{ padding: "13px 14px", borderBottom: `1px solid ${L.border}`, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start", background: sel ? L.active : (llamar ? "#FEF2F2" : "transparent"), borderLeft: sel ? `4px solid ${C.red}` : (llamar ? `3px solid ${C.red}` : "3px solid transparent"), transform: sel ? "translateX(10px)" : "translateX(0)", boxShadow: sel ? `-2px 0 0 ${C.red}, 0 2px 10px rgba(0,0,0,.06)` : "none", borderRadius: sel ? "0 10px 10px 0" : 0, transition: "transform .18s ease, background .12s, box-shadow .18s", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}
                   onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = L.hover; }}
                   onMouseLeave={(e) => { if (!sel) e.currentTarget.style.background = llamar ? "#FEF2F2" : "transparent"; }}>
@@ -1568,72 +1569,91 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
         </button>
       </div>
 
-      {/* ── Menú contextual (click derecho sobre un chat) ── */}
-      {menu && (
-        <>
-          <div onClick={() => setMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMenu(null); }}
-            style={{ position: "fixed", inset: 0, zIndex: 7000 }} />
-          <div style={{
-            position: "fixed",
-            left: Math.min(menu.x, window.innerWidth - 258),
-            top: Math.min(menu.y, window.innerHeight - 320),
-            zIndex: 7001, width: 244, background: L.white, borderRadius: 12,
-            border: `1px solid ${L.border}`, boxShadow: "0 12px 40px rgba(15,23,42,.22)",
-            padding: 6, fontFamily: FONT_BODY, overflow: "hidden",
-          }}>
-            <div style={{ padding: "7px 10px 8px", borderBottom: `1px solid ${L.border}`, marginBottom: 5 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: L.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {menu.c.nombre || menu.c.telefono || menu.c.email}
+      {/* ── Menú contextual (click derecho en PC / mantener presionado en celular) ── */}
+      {menu && (() => {
+        const c = menu.c;
+        const itemSt = isMobile ? { ...menuItemSt, padding: "13px 12px", fontSize: 14.5 } : menuItemSt;
+        const iconSz = isMobile ? 18 : 15;
+        const hoverOn  = (e) => { if (!isMobile) e.currentTarget.style.background = L.hover; };
+        const hoverOff = (e) => { if (!isMobile) e.currentTarget.style.background = "transparent"; };
+        const contenido = (
+          <>
+            <div style={{ padding: isMobile ? "4px 12px 12px" : "7px 10px 8px", borderBottom: `1px solid ${L.border}`, marginBottom: 5 }}>
+              <div style={{ fontSize: isMobile ? 15 : 13, fontWeight: 800, color: L.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {c.nombre || c.telefono || c.email}
               </div>
-              <div style={{ fontSize: 10.5, color: L.light, marginTop: 1 }}>Acciones rápidas</div>
+              <div style={{ fontSize: isMobile ? 12 : 10.5, color: L.light, marginTop: 1 }}>Acciones rápidas</div>
             </div>
 
-            <button onClick={() => { setAgendar(menu.c); setMenu(null); }} style={menuItemSt}
-              onMouseEnter={(e) => e.currentTarget.style.background = L.hover}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-              <Calendar size={15} color={C.red} /> Agendar llamada
+            <button onClick={() => { setAgendar(c); setMenu(null); }} style={itemSt} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+              <Calendar size={iconSz} color={C.red} /> Agendar llamada
             </button>
-
-            <button onClick={() => { onToggleLlamada?.(menu.c); setMenu(null); }} style={menuItemSt}
-              onMouseEnter={(e) => e.currentTarget.style.background = L.hover}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-              <Phone size={15} color={C.red} /> {requiereLlamada?.has(menu.c.id) ? "Quitar aviso de llamada" : "Marcar: hay que llamar"}
+            <button onClick={() => { onToggleLlamada?.(c); setMenu(null); }} style={itemSt} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+              <Phone size={iconSz} color={C.red} /> {requiereLlamada?.has(c.id) ? "Quitar aviso de llamada" : "Marcar: hay que llamar"}
             </button>
-
-            <button onClick={() => { onToggleDestacado?.(menu.c); setMenu(null); }} style={menuItemSt}
-              onMouseEnter={(e) => e.currentTarget.style.background = L.hover}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-              <Star size={15} color="#F59E0B" fill={menu.c.destacado ? "#F59E0B" : "none"} /> {menu.c.destacado ? "Quitar de importantes" : "Marcar importante"}
+            <button onClick={() => { onToggleDestacado?.(c); setMenu(null); }} style={itemSt} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+              <Star size={iconSz} color="#F59E0B" fill={c.destacado ? "#F59E0B" : "none"} /> {c.destacado ? "Quitar de importantes" : "Marcar importante"}
             </button>
-
-            <button onClick={() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); onPatchContacto?.(menu.c, { seguimiento_at: d.toISOString() }); setMenu(null); }} style={menuItemSt}
-              onMouseEnter={(e) => e.currentTarget.style.background = L.hover}
-              onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}>
-              <Clock size={15} color="#0EA5E9" /> Recordar seguimiento mañana
+            <button onClick={() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); onPatchContacto?.(c, { seguimiento_at: d.toISOString() }); setMenu(null); }} style={itemSt} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+              <Clock size={iconSz} color="#0EA5E9" /> Recordar seguimiento mañana
             </button>
 
             <div style={{ borderTop: `1px solid ${L.border}`, margin: "5px 0", paddingTop: 7 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: L.light, textTransform: "uppercase", letterSpacing: 0.4, padding: "0 8px 5px" }}>Estado</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "0 6px 4px" }}>
+              <div style={{ fontSize: isMobile ? 11 : 10, fontWeight: 800, color: L.light, textTransform: "uppercase", letterSpacing: 0.4, padding: "0 10px 6px" }}>Estado</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, padding: "0 8px 4px" }}>
                 {["nuevo", "contactado", "interesado", "negociando", "vendido", "perdido"].map((k) => {
-                  const est = ESTADOS[k]; const activo = menu.c.estado === k;
+                  const est = ESTADOS[k]; const activoEst = c.estado === k;
                   return (
-                    <button key={k} onClick={() => { onPatchContacto?.(menu.c, { estado: k }); setMenu(null); }}
-                      style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 5, cursor: "pointer",
-                        border: `1px solid ${activo ? est.color : "transparent"}`, background: est.bg, color: est.color }}>
+                    <button key={k} onClick={() => { onPatchContacto?.(c, { estado: k }); setMenu(null); }}
+                      style={{ fontSize: isMobile ? 12 : 10, fontWeight: 700, padding: isMobile ? "6px 11px" : "3px 8px", borderRadius: 6, cursor: "pointer",
+                        border: `1px solid ${activoEst ? est.color : "transparent"}`, background: est.bg, color: est.color }}>
                       {est.label}
                     </button>
                   );
                 })}
               </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        );
+
+        if (isMobile) {
+          // Bottom sheet: se desliza desde abajo
+          return (
+            <div onClick={() => setMenu(null)}
+              style={{ position: "fixed", inset: 0, zIndex: 7000, background: "rgba(15,23,42,.4)", display: "flex", alignItems: "flex-end" }}>
+              <div onClick={(e) => e.stopPropagation()}
+                style={{ width: "100%", background: L.white, borderRadius: "18px 18px 0 0", padding: "10px 8px calc(14px + env(safe-area-inset-bottom))", boxShadow: "0 -8px 40px rgba(0,0,0,.25)", fontFamily: FONT_BODY, animation: "ninitSheetUp .22s ease" }}>
+                <div style={{ width: 40, height: 4, borderRadius: 3, background: L.border, margin: "2px auto 10px" }} />
+                {contenido}
+                <button onClick={() => setMenu(null)} style={{ ...menuItemSt, padding: "13px 12px", fontSize: 14.5, justifyContent: "center", color: L.muted, fontWeight: 700, marginTop: 4, background: L.soft }}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          );
+        }
+        // Popover posicionado (escritorio)
+        return (
+          <>
+            <div onClick={() => setMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMenu(null); }}
+              style={{ position: "fixed", inset: 0, zIndex: 7000 }} />
+            <div style={{
+              position: "fixed",
+              left: Math.min(menu.x, window.innerWidth - 258),
+              top: Math.min(menu.y, window.innerHeight - 320),
+              zIndex: 7001, width: 244, background: L.white, borderRadius: 12,
+              border: `1px solid ${L.border}`, boxShadow: "0 12px 40px rgba(15,23,42,.22)",
+              padding: 6, fontFamily: FONT_BODY, overflow: "hidden",
+            }}>
+              {contenido}
+            </div>
+          </>
+        );
+      })()}
 
       {/* ── Modal: agendar llamada ── */}
       {agendar && (
-        <QuickLlamadaModal contacto={agendar} perfil={perfil} userName={userName}
+        <QuickLlamadaModal contacto={agendar} perfil={perfil} userName={userName} isMobile={isMobile}
           onFlagLlamada={(c) => onMarcarLlamada?.(c)}
           onClose={() => setAgendar(null)} />
       )}
@@ -1650,7 +1670,7 @@ const menuItemSt = {
 };
 
 // ── Modal rápido para agendar una llamada en el calendario ──
-function QuickLlamadaModal({ contacto, perfil, userName, onFlagLlamada, onClose }) {
+function QuickLlamadaModal({ contacto, perfil, userName, isMobile, onFlagLlamada, onClose }) {
   const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const hoy = new Date();
   const manana = new Date(hoy); manana.setDate(hoy.getDate() + 1);
@@ -1721,11 +1741,11 @@ function QuickLlamadaModal({ contacto, perfil, userName, onFlagLlamada, onClose 
   const lblSt = { fontSize: 11, fontWeight: 800, color: L.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6, display: "block" };
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.45)", zIndex: 8000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.45)", zIndex: 8000, display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", padding: isMobile ? 0 : 16 }}>
       <div onClick={(e) => e.stopPropagation()}
-        style={{ background: L.white, borderRadius: 18, width: "min(440px, 100%)", boxShadow: "0 20px 60px rgba(0,0,0,.3)", fontFamily: FONT_BODY, overflow: "hidden" }}>
+        style={{ background: L.white, borderRadius: isMobile ? "18px 18px 0 0" : 18, width: isMobile ? "100%" : "min(440px, 100%)", maxHeight: isMobile ? "92vh" : "90vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,.3)", fontFamily: FONT_BODY, overflow: "hidden", animation: isMobile ? "ninitSheetUp .22s ease" : "none" }}>
         {/* Cabecera */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", background: C.red }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", background: C.red, flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, color: "#fff" }}>
             <Phone size={18} />
             <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 16 }}>Agendar llamada</span>
@@ -1733,7 +1753,7 @@ function QuickLlamadaModal({ contacto, perfil, userName, onFlagLlamada, onClose 
           <button onClick={onClose} style={{ background: "rgba(255,255,255,.2)", border: "none", cursor: "pointer", color: "#fff", padding: 5, borderRadius: 7, display: "flex" }}><X size={17} /></button>
         </div>
 
-        <div style={{ padding: "18px 20px" }}>
+        <div style={{ padding: "18px 20px", overflowY: "auto" }}>
           <div style={{ fontSize: 14.5, fontWeight: 700, color: L.text, marginBottom: 16 }}>
             Llamar a <span style={{ color: C.red }}>{nombreCliente}</span>
           </div>
@@ -1741,17 +1761,17 @@ function QuickLlamadaModal({ contacto, perfil, userName, onFlagLlamada, onClose 
           {/* Fecha */}
           <div style={{ marginBottom: 14 }}>
             <label style={lblSt}>¿Cuándo?</label>
-            <div style={{ display: "flex", gap: 7, marginBottom: 8 }}>
+            <div style={{ display: "flex", gap: 7, marginBottom: 8, flexWrap: "wrap" }}>
               {[{ k: ymd(hoy), t: "Hoy" }, { k: ymd(manana), t: "Mañana" }].map((o) => {
                 const sel = fecha === o.k;
                 return (
                   <button key={o.k} onClick={() => setFecha(o.k)}
-                    style={{ padding: "7px 14px", borderRadius: 8, border: `1.5px solid ${sel ? C.red : L.border}`, background: sel ? "#FEF2F2" : "#fff", color: sel ? C.red : L.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
+                    style={{ padding: "9px 16px", borderRadius: 8, border: `1.5px solid ${sel ? C.red : L.border}`, background: sel ? "#FEF2F2" : "#fff", color: sel ? C.red : L.muted, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
                     {o.t}
                   </button>
                 );
               })}
-              <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} style={{ ...inputSt, width: "auto", flex: 1 }} />
+              <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} style={{ ...inputSt, width: "auto", flex: 1, minWidth: 140 }} />
             </div>
             <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} style={inputSt} />
           </div>
@@ -1780,16 +1800,16 @@ function QuickLlamadaModal({ contacto, perfil, userName, onFlagLlamada, onClose 
           </div>
 
           {/* Acciones */}
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
-            <button onClick={onClose} style={{ padding: "9px 16px", borderRadius: 9, border: `1.5px solid ${L.border}`, background: "#fff", color: L.muted, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY }}>Cancelar</button>
-            <button onClick={() => guardar(true)} disabled={guardando}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "9px 16px", borderRadius: 9, border: `1.5px solid #25D366`, background: "#fff", color: "#128C4A", fontSize: 13, fontWeight: 700, cursor: guardando ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: guardando ? 0.6 : 1 }}>
-              <FaWhatsapp size={14} /> Agendar y compartir
-            </button>
+          <div style={{ display: "flex", gap: 8, justifyContent: isMobile ? "stretch" : "flex-end", flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
             <button onClick={() => guardar(false)} disabled={guardando}
-              style={{ padding: "9px 18px", borderRadius: 9, border: "none", background: C.red, color: "#fff", fontSize: 13, fontWeight: 700, cursor: guardando ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: guardando ? 0.6 : 1 }}>
+              style={{ order: isMobile ? 1 : 3, padding: isMobile ? "13px 18px" : "9px 18px", borderRadius: 9, border: "none", background: C.red, color: "#fff", fontSize: 13.5, fontWeight: 700, cursor: guardando ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: guardando ? 0.6 : 1, width: isMobile ? "100%" : "auto" }}>
               {guardando ? "Guardando…" : "Agendar"}
             </button>
+            <button onClick={() => guardar(true)} disabled={guardando}
+              style={{ order: 2, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, padding: isMobile ? "13px 16px" : "9px 16px", borderRadius: 9, border: `1.5px solid #25D366`, background: "#fff", color: "#128C4A", fontSize: 13.5, fontWeight: 700, cursor: guardando ? "default" : "pointer", fontFamily: FONT_DISPLAY, opacity: guardando ? 0.6 : 1, width: isMobile ? "100%" : "auto" }}>
+              <FaWhatsapp size={15} /> Agendar y compartir
+            </button>
+            <button onClick={onClose} style={{ order: isMobile ? 3 : 1, padding: isMobile ? "13px 16px" : "9px 16px", borderRadius: 9, border: `1.5px solid ${L.border}`, background: "#fff", color: L.muted, fontSize: 13.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY, width: isMobile ? "100%" : "auto" }}>Cancelar</button>
           </div>
         </div>
       </div>
