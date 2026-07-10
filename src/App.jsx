@@ -3518,6 +3518,10 @@ export default function App() {
   const sesionDBId   = useRef(null);
   const heartbeatRef = useRef(null);
   const sesInicioRef = useRef(null);
+  // Refs para leer valores actuales dentro del callback de Realtime (evita closures viejos)
+  const contactosRef = useRef([]);
+  const activoRef    = useRef(null);
+  const notifCtxRef  = useRef({ perfil: null, rol: "vendedor" });
 
   // ── Auth ─────────────────────────────────────────────────
   useEffect(() => {
@@ -3654,6 +3658,63 @@ export default function App() {
 
     init();
     return () => cleanup();
+  }, [session]);
+
+  // Mantener refs al día para leer valores actuales dentro del callback de Realtime
+  useEffect(() => { contactosRef.current = contactos; }, [contactos]);
+  useEffect(() => { activoRef.current = activo; }, [activo]);
+  useEffect(() => { notifCtxRef.current = { perfil, rol: getRol(perfil) }; }, [perfil]);
+
+  // ── Notificaciones de nuevo mensaje entrante del cliente ─────
+  // Muestra un aviso del navegador cuando llega un mensaje del cliente
+  // (direccion "in"). Funciona con la app/PWA abierta (incluida en segundo
+  // plano). Cada vendedor solo recibe avisos de SUS contactos; el CEO, de todos.
+  useEffect(() => {
+    if (!session || !("Notification" in window)) return;
+
+    // Pedir permiso: al cargar y, como respaldo, en el primer toque del usuario
+    // (algunos navegadores móviles exigen un gesto).
+    const pedirPermiso = () => {
+      if (Notification.permission === "default") Notification.requestPermission().catch(() => {});
+    };
+    pedirPermiso();
+    window.addEventListener("pointerdown", pedirPermiso, { once: true });
+
+    const vistos = new Set();
+    const ch = supabase.channel("notif-mensajes")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mensajes", filter: "direccion=eq.in" },
+        (p) => {
+          const m = p.new;
+          if (!m || vistos.has(m.id)) return;
+          vistos.add(m.id);
+          if (Notification.permission !== "granted") return;
+
+          const { perfil: pf, rol: rl } = notifCtxRef.current;
+          const cont = contactosRef.current.find((c) => c.id === m.contacto_id);
+          // Vendedor: solo avisos de sus contactos (si sabemos a quién pertenece).
+          if (rl === "vendedor" && cont && cont.vendedor && pf?.nombre && cont.vendedor !== pf.nombre) return;
+          // Si ese chat ya está abierto y la app visible, no hace falta avisar.
+          if (document.visibilityState === "visible" && activoRef.current?.id === m.contacto_id) return;
+
+          const nombre = cont?.nombre || cont?.telefono || "Cliente nuevo";
+          const cuerpo = (m.contenido || "").slice(0, 140) || "Nuevo mensaje";
+          try {
+            const n = new Notification(`💬 ${nombre}`, {
+              body: cuerpo, icon: "/pwa-192.png", badge: "/pwa-192.png", tag: `msg-${m.contacto_id}`,
+            });
+            n.onclick = () => {
+              window.focus();
+              if (cont) { setActivo(cont); setVista("chat"); }
+              n.close();
+            };
+          } catch { /* navegador sin soporte de Notification en este contexto */ }
+        })
+      .subscribe();
+
+    return () => {
+      window.removeEventListener("pointerdown", pedirPermiso);
+      supabase.removeChannel(ch);
+    };
   }, [session]);
 
   // ── Cerrar sesión + tracking ─────────────────────────────
