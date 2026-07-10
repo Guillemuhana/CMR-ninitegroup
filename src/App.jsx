@@ -2290,7 +2290,6 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [texto, setTexto]       = useState("");
   const [enviando, setEnviando]   = useState(false);
   const [err, setErr]             = useState("");
-  const [panelSeg, setPanelSeg]   = useState(false);
   const [drawer, setDrawer]       = useState(false);
   const [pedidoModal, setPedido]  = useState(false);
   const [hoverMsg, setHoverMsg]   = useState(null);
@@ -2731,10 +2730,6 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.color = L.muted; }}>
                 <Pencil size={14} /> Editar
               </button>
-              <button onClick={() => setPanelSeg((v) => !v)} title="Programar seguimiento"
-                style={{ background: panelSeg ? C.gold : L.soft, border: `1.5px solid ${panelSeg ? C.gold : L.border}`, color: panelSeg ? "#fff" : L.muted, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, transition: "all .15s", flexShrink: 0 }}>
-                <Calendar size={14} /> Seguimiento
-              </button>
               <button onClick={() => upd({ bot_activo: !contacto.bot_activo })} title={contacto.bot_activo ? "El bot atiende este chat — tocá para atenderlo vos" : "Vos atendés este chat — tocá para que lo tome el bot"}
                 style={{ background: contacto.bot_activo ? "#DCFCE7" : "#FEF2F2", border: `1.5px solid ${contacto.bot_activo ? "#86EFAC" : "#FECACA"}`, color: contacto.bot_activo ? "#15803D" : C.red, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, transition: "all .15s", flexShrink: 0 }}>
                 {contacto.bot_activo ? <><Bot size={14} /> Bot</> : <><User size={14} /> Yo atiendo</>}
@@ -2768,10 +2763,6 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               style={{ ...btnSt, flexShrink: 0, fontSize: 13, padding: "8px 18px", borderRadius: 12, fontWeight: 700, gap: 7, background: C.gradBtn, color: "#fff", borderColor: "transparent", boxShadow: "0 6px 16px rgba(99,102,241,.3)", transition: "transform .1s ease" }}>
               <Sparkles size={15} /> Avanzar
             </button>
-            <button onClick={() => setPanelSeg((v) => !v)}
-              style={{ ...btnSt, flexShrink: 0, fontSize: 12, background: panelSeg ? C.gold : L.soft, color: panelSeg ? "#fff" : L.muted, borderColor: panelSeg ? C.gold : L.border }}>
-              <Calendar size={13} /> Seguimiento
-            </button>
             <button onClick={() => upd({ bot_activo: !contacto.bot_activo })}
               style={{ ...btnSt, flexShrink: 0, fontSize: 12, fontWeight: 700, background: contacto.bot_activo ? "#DCFCE7" : "#FEF2F2", color: contacto.bot_activo ? "#15803D" : C.red, borderColor: contacto.bot_activo ? "#86EFAC" : "#FECACA" }}>
               {contacto.bot_activo ? <><Bot size={13} /> Bot</> : <><User size={13} /> Yo atiendo</>}
@@ -2783,22 +2774,6 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
           </div>
         )}
       </div>
-
-      {/* ── Panel seguimiento ── */}
-      {panelSeg && (
-        <div style={{ background: "#FFFBEB", borderBottom: `1px solid #FDE68A`, padding: isMobile ? "12px 14px" : "13px 22px", display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
-          <div>
-            <label style={lblSt}>Próximo contacto</label>
-            <input type="datetime-local" style={{ ...inpSt, width: 215 }}
-              defaultValue={contacto.seguimiento_at ? new Date(contacto.seguimiento_at).toISOString().slice(0, 16) : ""}
-              onChange={(e) => upd({ seguimiento_at: e.target.value ? new Date(e.target.value).toISOString() : null })} />
-          </div>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <label style={lblSt}>Nota</label>
-            <input style={inpSt} placeholder="Ej: confirmar pedido del finde" defaultValue={contacto.nota_seguimiento || ""} onBlur={(e) => upd({ nota_seguimiento: e.target.value })} />
-          </div>
-        </div>
-      )}
 
       {/* ── Banner confirmar eliminación ── */}
       {confirmElim && (
