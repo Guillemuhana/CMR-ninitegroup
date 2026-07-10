@@ -97,6 +97,11 @@ const RE_PIDE_HUMANO = /(hablar\s+con\s+(un[oa]?\s+)?(humano|persona|alguien|ven
 // Devuelve { pide, motivo } donde motivo ∈ "llamada" | "ventas" | "urgente".
 function pideContacto(c) {
   if (!c) return { pide: false };
+  // Si el vendedor lo marcó como atendido ("quitar de la lista") y el cliente
+  // no volvió a escribir desde entonces, no aparece. Si el cliente manda un
+  // mensaje nuevo después del descarte, vuelve a aparecer (está pidiendo otra vez).
+  if (c.pide_descartado_at && (!c.ultimo_in_at || new Date(c.pide_descartado_at) >= new Date(c.ultimo_in_at)))
+    return { pide: false };
   if (c.ia_intencion === "llamada_telefonica") return { pide: true, motivo: "llamada" };
   if (c.ia_intencion === "agente_ventas")      return { pide: true, motivo: "ventas" };
   if (c.ia_urgencia === "alta_prioridad")       return { pide: true, motivo: "urgente" };
@@ -1463,7 +1468,7 @@ function NavTabs({ vista, setVista, rol, contactos = [] }) {
 // PANTALLA "PIDEN CONTACTO" — clientes que solicitan que los llamen
 // o hablar con un vendedor (filtro inteligente en su propia vista).
 // ============================================================
-function PrioridadPanel({ contactos = [], isMobile, onAbrirChat }) {
+function PrioridadPanel({ contactos = [], isMobile, onAbrirChat, onQuitar }) {
   const ORDEN = { llamada: 0, urgente: 1, ventas: 2 };
   const lista = contactos
     .map((c) => ({ c, pc: pideContacto(c) }))
@@ -1515,6 +1520,15 @@ function PrioridadPanel({ contactos = [], isMobile, onAbrirChat }) {
                   <div style={{ fontSize: 12.5, color: L.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.ultimo_msg || "—"}</div>
                   {c.telefono && <div style={{ fontSize: 11.5, color: L.light, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}><Phone size={11} /> {c.telefono}</div>}
                 </div>
+                {/* Quitar de la lista (marcar como atendido) — no borra el contacto */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); onQuitar?.(c); }}
+                  title="Ya lo atendí — quitar de la lista"
+                  style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: isMobile ? "7px 9px" : "7px 12px", borderRadius: 9, border: `1.5px solid ${L.border}`, background: L.white, color: L.muted, fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: FONT_DISPLAY }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "#DCFCE7"; e.currentTarget.style.borderColor = "#86EFAC"; e.currentTarget.style.color = "#15803D"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = L.white; e.currentTarget.style.borderColor = L.border; e.currentTarget.style.color = L.muted; }}>
+                  <Check size={15} /> {isMobile ? "" : "Atendido"}
+                </button>
                 <ChevronRight size={20} color={L.light} style={{ flexShrink: 0 }} />
               </div>
             );
@@ -3819,7 +3833,8 @@ export default function App() {
             {isMobile && <MobileBack title="Piden contacto" onBack={() => setVista("chat")} />}
             <div style={{ flex: 1, overflowY: "auto", height: "100%" }}>
               <PrioridadPanel contactos={contactos} isMobile={isMobile}
-                onAbrirChat={(c) => { setActivo(c); setVista("chat"); }} />
+                onAbrirChat={(c) => { setActivo(c); setVista("chat"); }}
+                onQuitar={(c) => patchContacto(c, { requiere_llamada: false, pide_descartado_at: new Date().toISOString() })} />
             </div>
           </>
         ) : vista === "pedidos" ? (
