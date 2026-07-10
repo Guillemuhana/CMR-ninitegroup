@@ -1927,14 +1927,18 @@ function QuickLlamadaModal({ contacto, perfil, userName, isMobile, onFlagLlamada
     (async () => {
       const { data } = await supabase.from("vendedores")
         .select("id,nombre,role,activo").eq("activo", true).order("nombre");
-      const lista = data || [];
+      let lista = data || [];
+      // Asegurar que el usuario actual esté en la lista aunque no figure como
+      // "activo" (p. ej. el CEO): así puede agendarse la llamada a sí mismo.
+      if (perfil?.id && !lista.some((v) => v.id === perfil.id)) {
+        lista = [{ id: perfil.id, nombre: perfil.nombre, role: perfil.role, activo: true }, ...lista];
+      }
       setVendedores(lista);
-      // Responsable por defecto: el usuario actual si está en la lista
-      if (perfil?.id) {
-        const yo = lista.find((v) => v.id === perfil.id);
-        if (yo) setResp({ id: yo.id, nombre: yo.nombre });
-        else if (lista[0]) setResp({ id: lista[0].id, nombre: lista[0].nombre });
-      } else if (lista[0]) setResp({ id: lista[0].id, nombre: lista[0].nombre });
+      // Responsable por defecto: SIEMPRE el usuario actual (es donde va a mirar
+      // su propia agenda). Antes caía en lista[0] —el primer vendedor alfabético—
+      // y la llamada se guardaba en la agenda de otra persona.
+      if (perfil?.id) setResp({ id: perfil.id, nombre: perfil.nombre });
+      else if (lista[0]) setResp({ id: lista[0].id, nombre: lista[0].nombre });
     })();
   }, [perfil]);
 
