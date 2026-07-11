@@ -306,6 +306,33 @@ function WelcomeSplash({ onDone }) {
 }
 
 // ============================================================
+// LOGO CON BRILLO — muestra el logo y hace pasar un destello (sol) por su
+// silueta cada 5s. El destello se recorta a la forma del logo con mask-image,
+// así el brillo viaja "por el contorno" y no en un rectángulo.
+// ============================================================
+function LogoBrillo({ imgStyle = {}, alt = "NINIT Group" }) {
+  const fit = imgStyle.objectFit || "contain";
+  const pos = imgStyle.objectPosition || "center";
+  return (
+    <span style={{ position: "relative", display: "inline-block", lineHeight: 0 }}>
+      <img src={LOGO_URL} alt={alt} style={imgStyle} />
+      <span
+        aria-hidden
+        className="logo-brillo"
+        style={{
+          position: "absolute", left: 0, top: 0, right: 0, bottom: 0, pointerEvents: "none",
+          WebkitMaskImage: `url(${LOGO_URL})`, maskImage: `url(${LOGO_URL})`,
+          WebkitMaskSize: fit, maskSize: fit,
+          WebkitMaskPosition: pos, maskPosition: pos,
+          WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+          borderRadius: imgStyle.borderRadius,
+        }}
+      />
+    </span>
+  );
+}
+
+// ============================================================
 // LOGIN
 // ============================================================
 function Login() {
@@ -329,8 +356,7 @@ function Login() {
     <div className="login-scroll" style={{ minHeight: "100%", overflowY: "auto", WebkitOverflowScrolling: "touch", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#fff", fontFamily: FONT_BODY, padding: "40px 20px" }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 36 }}>
-          <img src={LOGO_URL} alt="NINIT Group"
-            style={{ width: "100%", maxWidth: 320, height: "auto", objectFit: "contain", display: "block", filter: "drop-shadow(0 2px 14px rgba(58,141,194,0.45))" }} />
+          <LogoBrillo imgStyle={{ width: "100%", maxWidth: 320, height: "auto", objectFit: "contain", display: "block", filter: "drop-shadow(0 2px 14px rgba(58,141,194,0.45))" }} />
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12 }}>
             <div style={{ height: 1, width: 28, background: L.border }} />
             <span style={{ fontFamily: FONT_DISPLAY, fontSize: 11, fontWeight: 700, letterSpacing: 4, color: L.light, textTransform: "uppercase" }}>CRM</span>
@@ -1655,7 +1681,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
 
       {/* ── Brand bar ── */}
       <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.gradAI, borderBottom: `3px solid ${C.redDark}`, boxShadow: "0 4px 18px rgba(58,141,194,.22)" }}>
-        <img src={LOGO_URL} alt="NINIT Group" style={{ width: 210, height: 52, objectFit: "cover", objectPosition: "center 38%", filter: "brightness(0) invert(1)", opacity: 0.95 }} />
+        <LogoBrillo imgStyle={{ width: 210, height: 52, objectFit: "cover", objectPosition: "center 38%", filter: "brightness(0) invert(1)", opacity: 0.95 }} />
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }}
             onDescartar={onDescartarAlerta} onDescartarTodas={onDescartarTodasAlertas} />

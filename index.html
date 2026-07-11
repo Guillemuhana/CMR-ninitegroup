@@ -62,6 +62,30 @@
       /* ── Selección de texto con tinte de marca ── */
       ::selection { background: rgba(124,138,240,.22); }
 
+      /* ── Brillo del logo: destello cálido (sol) que recorre su silueta ── */
+      .logo-brillo {
+        background: linear-gradient(
+          105deg,
+          transparent 40%,
+          rgba(255, 214, 130, 0.35) 47%,
+          rgba(255, 245, 210, 0.95) 50%,
+          rgba(255, 214, 130, 0.35) 53%,
+          transparent 60%
+        );
+        background-repeat: no-repeat;
+        background-size: 280% 100%;
+        background-position: 170% 0;
+        animation: logoBrillo 5s ease-in-out infinite;
+      }
+      @keyframes logoBrillo {
+        0%   { background-position: 170% 0; }
+        16%  { background-position: -70% 0; }
+        100% { background-position: -70% 0; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .logo-brillo { animation: none; }
+      }
+
       /* ── Botones: esquinas suaves pero minimalistas (menos "pastilla") ── */
       /* Global para unificar todo el CRM sin tocar cientos de estilos inline. */
       button { border-radius: 10px !important; }
