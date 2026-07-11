@@ -3726,6 +3726,18 @@ export default function App() {
     };
   }, [session, perfil]);
 
+  // Badge (número) en el ícono de la app: cantidad de chats con mensajes sin
+  // leer. Se mantiene al día mientras la app está abierta; el service worker lo
+  // actualiza cuando llega un push con la app cerrada.
+  useEffect(() => {
+    if (!("setAppBadge" in navigator)) return;
+    const n = contactos.reduce((a, c) => a + ((c.no_leidos || 0) > 0 ? 1 : 0), 0);
+    try {
+      if (n > 0) navigator.setAppBadge(n);
+      else navigator.clearAppBadge?.();
+    } catch { /* Badging API no disponible en este contexto */ }
+  }, [contactos]);
+
   // Si la PWA se abrió desde una notificación (openWindow con ?chat=ID),
   // abrir ese chat cuando ya cargaron los contactos.
   useEffect(() => {

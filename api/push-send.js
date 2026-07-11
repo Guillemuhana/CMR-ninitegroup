@@ -60,19 +60,31 @@ export default async function handler(req, res) {
   if (error) return res.status(500).json({ error: error.message });
   if (!subs?.length) return res.status(200).json({ sent: 0 });
 
-  const payload = JSON.stringify({
+  // Número para el badge del ícono = chats con mensajes sin leer.
+  // El CEO ve el total; cada vendedor solo los suyos.
+  const contarNoLeidos = async (vendedorFiltro) => {
+    let q = admin.from("contactos").select("id", { count: "exact", head: true }).gt("no_leidos", 0);
+    if (vendedorFiltro) q = q.eq("vendedor", vendedorFiltro);
+    const { count } = await q;
+    return count || 0;
+  };
+  const badgeCeo = await contarNoLeidos(null);
+  const badgeVend = contacto?.vendedor ? await contarNoLeidos(contacto.vendedor) : badgeCeo;
+
+  const base = {
     title: `💬 ${nombre}`,
     body: cuerpo,
     tag: `msg-${rec.contacto_id || "x"}`,
     contacto_id: rec.contacto_id || null,
     url: rec.contacto_id ? `/?chat=${rec.contacto_id}` : "/",
-  });
+  };
 
   let sent = 0;
   const muertas = [];
   await Promise.all(
     subs.map(async (s) => {
       const subscription = { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } };
+      const payload = JSON.stringify({ ...base, badge_count: s.rol === "ceo" ? badgeCeo : badgeVend });
       try {
         await webpush.sendNotification(subscription, payload);
         sent++;

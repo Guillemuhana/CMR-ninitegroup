@@ -30,8 +30,17 @@ self.addEventListener("push", (event) => {
   const body  = data.body  || "Tenés un mensaje nuevo de un cliente.";
   const tag   = data.tag   || "ninit-msg";
   const contactoId = data.contacto_id || null;
+  const badgeCount = data.badge_count;
 
   event.waitUntil((async () => {
+    // Badge (número) en el ícono de la app, aunque esté cerrada.
+    try {
+      if (typeof badgeCount === "number" && self.navigator?.setAppBadge) {
+        badgeCount > 0 ? await self.navigator.setAppBadge(badgeCount)
+                       : await self.navigator.clearAppBadge?.();
+      }
+    } catch { /* Badging API no disponible */ }
+
     // Si el vendedor está mirando la app en este momento (ventana enfocada),
     // no hace falta molestarlo: el CRM ya muestra el mensaje en vivo.
     const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
@@ -40,11 +49,13 @@ self.addEventListener("push", (event) => {
     await self.registration.showNotification(title, {
       body,
       tag,
-      renotify: true,
+      renotify: true,          // vuelve a sonar/vibrar aunque reemplace a otra del mismo chat
+      silent: false,           // asegura sonido (según ajustes del teléfono)
+      requireInteraction: false,
       icon: "/pwa-192-v2.png",
       badge: "/pwa-192-v2.png",
       data: { contacto_id: contactoId, url: data.url || "/" },
-      vibrate: [120, 60, 120],
+      vibrate: [200, 80, 200, 80, 200],
     });
   })());
 });
