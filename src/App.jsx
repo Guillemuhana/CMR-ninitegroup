@@ -3720,9 +3720,30 @@ export default function App() {
     };
     navigator.serviceWorker?.addEventListener("message", onSWMsg);
 
+    // Sonido propio (Car.mp3) al entrar un mensaje del cliente con la app ABIERTA.
+    // (Con la app cerrada, el aviso usa el sonido del sistema: la web no permite
+    // un audio propio en las notificaciones en segundo plano.)
+    const audio = new Audio("/Car.mp3");
+    audio.preload = "auto";
+    // Desbloquear la reproducción en el primer gesto (política de autoplay).
+    const desbloquear = () => { audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {}); };
+    window.addEventListener("pointerdown", desbloquear, { once: true });
+
+    const chSonido = supabase.channel("sonido-mensajes-in")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mensajes", filter: "direccion=eq.in" }, (p) => {
+        const m = p.new; if (!m) return;
+        const cont = contactosRef.current.find((c) => c.id === m.contacto_id);
+        // Vendedor: solo suena por sus propios contactos.
+        if (rl === "vendedor" && cont?.vendedor && perfil?.nombre && cont.vendedor !== perfil.nombre) return;
+        try { audio.currentTime = 0; audio.play().catch(() => {}); } catch { /* autoplay bloqueado */ }
+      })
+      .subscribe();
+
     return () => {
       window.removeEventListener("pointerdown", onGesto);
+      window.removeEventListener("pointerdown", desbloquear);
       navigator.serviceWorker?.removeEventListener("message", onSWMsg);
+      supabase.removeChannel(chSonido);
     };
   }, [session, perfil]);
 
