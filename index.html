@@ -65,22 +65,24 @@
       /* ── Brillo del logo: destello cálido (sol) que recorre su silueta ── */
       .logo-brillo {
         background: linear-gradient(
-          105deg,
-          transparent 40%,
-          rgba(255, 214, 130, 0.35) 47%,
-          rgba(255, 245, 210, 0.95) 50%,
-          rgba(255, 214, 130, 0.35) 53%,
-          transparent 60%
+          100deg,
+          transparent 28%,
+          rgba(255, 210, 120, 0.55) 40%,
+          rgba(255, 250, 230, 1) 50%,
+          rgba(255, 210, 120, 0.55) 60%,
+          transparent 72%
         );
         background-repeat: no-repeat;
-        background-size: 280% 100%;
-        background-position: 170% 0;
-        animation: logoBrillo 5s ease-in-out infinite;
+        background-size: 300% 100%;
+        background-position: 175% 0;
+        /* Barrido lento (~2s) y luego descansa hasta completar el ciclo */
+        animation: logoBrillo 4.5s ease-in-out infinite;
+        will-change: background-position;
       }
       @keyframes logoBrillo {
-        0%   { background-position: 170% 0; }
-        16%  { background-position: -70% 0; }
-        100% { background-position: -70% 0; }
+        0%   { background-position: 175% 0; }
+        44%  { background-position: -75% 0; }
+        100% { background-position: -75% 0; }
       }
       @media (prefers-reduced-motion: reduce) {
         .logo-brillo { animation: none; }
