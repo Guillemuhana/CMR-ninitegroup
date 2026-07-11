@@ -66,23 +66,25 @@
       .logo-brillo {
         background: linear-gradient(
           100deg,
-          transparent 28%,
-          rgba(255, 210, 120, 0.55) 40%,
-          rgba(255, 250, 230, 1) 50%,
-          rgba(255, 210, 120, 0.55) 60%,
-          transparent 72%
+          transparent 18%,
+          rgba(255, 200, 90, 0.85) 34%,
+          rgba(255, 255, 250, 1) 46%,
+          rgba(255, 255, 250, 1) 54%,
+          rgba(255, 200, 90, 0.85) 66%,
+          transparent 82%
         );
         background-repeat: no-repeat;
-        background-size: 300% 100%;
-        background-position: 175% 0;
+        background-size: 320% 100%;
+        background-position: 180% 0;
         /* Barrido lento (~2s) y luego descansa hasta completar el ciclo */
         animation: logoBrillo 4.5s ease-in-out infinite;
         will-change: background-position;
+        filter: drop-shadow(0 0 7px rgba(255, 225, 150, 0.95));
       }
       @keyframes logoBrillo {
-        0%   { background-position: 175% 0; }
-        44%  { background-position: -75% 0; }
-        100% { background-position: -75% 0; }
+        0%   { background-position: 185% 0; }
+        44%  { background-position: -85% 0; }
+        100% { background-position: -85% 0; }
       }
       @media (prefers-reduced-motion: reduce) {
         .logo-brillo { animation: none; }
