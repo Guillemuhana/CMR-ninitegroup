@@ -17,6 +17,7 @@ import {
   VENDEDORES, ESTADOS, calcularAlertas, getRol, cargarPerfil,
   ELEVENLABS_KEY, ELEVENLABS_VOICE_ID,
 } from "./lib";
+import { activarPush } from "./push";
 import Reportes from "./Reportes";
 import AdminPanel from "./AdminPanel";
 import DiarioVendedor from "./DiarioVendedor";
@@ -3518,10 +3519,8 @@ export default function App() {
   const sesionDBId   = useRef(null);
   const heartbeatRef = useRef(null);
   const sesInicioRef = useRef(null);
-  // Refs para leer valores actuales dentro del callback de Realtime (evita closures viejos)
+  // Ref para leer los contactos actuales dentro de callbacks (evita closures viejos)
   const contactosRef = useRef([]);
-  const activoRef    = useRef(null);
-  const notifCtxRef  = useRef({ perfil: null, rol: "vendedor" });
 
   // ── Auth ─────────────────────────────────────────────────
   useEffect(() => {
@@ -3660,62 +3659,52 @@ export default function App() {
     return () => cleanup();
   }, [session]);
 
-  // Mantener refs al día para leer valores actuales dentro del callback de Realtime
+  // Mantener el ref de contactos al día para leerlo dentro de callbacks
   useEffect(() => { contactosRef.current = contactos; }, [contactos]);
-  useEffect(() => { activoRef.current = activo; }, [activo]);
-  useEffect(() => { notifCtxRef.current = { perfil, rol: getRol(perfil) }; }, [perfil]);
 
-  // ── Notificaciones de nuevo mensaje entrante del cliente ─────
-  // Muestra un aviso del navegador cuando llega un mensaje del cliente
-  // (direccion "in"). Funciona con la app/PWA abierta (incluida en segundo
-  // plano). Cada vendedor solo recibe avisos de SUS contactos; el CEO, de todos.
+  // ── Notificaciones PUSH de nuevo mensaje del cliente ─────────
+  // Con Web Push la notificación la muestra el service worker (src/sw.js),
+  // así que llega AUNQUE la app/PWA esté cerrada. El disparo lo hace el
+  // servidor (Supabase → /api/push-send) cuando entra un mensaje "in".
+  // Acá solo (1) pedimos permiso y guardamos la suscripción del vendedor, y
+  // (2) escuchamos al SW para abrir el chat cuando tocan la notificación.
   useEffect(() => {
-    if (!session || !("Notification" in window)) return;
+    if (!session || !perfil) return;
+    const rl = getRol(perfil);
 
-    // Pedir permiso: al cargar y, como respaldo, en el primer toque del usuario
-    // (algunos navegadores móviles exigen un gesto).
-    const pedirPermiso = () => {
-      if (Notification.permission === "default") Notification.requestPermission().catch(() => {});
+    // Intento al cargar (si el permiso ya está dado, se suscribe solo) y
+    // respaldo en el primer gesto (iOS exige gesto para pedir permiso).
+    activarPush(perfil, rl);
+    const onGesto = () => activarPush(perfil, rl);
+    window.addEventListener("pointerdown", onGesto, { once: true });
+
+    // Cuando el vendedor toca una notificación, el SW nos dice qué chat abrir.
+    const onSWMsg = (ev) => {
+      if (ev.data?.type === "abrir-chat" && ev.data.contacto_id) {
+        const cont = contactosRef.current.find((c) => c.id === ev.data.contacto_id);
+        if (cont) { setActivo(cont); setVista("chat"); }
+      }
     };
-    pedirPermiso();
-    window.addEventListener("pointerdown", pedirPermiso, { once: true });
-
-    const vistos = new Set();
-    const ch = supabase.channel("notif-mensajes")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mensajes", filter: "direccion=eq.in" },
-        (p) => {
-          const m = p.new;
-          if (!m || vistos.has(m.id)) return;
-          vistos.add(m.id);
-          if (Notification.permission !== "granted") return;
-
-          const { perfil: pf, rol: rl } = notifCtxRef.current;
-          const cont = contactosRef.current.find((c) => c.id === m.contacto_id);
-          // Vendedor: solo avisos de sus contactos (si sabemos a quién pertenece).
-          if (rl === "vendedor" && cont && cont.vendedor && pf?.nombre && cont.vendedor !== pf.nombre) return;
-          // Si ese chat ya está abierto y la app visible, no hace falta avisar.
-          if (document.visibilityState === "visible" && activoRef.current?.id === m.contacto_id) return;
-
-          const nombre = cont?.nombre || cont?.telefono || "Cliente nuevo";
-          const cuerpo = (m.contenido || "").slice(0, 140) || "Nuevo mensaje";
-          try {
-            const n = new Notification(`💬 ${nombre}`, {
-              body: cuerpo, icon: "/pwa-192.png", badge: "/pwa-192.png", tag: `msg-${m.contacto_id}`,
-            });
-            n.onclick = () => {
-              window.focus();
-              if (cont) { setActivo(cont); setVista("chat"); }
-              n.close();
-            };
-          } catch { /* navegador sin soporte de Notification en este contexto */ }
-        })
-      .subscribe();
+    navigator.serviceWorker?.addEventListener("message", onSWMsg);
 
     return () => {
-      window.removeEventListener("pointerdown", pedirPermiso);
-      supabase.removeChannel(ch);
+      window.removeEventListener("pointerdown", onGesto);
+      navigator.serviceWorker?.removeEventListener("message", onSWMsg);
     };
-  }, [session]);
+  }, [session, perfil]);
+
+  // Si la PWA se abrió desde una notificación (openWindow con ?chat=ID),
+  // abrir ese chat cuando ya cargaron los contactos.
+  useEffect(() => {
+    const chatId = new URLSearchParams(window.location.search).get("chat");
+    if (!chatId || !contactos.length) return;
+    const cont = contactos.find((c) => String(c.id) === String(chatId));
+    if (cont) {
+      setActivo(cont);
+      setVista("chat");
+      window.history.replaceState({}, "", "/");
+    }
+  }, [contactos]);
 
   // ── Cerrar sesión + tracking ─────────────────────────────
   const handleLogout = useCallback(async () => {

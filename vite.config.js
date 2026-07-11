@@ -6,10 +6,20 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // Service worker propio (src/sw.js) para poder recibir PUSH del servidor
+      // y mostrar notificaciones con la app cerrada. Vite inyecta el manifiesto
+      // de precache dentro de ese archivo.
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.js",
       // Se actualiza sola: cada deploy nuevo reemplaza la versión cacheada
       // sin que el vendedor tenga que reinstalar nada.
       registerType: "autoUpdate",
+      injectRegister: "auto",
       includeAssets: ["logo.png", "apple-touch-icon-v2.png"],
+      injectManifest: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      },
       manifest: {
         name: "NINIT Group · CRM",
         short_name: "NINIT",
@@ -25,14 +35,6 @@ export default defineConfig({
           { src: "/pwa-512-v2.png", sizes: "512x512", type: "image/png" },
           { src: "/pwa-maskable-512-v2.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
-      },
-      workbox: {
-        // Solo se cachea la "cáscara" (JS/CSS/HTML del build) para que abra
-        // rápido y offline. Los datos SIEMPRE se piden en vivo a Supabase:
-        // no agregamos runtimeCaching de la API, así el CRM nunca muestra datos viejos.
-        navigateFallback: "/index.html",
-        cleanupOutdatedCaches: true,
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
     }),
   ],
