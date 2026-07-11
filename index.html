@@ -62,6 +62,10 @@
       /* ── Selección de texto con tinte de marca ── */
       ::selection { background: rgba(124,138,240,.22); }
 
+      /* ── Botones: esquinas suaves pero minimalistas (menos "pastilla") ── */
+      /* Global para unificar todo el CRM sin tocar cientos de estilos inline. */
+      button { border-radius: 10px !important; }
+
       /* ── Micro-interacciones suaves en botones ── */
       button { transition: filter .15s ease, transform .08s ease, box-shadow .15s ease; }
       button:not(:disabled):hover { filter: brightness(1.04) saturate(1.03); }
