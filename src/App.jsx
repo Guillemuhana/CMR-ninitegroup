@@ -3617,6 +3617,13 @@ export default function App() {
         const nombreLindo = p.nombre && p.nombre !== "ninitgroup" ? p.nombre : "Nicolas";
         p = { ...p, role: "ceo", nombre: nombreLindo };
       }
+      // Guillermo Muhana (programador): acceso TOTAL como el CEO. La elevación es
+      // solo en memoria; su fila en `vendedores` sigue como "vendedor", así que
+      // igual aparece en los listados y reportes de ventas.
+      const nombreLc = (p?.nombre || "").trim().toLowerCase();
+      if (/guillermo/.test(nombreLc) && /muhana/.test(nombreLc)) {
+        p = { ...p, role: "ceo" };
+      }
       setPerfil(p);
 
       const cargar = async () => {

@@ -7,16 +7,39 @@ export default function LogoNinit({ height = 48, color = "#1a3a6b", style = {} }
 
   // id único por instancia (evita colisiones si hay más de un logo en pantalla)
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
-  const shineId = `shine-${uid}`;
-  const sweepId = `sweep-${uid}`;
+  const glowId = `glow-${uid}`;
 
-  // Formas del contorno del tráiler (se dibujan 2 veces: base + destello encima)
-  const contorno = (stroke, extra = {}) => (
-    <g fill="none" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" {...extra}>
-      <circle cx="22" cy="74" r="8" />
-      <circle cx="72" cy="74" r="8" />
-      <rect x="5" y="18" width="88" height="48" rx="7" />
-      <path d="M 24 18 Q 24 7 36 7 Q 48 7 48 18" />
+  // Un "destello" que recorre una forma: segmento corto y brillante que viaja
+  // por el trazo (stroke-dash) y aparece/desaparece en un ciclo de 5s.
+  const Destello = ({ children, begin = "0s" }) => (
+    <g
+      fill="none"
+      stroke="#eaf7ff"
+      strokeWidth="3"
+      strokeLinecap="round"
+      filter={`url(#${glowId})`}
+    >
+      {children}
+      {/* El segmento (10% del contorno) viaja por todo el trazo */}
+      <animate
+        attributeName="stroke-dashoffset"
+        dur="5s"
+        begin={begin}
+        repeatCount="indefinite"
+        values="100; 0; 0"
+        keyTimes="0; 0.32; 1"
+        calcMode="spline"
+        keySplines="0.45 0 0.2 1; 0 0 1 1"
+      />
+      {/* Solo se ve mientras viaja; el resto del ciclo, invisible */}
+      <animate
+        attributeName="opacity"
+        dur="5s"
+        begin={begin}
+        repeatCount="indefinite"
+        values="0; 1; 1; 0; 0"
+        keyTimes="0; 0.04; 0.28; 0.4; 1"
+      />
     </g>
   );
 
@@ -29,41 +52,39 @@ export default function LogoNinit({ height = 48, color = "#1a3a6b", style = {} }
       style={style}
     >
       <defs>
-        {/* Banda de luz angosta que barre el contorno (el "sol" que refleja) */}
-        <linearGradient id={shineId} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="46" y2="0">
-          <stop offset="0"   stopColor="#ffffff" stopOpacity="0" />
-          <stop offset="0.5" stopColor="#8fd3ff" stopOpacity="1" />
-          <stop offset="1"   stopColor="#ffffff" stopOpacity="0" />
-          {/* Barre de izquierda a derecha ~1.4s y espera ~3.6s → ciclo de 5s */}
-          <animateTransform
-            id={sweepId}
-            attributeName="gradientTransform"
-            type="translate"
-            from="-60 0"
-            to="160 0"
-            dur="1.4s"
-            begin={`0s; ${sweepId}.end+3.6s`}
-            repeatCount="1"
-            fill="freeze"
-          />
-        </linearGradient>
+        {/* Resplandor suave para que el destello parezca luz (reflejo del sol) */}
+        <filter id={glowId} x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="1.8" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
 
       {/* Línea de suelo */}
       <line x1="4" y1="82" x2="96" y2="82" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.35" />
 
-      {/* Contorno base */}
-      {contorno(color)}
+      {/* ── Contorno base del tráiler ── */}
+      <g fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round">
+        <circle cx="22" cy="74" r="8" />
+        <circle cx="72" cy="74" r="8" />
+        <rect x="5" y="18" width="88" height="48" rx="7" />
+        <path d="M 24 18 Q 24 7 36 7 Q 48 7 48 18" />
+      </g>
 
       {/* Separador lateral */}
       <line x1="80" y1="22" x2="80" y2="62" stroke={color} strokeWidth="1.5" opacity="0.45" />
 
-      {/* Destello: mismo contorno pintado con la banda de luz, en modo "screen"
-          para que sume brillo sobre el trazo base sin taparlo */}
-      {contorno(`url(#${shineId})`, {
-        strokeWidth: "2.6",
-        style: { mixBlendMode: "screen" },
-      })}
+      {/* ── Destello que recorre el marco principal ── */}
+      <Destello>
+        <rect x="5" y="18" width="88" height="48" rx="7" pathLength="100" strokeDasharray="10 90" strokeDashoffset="100" />
+      </Destello>
+
+      {/* Segundo destello, un toque desfasado, sobre la cúpula (más vida) */}
+      <Destello begin="0.35s">
+        <path d="M 24 18 Q 24 7 36 7 Q 48 7 48 18" pathLength="100" strokeDasharray="14 86" strokeDashoffset="100" />
+      </Destello>
 
       {/* Texto principal */}
       <text
