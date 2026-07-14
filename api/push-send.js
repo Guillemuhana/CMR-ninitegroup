@@ -13,12 +13,6 @@ import webpush from "web-push";
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  // Seguridad: el trigger de Supabase manda este secreto en un header.
-  const secret = req.headers["x-push-secret"] || "";
-  if (!process.env.PUSH_WEBHOOK_SECRET || secret !== process.env.PUSH_WEBHOOK_SECRET) {
-    return res.status(401).json({ error: "No autorizado." });
-  }
-
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY } = process.env;
@@ -31,6 +25,46 @@ export default async function handler(req, res) {
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+
+  // ── Rama ASIGNACIÓN: el CEO asignó un cliente a un vendedor ──────────
+  // La dispara el navegador del CEO (fetch autenticado), no el trigger.
+  if (req.body?.tipo === "asignacion") {
+    const token = (req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+    if (!token) return res.status(401).json({ error: "No autenticado." });
+    const { data: userData, error: userErr } = await admin.auth.getUser(token);
+    if (userErr || !userData?.user) return res.status(401).json({ error: "Sesión inválida." });
+
+    const { contacto_id, vendedor, cliente, asignado_por } = req.body || {};
+    if (!vendedor) return res.status(400).json({ error: "Falta el vendedor a notificar." });
+
+    const { data: subsA, error: errA } = await admin
+      .from("push_subscriptions").select("*").eq("vendedor", vendedor);
+    if (errA) return res.status(500).json({ error: errA.message });
+    if (!subsA?.length) return res.status(200).json({ sent: 0 });
+
+    const payloadA = JSON.stringify({
+      title: "🙋 Nuevo cliente asignado",
+      body: `${asignado_por ? asignado_por + " te" : "Te"} asignó a ${cliente || "un cliente"}. Tocá para abrir el chat.`,
+      tag: `asignacion-${contacto_id || "x"}`,
+      contacto_id: contacto_id || null,
+      url: contacto_id ? `/?chat=${contacto_id}` : "/",
+    });
+
+    let sentA = 0; const muertasA = [];
+    await Promise.all(subsA.map(async (s) => {
+      const subscription = { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } };
+      try { await webpush.sendNotification(subscription, payloadA); sentA++; }
+      catch (e) { if (e.statusCode === 404 || e.statusCode === 410) muertasA.push(s.endpoint); }
+    }));
+    if (muertasA.length) await admin.from("push_subscriptions").delete().in("endpoint", muertasA);
+    return res.status(200).json({ sent: sentA, limpiadas: muertasA.length });
+  }
+
+  // ── Rama MENSAJE (default): trigger de Supabase con secreto compartido ──
+  const secret = req.headers["x-push-secret"] || "";
+  if (!process.env.PUSH_WEBHOOK_SECRET || secret !== process.env.PUSH_WEBHOOK_SECRET) {
+    return res.status(401).json({ error: "No autorizado." });
+  }
 
   // El body puede venir como { record: {...} } o como el record directo.
   const rec = req.body?.record || req.body || {};

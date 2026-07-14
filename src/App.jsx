@@ -1614,7 +1614,7 @@ function CanalSelector({ canal, setCanal }) {
 // ============================================================
 // SIDEBAR
 // ============================================================
-function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContacto, onToggleLlamada, onMarcarLlamada, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
+function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContacto, onToggleLlamada, onMarcarLlamada, onAsignarVendedor, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
   const [soloDestacados, setSoloDestacados] = useState(false);
@@ -1625,6 +1625,16 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
   const [menu, setMenu]           = useState(null);   // menú contextual: { x, y, c }
   const [agendar, setAgendar]     = useState(null);   // contacto a agendar llamada
   const [now, setNow]             = useState(Date.now());
+  // Vendedores activos para el submenú "Asignar a vendedor" (solo CEO).
+  const [vendedoresAsign, setVendedoresAsign] = useState([]);
+  useEffect(() => {
+    if (rol !== "ceo") return;
+    (async () => {
+      const { data } = await supabase.from("vendedores")
+        .select("id,nombre,role,activo").eq("activo", true).order("nombre");
+      setVendedoresAsign((data || []).filter((v) => v.role === "vendedor"));
+    })();
+  }, [rol]);
   // Long-press (mantener presionado) para abrir el menú en celular, donde no
   // existe el click derecho. Se cancela si el dedo se mueve (>10px = scroll).
   const press = useRef({ timer: null, x: 0, y: 0 });
@@ -1892,6 +1902,30 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                 })}
               </div>
             </div>
+
+            {/* Asignar a vendedor — solo CEO. Le manda el chat al vendedor y le avisa. */}
+            {rol === "ceo" && (
+              <div style={{ borderTop: `1px solid ${L.border}`, margin: "5px 0 0", paddingTop: 7 }}>
+                <div style={{ fontSize: isMobile ? 11 : 10, fontWeight: 800, color: L.light, textTransform: "uppercase", letterSpacing: 0.4, padding: "0 10px 6px" }}>Asignar a vendedor</div>
+                {vendedoresAsign.length === 0 ? (
+                  <div style={{ fontSize: isMobile ? 12.5 : 11.5, color: L.light, padding: "0 10px 8px" }}>No hay vendedores activos</div>
+                ) : (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, padding: "0 8px 6px" }}>
+                    {vendedoresAsign.map((v) => {
+                      const yaEs = c.vendedor === v.nombre;
+                      return (
+                        <button key={v.id} onClick={() => { if (!yaEs) onAsignarVendedor?.(c, v); setMenu(null); }}
+                          title={yaEs ? "Ya está asignado a este vendedor" : `Asignar a ${v.nombre}`}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: isMobile ? 12 : 10.5, fontWeight: 700, padding: isMobile ? "7px 11px" : "4px 9px", borderRadius: 7, cursor: yaEs ? "default" : "pointer",
+                            border: `1px solid ${yaEs ? C.red : L.border}`, background: yaEs ? C.aiSoft : L.white, color: yaEs ? C.red : L.text }}>
+                          {yaEs ? <Check size={iconSz - 3} color={C.red} /> : <User size={iconSz - 3} color={L.muted} />} {v.nombre}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         );
 
@@ -3526,6 +3560,61 @@ function BienvenidaVendedor({ perfil, rol }) {
   );
 }
 
+// Cartel para el VENDEDOR: "Se te asignó un cliente". Suena + vibra al aparecer.
+function BannerAsignacion({ info, onVer, onClose }) {
+  useEffect(() => {
+    try { const a = new Audio("/Car.mp3"); a.play().catch(() => {}); } catch { /* autoplay */ }
+    try { navigator.vibrate?.([200, 90, 200]); } catch { /* sin soporte */ }
+    const t = setTimeout(onClose, 14000);
+    return () => clearTimeout(t);
+  }, []);
+  const c = info.contacto || {};
+  const nombre = c.nombre || c.telefono || "un cliente";
+  return (
+    <>
+      <style>{`@keyframes ninitAsigDown{from{transform:translate(-50%,-120%);opacity:0}to{transform:translate(-50%,0);opacity:1}}`}</style>
+      <div style={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 9000, width: "min(460px, calc(100vw - 24px))", background: "#FFFFFF", border: `1px solid ${L.border}`, borderLeft: `4px solid ${C.red}`, borderRadius: 14, boxShadow: "0 14px 48px rgba(0,0,0,.24)", padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: 12, fontFamily: FONT_BODY, animation: "ninitAsigDown .28s ease" }}>
+        <div style={{ flexShrink: 0, width: 40, height: 40, borderRadius: "50%", background: C.aiSoft, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <User size={20} color={C.red} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14.5, fontWeight: 800, color: L.text, fontFamily: FONT_DISPLAY }}>Se te asignó un cliente</div>
+          <div style={{ fontSize: 13, color: L.muted, marginTop: 2 }}>
+            {info.por ? <><b style={{ color: L.text }}>{info.por}</b> te asignó a </> : "Te asignaron a "}
+            <b style={{ color: L.text }}>{nombre}</b>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <button onClick={onVer}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.gradBtn, color: "#fff", border: "none", borderRadius: 9, padding: "7px 13px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
+              <MessageSquare size={14} /> Ver chat
+            </button>
+            <button onClick={onClose}
+              style={{ background: "transparent", color: L.muted, border: `1.5px solid ${L.border}`, borderRadius: 9, padding: "7px 13px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>
+              Después
+            </button>
+          </div>
+        </div>
+        <button onClick={onClose} title="Cerrar" style={{ background: "transparent", border: "none", cursor: "pointer", padding: 2, lineHeight: 0, color: L.light }}>
+          <X size={17} />
+        </button>
+      </div>
+    </>
+  );
+}
+
+// Confirmación breve para el CEO tras asignar (arriba a la derecha, se va sola).
+function ToastAsignacion({ texto, onClose }) {
+  useEffect(() => { const t = setTimeout(onClose, 3200); return () => clearTimeout(t); }, []);
+  return (
+    <>
+      <style>{`@keyframes ninitToastIn{from{transform:translateY(-14px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+      <div style={{ position: "fixed", top: 18, right: 18, zIndex: 9000, background: L.text, color: "#fff", borderRadius: 11, padding: "11px 15px", display: "flex", alignItems: "center", gap: 9, fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: 600, boxShadow: "0 10px 34px rgba(0,0,0,.28)", animation: "ninitToastIn .22s ease" }}>
+        <Check size={17} color="#4ADE80" /> {texto}
+      </div>
+    </>
+  );
+}
+
 // ============================================================
 // APP
 // ============================================================
@@ -3540,6 +3629,8 @@ export default function App() {
   const [niniPrompt, setNiniPrompt] = useState("");
   const [alertasVistas, setAlertasVistas] = useState(() => new Set()); // ids de alertas ya vistas/descartadas
   const [welcome,   setWelcome]   = useState(false);
+  const [asignacionRecibida, setAsignacionRecibida] = useState(null);  // banner al vendedor: { contacto, por }
+  const [avisoCEO,  setAvisoCEO]  = useState("");                       // confirmación al CEO tras asignar
   const tuvoSesion   = useRef(false);
   const welcomeShown = useRef(false);
   const sesionDBId   = useRef(null);
@@ -3679,8 +3770,27 @@ export default function App() {
         }, 120000);
       }
 
+      // Detecta EN VIVO cuando el CEO me asigna un cliente (con la app abierta)
+      // y dispara el cartel "se te asignó un cliente". Con la app cerrada el
+      // aviso llega por PUSH (/api/asignar-push).
+      const onContactoChange = (payload) => {
+        try {
+          if (payload.eventType === "UPDATE" && payload.new && p?.nombre) {
+            const nuevo = payload.new;
+            const prev = contactosRef.current.find((x) => x.id === nuevo.id);
+            const meAsignaron =
+              nuevo.vendedor === p.nombre &&                 // ahora es mío
+              prev && prev.vendedor !== nuevo.vendedor &&    // antes no lo era
+              (nuevo.asignado_por || "") !== p.nombre;       // no me lo asigné yo
+            if (meAsignaron) {
+              setAsignacionRecibida({ contacto: nuevo, por: nuevo.asignado_por || null });
+            }
+          }
+        } catch { /* ignore */ }
+        cargar();
+      };
       const ch = supabase.channel("contactos-feed")
-        .on("postgres_changes", { event: "*", schema: "public", table: "contactos" }, cargar).subscribe();
+        .on("postgres_changes", { event: "*", schema: "public", table: "contactos" }, onContactoChange).subscribe();
 
       cleanup = () => {
         supabase.removeChannel(ch);
@@ -3711,39 +3821,34 @@ export default function App() {
     const onGesto = () => activarPush(perfil, rl);
     window.addEventListener("pointerdown", onGesto, { once: true });
 
-    // Cuando el vendedor toca una notificación, el SW nos dice qué chat abrir.
-    const onSWMsg = (ev) => {
-      if (ev.data?.type === "abrir-chat" && ev.data.contacto_id) {
-        const cont = contactosRef.current.find((c) => c.id === ev.data.contacto_id);
-        if (cont) { setActivo(cont); setVista("chat"); }
-      }
-    };
-    navigator.serviceWorker?.addEventListener("message", onSWMsg);
-
-    // Sonido propio (Car.mp3) al entrar un mensaje del cliente con la app ABIERTA.
-    // (Con la app cerrada, el aviso usa el sonido del sistema: la web no permite
-    // un audio propio en las notificaciones en segundo plano.)
+    // Sonido propio (Car.mp3) cuando llega un mensaje con la app a la vista.
+    // Lo dispara el service worker (que recibe el push siempre), así no depende
+    // de Realtime. Con la app cerrada, el aviso usa el sonido del sistema (la
+    // web no permite un audio propio en notificaciones de segundo plano).
     const audio = new Audio("/Car.mp3");
     audio.preload = "auto";
     // Desbloquear la reproducción en el primer gesto (política de autoplay).
     const desbloquear = () => { audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {}); };
-    window.addEventListener("pointerdown", desbloquear, { once: true });
+    const gestos = ["pointerdown", "click", "touchend", "keydown"];
+    gestos.forEach((e) => window.addEventListener(e, desbloquear, { once: true }));
+    const sonar = () => { try { audio.currentTime = 0; audio.play().catch(() => {}); } catch { /* autoplay bloqueado */ } };
 
-    const chSonido = supabase.channel("sonido-mensajes-in")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "mensajes", filter: "direccion=eq.in" }, (p) => {
-        const m = p.new; if (!m) return;
-        const cont = contactosRef.current.find((c) => c.id === m.contacto_id);
-        // Vendedor: solo suena por sus propios contactos.
-        if (rl === "vendedor" && cont?.vendedor && perfil?.nombre && cont.vendedor !== perfil.nombre) return;
-        try { audio.currentTime = 0; audio.play().catch(() => {}); } catch { /* autoplay bloqueado */ }
-      })
-      .subscribe();
+    // Mensajes desde el SW: abrir chat al tocar la notif, o reproducir el sonido.
+    const onSWMsg = (ev) => {
+      const t = ev.data?.type;
+      if (t === "abrir-chat" && ev.data.contacto_id) {
+        const cont = contactosRef.current.find((c) => c.id === ev.data.contacto_id);
+        if (cont) { setActivo(cont); setVista("chat"); }
+      } else if (t === "reproducir-sonido") {
+        sonar();
+      }
+    };
+    navigator.serviceWorker?.addEventListener("message", onSWMsg);
 
     return () => {
       window.removeEventListener("pointerdown", onGesto);
-      window.removeEventListener("pointerdown", desbloquear);
+      gestos.forEach((e) => window.removeEventListener(e, desbloquear));
       navigator.serviceWorker?.removeEventListener("message", onSWMsg);
-      supabase.removeChannel(chSonido);
     };
   }, [session, perfil]);
 
@@ -3816,6 +3921,45 @@ export default function App() {
     if (error) console.warn("patchContacto:", error.message);
   };
 
+  // Asignar un cliente a un vendedor (solo CEO, desde el menú contextual).
+  // Le "manda" el chat (columna vendedor), le deja registro de quién asignó, y
+  // le avisa por PUSH (llega aunque tenga la app cerrada). Con la app abierta,
+  // el cartel lo dispara el Realtime (ver onContactoChange).
+  const asignarVendedor = async (c, vendedor) => {
+    const nombreVend = typeof vendedor === "string" ? vendedor : vendedor?.nombre;
+    if (!nombreVend || c.vendedor === nombreVend) return;
+    const asignado_at = new Date().toISOString();
+    const yo = perfil?.nombre || "CEO";
+
+    updateContacto({ ...c, vendedor: nombreVend, asignado_por: yo, asignado_at }); // optimista
+
+    // Núcleo + metadatos. Si faltan las columnas (migración no corrida), se
+    // reintenta solo con `vendedor` para no romper la asignación.
+    const { error } = await supabase.from("contactos")
+      .update({ vendedor: nombreVend, asignado_por: yo, asignado_at }).eq("id", c.id);
+    if (error) {
+      await supabase.from("contactos").update({ vendedor: nombreVend }).eq("id", c.id);
+    }
+
+    setAvisoCEO(`Cliente asignado a ${nombreVend}`);
+
+    // Aviso PUSH al vendedor (app cerrada o en segundo plano).
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetch("/api/push-send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+        body: JSON.stringify({
+          tipo: "asignacion",
+          contacto_id: c.id,
+          vendedor: nombreVend,
+          cliente: c.nombre || c.telefono || "un cliente",
+          asignado_por: yo,
+        }),
+      });
+    } catch (e) { console.warn("asignar-push:", e?.message || e); }
+  };
+
   // Aviso "hay que llamar" — se guarda en la DB (columna requiere_llamada) para compartirlo entre vendedores
   const setLlamada = async (c, valor) => {
     updateContacto({ ...c, requiere_llamada: valor });        // optimista
@@ -3866,12 +4010,19 @@ export default function App() {
       style={{ fontFamily: FONT_BODY, background: L.bg }}>
       <FontLoader />
       {welcome && <WelcomeSplash onDone={() => setWelcome(false)} />}
+      {avisoCEO && <ToastAsignacion texto={avisoCEO} onClose={() => setAvisoCEO("")} />}
+      {asignacionRecibida && (
+        <BannerAsignacion info={asignacionRecibida}
+          onVer={() => { setActivo(asignacionRecibida.contacto); setVista("chat"); setAsignacionRecibida(null); }}
+          onClose={() => setAsignacionRecibida(null)} />
+      )}
 
       <div className="app-sidebar">
         <Sidebar contactos={contactos} activo={activo}
           onSelect={(c) => setActivo(c)}
           onToggleDestacado={toggleDestacado}
           onPatchContacto={patchContacto}
+          onAsignarVendedor={asignarVendedor}
           onToggleLlamada={toggleLlamada} onMarcarLlamada={marcarLlamada}
           onLogout={handleLogout}
           userEmail={userEmail} userName={userName}
