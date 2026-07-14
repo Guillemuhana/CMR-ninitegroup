@@ -1018,18 +1018,29 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
     const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
     const inicioDia = new Date(); inicioDia.setHours(0, 0, 0, 0);
     const desde7 = new Date(); desde7.setDate(desde7.getDate() - 6);
+    const inicioSemana = new Date(desde7); inicioSemana.setHours(0, 0, 0, 0);
     const desde7Str = `${desde7.getFullYear()}-${String(desde7.getMonth() + 1).padStart(2, "0")}-${String(desde7.getDate()).padStart(2, "0")}`;
     const mesActual = hoy.getMonth(), anioActual = hoy.getFullYear();
+    const inicioMesStr = `${anioActual}-${String(mesActual + 1).padStart(2, "0")}-01`;
+    // Ventana de llamadas: la más amplia entre "inicio de mes" y "hace 7 días"
+    // (por si la semana cruza de mes) para poder contar hoy / semana / mes.
+    const desdeLlam = inicioMesStr < desde7Str ? inicioMesStr : desde7Str;
     const safe = async (p) => { try { const { data, error } = await p; return error ? [] : (data || []); } catch { return []; } };
 
-    const [vends, pedidos, diarios, sesiones, agenda, msgsHoy] = await Promise.all([
+    const [vends, pedidos, diarios, sesiones, agenda, msgsSemana, llamadasSem] = await Promise.all([
       safe(supabase.from("vendedores").select("id,nombre,role,activo").eq("activo", true)),
       safe(supabase.from("pedidos").select("vendedor,total,estado,created_at")),
       safe(supabase.from("diario_vendedor").select("vendedor_id,fecha,completado,estado_animo,valoracion_nota,valoracion_comentario").gte("fecha", desde7Str).order("fecha", { ascending: false })),
       safe(supabase.from("sesiones_vendedor").select("vendedor_id,duracion_seg,fecha").gte("fecha", desde7Str)),
       safe(supabase.from("agenda_vendedor").select("vendedor_id,fecha,hora,tipo,titulo,completado").gte("fecha", hoyStr).order("fecha").order("hora", { nullsFirst: true })),
-      safe(supabase.from("mensajes").select("agente,created_at").eq("direccion", "out").gte("created_at", inicioDia.toISOString())),
+      // Mensajes de la semana (in y out) para el resumen global. Orden desc + limit
+      // alto: si hubiera muchísimos, se preservan los más recientes (los de hoy).
+      safe(supabase.from("mensajes").select("agente,direccion,created_at").gte("created_at", inicioSemana.toISOString()).order("created_at", { ascending: false }).limit(5000)),
+      // Llamadas del mes (eventos de agenda tipo llamada) para contar hechas hoy/semana/mes.
+      safe(supabase.from("agenda_vendedor").select("vendedor_id,fecha,tipo,completado").eq("tipo", "llamada").gte("fecha", desdeLlam)),
     ]);
+    // Salientes de HOY por agente: quién respondió cada mensaje (para el desglose por vendedor).
+    const msgsHoy = msgsSemana.filter((m) => m.direccion === "out" && new Date(m.created_at) >= inicioDia);
 
     const vendedoresList = vends.filter((v) => v.role === "vendedor");
     const ANIMO = { excelente: "excelente", bien: "bien", neutro: "normal", mal: "difícil", muy_mal: "mal día" };
@@ -1065,9 +1076,60 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
       return b;
     });
 
-    const texto = vendedoresList.length
-      ? `\n\n════ DATOS POR VENDEDOR (usalos cuando Nicolás pida un reporte/desempeño) ════\n${bloques.join("\n\n")}`
-      : "";
+    // ── Resumen GLOBAL del equipo (todos los chats, estén o no asignados) ──
+    // Es lo que hacía falta: cuando los leads no están asignados a un vendedor,
+    // los bloques individuales dan 0 y el reporte parecía "vacío". Acá se ven los
+    // totales reales: consultas entrantes, respuestas y QUIÉN respondió, llamadas, etc.
+    const msgsOut = msgsSemana.filter((m) => m.direccion === "out");
+    const msgsIn  = msgsSemana.filter((m) => m.direccion === "in");
+    const esDeHoy = (m) => new Date(m.created_at) >= inicioDia;
+    const outHoy = msgsOut.filter(esDeHoy);
+    const inHoy  = msgsIn.filter(esDeHoy);
+    // Desglose "quién respondió": agrupa los salientes por agente (null = Bot).
+    const porAgente = (arr) => {
+      const map = {};
+      arr.forEach((m) => { const a = (m.agente && String(m.agente).trim()) || "Bot/automático"; map[a] = (map[a] || 0) + 1; });
+      return Object.entries(map).sort((a, b) => b[1] - a[1]).map(([a, n]) => `${a}: ${n}`).join(", ");
+    };
+    const hechas        = llamadasSem.filter((l) => l.completado);
+    const llamHoyHechas = hechas.filter((l) => l.fecha === hoyStr).length;
+    const llamSemHechas = hechas.filter((l) => l.fecha >= desde7Str).length;
+    const llamMesHechas = hechas.filter((l) => l.fecha >= inicioMesStr).length;
+    const llamPend      = llamadasSem.filter((l) => !l.completado && l.fecha >= hoyStr).length;
+    const reqLlamada    = contactos.filter((c) => c.requiere_llamada).length;
+    // Quién hizo las llamadas de la semana (por vendedor).
+    const nombrePorId = Object.fromEntries(vends.map((v) => [v.id, v.nombre]));
+    const llamPorVend = {};
+    hechas.filter((l) => l.fecha >= desde7Str).forEach((l) => { const n = nombrePorId[l.vendedor_id] || "otro"; llamPorVend[n] = (llamPorVend[n] || 0) + 1; });
+    const llamPorVendTxt = Object.entries(llamPorVend).sort((a, b) => b[1] - a[1]).map(([n, c]) => `${n}: ${c}`).join(", ");
+    const totalLeads    = contactos.length;
+    const sinAsignar    = contactos.filter((c) => !c.vendedor).length;
+    const nuevosHoy     = contactos.filter((c) => c.created_at && new Date(c.created_at) >= inicioDia).length;
+    const nuevosSem     = contactos.filter((c) => c.created_at && new Date(c.created_at) >= inicioSemana).length;
+    const sinRespGlobal = contactos.filter((c) => !c.bot_activo && c.ultimo_in_at && (!c.ultimo_out_at || new Date(c.ultimo_in_at) > new Date(c.ultimo_out_at))).length;
+    const estGlobal = {}; contactos.forEach((c) => { const k = c.estado || "nuevo"; estGlobal[k] = (estGlobal[k] || 0) + 1; });
+    const estGlobalTxt = Object.entries(estGlobal).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${n} ${ESTADOS[k]?.label || k}`).join(", ");
+
+    const globalTxt = `════ RESUMEN GLOBAL DEL EQUIPO (todos los chats, estén o no asignados) ════
+HOY (${hoyStr}):
+  • Leads nuevos: ${nuevosHoy}
+  • Consultas entrantes de clientes: ${inHoy.length} mensajes
+  • Respuestas enviadas: ${outHoy.length} mensajes
+  • Quién respondió hoy: ${porAgente(outHoy) || "nadie respondió todavía"}
+  • Llamadas hechas hoy: ${llamHoyHechas} | Llamadas agendadas pendientes: ${llamPend} | Clientes marcados "hay que llamar": ${reqLlamada}
+ÚLTIMOS 7 DÍAS:
+  • Leads nuevos: ${nuevosSem}
+  • Consultas entrantes: ${msgsIn.length} | Respuestas enviadas: ${msgsOut.length}
+  • Quién respondió (semana): ${porAgente(msgsOut) || "sin respuestas"}
+  • Llamadas hechas: ${llamSemHechas}${llamPorVendTxt ? ` (por vendedor → ${llamPorVendTxt})` : ""}
+ESTE MES:
+  • Llamadas hechas: ${llamMesHechas}
+CARTERA TOTAL: ${totalLeads} contactos | ${sinAsignar} sin asignar a un vendedor | ${sinRespGlobal} sin responder ahora mismo
+  • Por estado: ${estGlobalTxt || "sin datos"}`;
+
+    const texto = `\n\n${globalTxt}${vendedoresList.length
+      ? `\n\n════ DATOS POR VENDEDOR (para desempeño individual) ════\n${bloques.join("\n\n")}`
+      : ""}`;
     reporteCEORef.current = { ts: Date.now(), texto };
     return texto;
   }, [contactos]);
@@ -1096,12 +1158,20 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
       if (vozOnRef.current) sysExtra += "\nMODO VOZ ACTIVO: máximo 2 oraciones, sin listas, sin markdown, lenguaje natural hablado.";
       // El reporte por vendedor es MUY pesado en tokens. Solo lo incluimos cuando
       // la consulta es sobre reportes/desempeño/equipo, para no agotar la cuota de Groq.
-      const pideReporte = /report|resumen|desempe|rendimiento|informe|equipo|vendedor|ranking|compar|c[oó]mo va|como va|productiv|ventas del|pipeline|m[eé]tricas?|kpi/i.test(q);
+      const pideReporte = /report|resumen|desempe|rendimiento|informe|equipo|vendedor|ranking|compar|c[oó]mo va|como va|c[oó]mo venimos|como venimos|productiv|ventas del|pipeline|m[eé]tricas?|kpi|acciones|actividad|llamad|del d[ií]a|de la semana/i.test(q);
       if (rol === "ceo" && pideReporte) {
         if (Date.now() - reporteCEORef.current.ts > 60000) { await cargarReporteCEO(); }
         sysExtra += reporteCEORef.current.texto;
-        sysExtra += `\n\n════ REPORTES DE VENDEDORES (sos CEO) ════
-Cuando Nicolás pida un REPORTE, RESUMEN o el DESEMPEÑO de un vendedor (ej: "dame un reporte de Fernando") o de todo el equipo, armá un informe PROFESIONAL, completo y ordenado usando los DATOS POR VENDEDOR de arriba. Incluí: pipeline y leads activos, pendientes sin responder, ventas del mes, actividad (mensajes/tiempo), estado del diario (si lo completó y su ánimo), tu última valoración, y la agenda próxima. Estructuralo con secciones o viñetas claras, destacá lo positivo y lo que hay que mejorar, y cerrá con 1-2 recomendaciones concretas. Si comparás vendedores, hacelo de forma objetiva. NUNCA inventes números: usá solo los datos provistos; si falta un dato, decí "sin datos".`;
+        sysExtra += `\n\n════ CÓMO ARMAR EL REPORTE (sos CEO) ════
+Cuando Nicolás pida un REPORTE, RESUMEN, las "acciones del día", "cómo venimos", la ACTIVIDAD o el DESEMPEÑO del equipo o de un vendedor, armá un informe PROFESIONAL, DETALLADO y ordenado usando el RESUMEN GLOBAL y los DATOS POR VENDEDOR de arriba.
+Empezá SIEMPRE por el panorama del día y de la semana con NÚMEROS CONCRETOS (aunque los leads no estén asignados a un vendedor):
+  1. Actividad de HOY: leads nuevos, consultas entrantes de clientes, respuestas enviadas y QUIÉN de los vendedores habló con los clientes (desglose por agente).
+  2. Llamadas: hechas HOY, en la SEMANA y en el MES (con quién las hizo), agendadas pendientes y clientes marcados "hay que llamar".
+  3. Actividad de los ÚLTIMOS 7 DÍAS: leads nuevos, consultas, respuestas y quién respondió.
+  4. Cartera total: cuántos contactos hay, cuántos sin asignar, cuántos sin responder y el desglose por estado.
+Mantenelo SIMPLE y claro para Nicolás: números concretos y al grano, sin relleno.
+Después, si pide desempeño individual, sumá por vendedor: pipeline, ventas del mes, actividad, diario y ánimo, tu valoración y agenda próxima.
+Estructuralo con secciones y viñetas claras, destacá lo bueno y lo que hay que mejorar, y cerrá con 1-2 recomendaciones concretas. NUNCA inventes ni digas "no hay nada registrado" si arriba hay números: usá SOLO los datos provistos; si un dato puntual no está, decí "sin datos" (nunca digas que no tenés acceso).`;
       }
       // Consultas de solo lectura — disponibles para TODOS (vendedores y CEO).
       sysExtra += `\n\n════ CONSULTAR EL CRM (podés buscar datos reales) ════
