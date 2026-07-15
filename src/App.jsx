@@ -4405,7 +4405,7 @@ export default function App() {
         </div>
       )}
 
-      <div className="app-sidebar" style={isMobile ? { display: "flex", flexDirection: "column" } : undefined}>
+      <div className="app-sidebar">
         <div style={{ flex: 1, minHeight: 0 }}>
         <Sidebar contactos={contactos} activo={activo}
           onSelect={(c) => setActivo(c)}

@@ -112,7 +112,13 @@
       /* Escritorio: rail de navegación · conversaciones · panel activo */
       .app-layout  { display: flex; height: 100%; overflow: hidden; }
       .app-rail    { flex-shrink: 0; width: 236px; height: 100%; }
-      .app-sidebar { flex-shrink: 0; width: 380px; height: 100%; }
+      /* Columna flex en TODOS los anchos: adentro lleva la lista (que scrollea
+         sola) y, en celular, la BottomNav al pie. Si no es flex, el `flex: 1`
+         del envoltorio de la lista es inerte, la lista se dibuja a su alto
+         natural y desborda: overflow:hidden esconde la barra pero no frena el
+         scroll programático, así que al enfocarse el cuadro de escribir el
+         navegador arrastraba todo el layout hasta el fondo. */
+      .app-sidebar { flex-shrink: 0; width: 380px; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
       .app-main    { flex: 1; min-width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
       .app-right   { flex-shrink: 0; width: 320px; height: 100%; }
 
