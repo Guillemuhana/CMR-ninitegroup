@@ -2346,6 +2346,69 @@ function QuickLlamadaModal({ contacto, perfil, userName, isMobile, onFlagLlamada
 }
 
 // ============================================================
+// PLANTILLAS DE RESPUESTA RÁPIDA
+// ============================================================
+// {VENDEDOR} se reemplaza por el nombre de pila de quien está logueado.
+const PLANTILLAS = [
+  {
+    grupo: "🟢 Primer contacto",
+    items: [
+      {
+        label: "Saludo (ES)",
+        texto: `Hola, mucho gusto, mi nombre es {VENDEDOR} con Ninit Group. Te puedo ayudar a partir de aquí en la compra de la unidad que estás buscando, dejame saber las preguntas que pudieras tener. ¡Gracias! 🚐✨`,
+      },
+      {
+        label: "Saludo (EN)",
+        texto: `Hi, nice to meet you! My name is {VENDEDOR} with Ninit Group. I can help you from here with the purchase of the unit you're looking for. Let me know any questions you may have. Thank you! 🚐✨`,
+      },
+      {
+        label: "Bienvenida Meta Ads",
+        texto: `Hi! Thanks for reaching out to NINIT Group 🚐✨ I'm here to help! I saw you were interested in our luxury restroom trailers. Could you tell me a bit more about your needs?\n\n• Are you looking to buy or rent?\n• What's the event date and location?\n• How many guests are you expecting?\n\nWe'll put together a custom quote for you right away!`,
+      },
+      {
+        label: "Saludo + catálogo",
+        texto: `Hi! Thanks for your interest in NINIT Group 🙌\n\nHere's our full catalog with all models and specs:\n👉 https://ninitgroup.com/wp-content/uploads/2026/04/NINITGROUP_CATALOG.pdf\n\nWe have 4 models available:\n• 2-Stall White Marble — boutique events\n• 3-Stall — our most popular unit ⭐\n• 4-Stall — large festivals & high traffic\n• ADA+2 — fully accessible option\n\nWhich one fits your event best?`,
+      },
+    ],
+  },
+  {
+    grupo: "💰 Precios y modelos",
+    items: [
+      {
+        label: "Precios de venta",
+        texto: `Here's a quick overview of our pricing:\n\n🏆 2-Stall White Marble: $21,500 (pre-sale) / $24,000 (ready to ship)\n⭐ 3-Stall (most popular): $25,000 (pre-sale) / $27,500 (ready to ship)\n🔥 4-Stall: $32,500 (pre-sale) / $35,000 (ready to ship)\n♿ ADA+2 Accessible: $29,500 (pre-sale) / $32,000 (ready to ship)\n\n📦 FREE shipping for Florida clients!\n\nReady-to-ship units have limited stock. Want to reserve yours with a deposit?`,
+      },
+      {
+        label: "Solicitar cotización alquiler",
+        texto: `For rental pricing, it depends on the event date, duration, and model. Could you share:\n\n1️⃣ Event date?\n2️⃣ City / location?\n3️⃣ How many hours/days?\n4️⃣ Estimated number of guests?\n\nI'll get you a custom rental quote ASAP 🙌`,
+      },
+    ],
+  },
+  {
+    grupo: "📋 Calificar lead",
+    items: [
+      {
+        label: "Pedir datos del evento",
+        texto: `To prepare your custom quote, I just need a few details:\n\n1. Buy or rent?\n2. Event date?\n3. Event location (city)?\n4. Estimated number of guests?\n5. Any specific model in mind?\n\nWe'll get back to you with a tailored proposal right away! 🚐`,
+      },
+    ],
+  },
+  {
+    grupo: "🔔 Seguimiento",
+    items: [
+      {
+        label: "Follow-up 24h",
+        texto: `Hi! Just following up on your inquiry about our luxury restroom trailers 😊 We still have units available and would love to help with your event. Any questions I can answer for you?`,
+      },
+      {
+        label: "Urgencia (stock limitado)",
+        texto: `Quick heads up — our ready-to-ship units are moving fast! 🚨 If you want to lock in availability for your event, now is the perfect time to secure your unit with a deposit. Want me to send over the details to get started?`,
+      },
+    ],
+  },
+];
+
+// ============================================================
 // COTIZACIONES (links por modelo)
 // ============================================================
 const COTIZACIONES = [
@@ -2684,6 +2747,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [hoverMsg, setHoverMsg]   = useState(null);
   const [confirmElim, setConfirmElim] = useState(false);
   const [eliminando, setEliminando]   = useState(false);
+  const [showPlantillas, setShowPlantillas] = useState(false);
   const [showCotizaciones, setShowCotizaciones] = useState(false);
   const [showFotos, setShowFotos] = useState(false);
   const [fotoModelo, setFotoModelo] = useState(null);
@@ -2714,10 +2778,18 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [replyTo, setReplyTo] = useState(null); // { id, contenido, esCliente } | null
   const [toolsOpen, setToolsOpen] = useState(false); // desplegable de herramientas del input
   const endRef = useRef(null);
+  const plantillasRef = useRef(null);
   const cotizacionesRef = useRef(null);
   const fotosRef = useRef(null);
   const fileInputRef = useRef(null);
 
+
+  useEffect(() => {
+    if (!showPlantillas) return;
+    const h = (e) => { if (plantillasRef.current && !plantillasRef.current.contains(e.target)) setShowPlantillas(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showPlantillas]);
 
   useEffect(() => {
     if (!showCotizaciones) return;
@@ -3351,7 +3423,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
         {/* Botón ＋ con desplegable de herramientas */}
         <div style={{ position: "relative", display: "flex", alignItems: "flex-end", gap: 8, flexShrink: 0 }}
           onMouseEnter={() => setToolsOpen(true)}
-          onMouseLeave={() => { if (!showCotizaciones && !showFotos) setToolsOpen(false); }}>
+          onMouseLeave={() => { if (!showCotizaciones && !showFotos && !showPlantillas) setToolsOpen(false); }}>
           <style>{`.tools-pop{animation:toolsIn .18s ease}@keyframes toolsIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}`}</style>
           <button onClick={() => setToolsOpen((v) => !v)} title="Adjuntar y más opciones"
             style={{ background: toolsOpen ? C.gradBtn : L.soft, color: toolsOpen ? "#fff" : C.red, border: `1.5px solid ${toolsOpen ? "transparent" : L.border}`, borderRadius: 11, width: 42, height: 42, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .18s" }}>
@@ -3359,6 +3431,35 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
           </button>
           {toolsOpen && (
           <div className="tools-pop" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+        {/* Plantillas rápidas */}
+        <div ref={plantillasRef} style={{ position: "relative", flexShrink: 0 }}>
+          <button onClick={() => setShowPlantillas((v) => !v)} title="Plantillas de respuesta rápida"
+            style={{ background: showPlantillas ? C.red : L.soft, color: showPlantillas ? "#fff" : C.red, border: `1.5px solid ${showPlantillas ? C.red : C.red + "55"}`, borderRadius: 11, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, transition: "all .15s", flexShrink: 0 }}>
+            <Zap size={15} />
+            {!isMobile && <span>Plantillas</span>}
+          </button>
+          {showPlantillas && (
+            <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: isMobile ? "calc(100vw - 24px)" : 380, maxHeight: 460, overflowY: "auto", background: L.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", border: `1px solid ${L.border}`, zIndex: 200 }}>
+              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                <Zap size={14} color={C.red} />
+                <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.8 }}>Plantillas rápidas</span>
+              </div>
+              {PLANTILLAS.map((grupo) => (
+                <div key={grupo.grupo}>
+                  <div style={{ padding: "8px 16px 4px", fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{grupo.grupo}</div>
+                  {grupo.items.map((item) => (
+                    <button key={item.label} onClick={() => { setTexto(item.texto.replaceAll("{VENDEDOR}", (userName || "").split(" ")[0])); setShowPlantillas(false); }}
+                      style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40` }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         {/* Cotizaciones */}
         <div ref={cotizacionesRef} style={{ position: "relative", flexShrink: 0 }}>
           <button onClick={() => setShowCotizaciones((v) => !v)} title="Enviar link de cotización"
