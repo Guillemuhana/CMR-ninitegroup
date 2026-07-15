@@ -1466,6 +1466,15 @@ REGLAS ESTRICTAS:
   );
 }
 
+// Tabs de la lista de conversaciones. Las claves son las que ya entendía el
+// filtro del Sidebar; "favoritos" usa el flag `destacado` del contacto.
+const SIDEBAR_TABS = [
+  { key: "todos",          label: "Todos" },
+  { key: "q:sinresponder", label: "Sin responder" },
+  { key: "q:seguimientos", label: "Seguimientos" },
+  { key: "favoritos",      label: "Favoritos" },
+];
+
 // ============================================================
 // NAV RAIL — navegación lateral de escritorio (el rail oscuro del diseño)
 // ============================================================
@@ -1833,20 +1842,37 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
   // Clientes que piden contacto (para el contador y el filtro de prioridad).
   const nPide = contactos.reduce((n, c) => n + (pideContacto(c).pide ? 1 : 0), 0);
 
-  const lista = contactos.filter((c) => {
-    const porBusq   = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
-    const porCanal  = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
-    const porDest   = !soloDestacados || c.destacado;
-    const porPide   = !soloPide || pideContacto(c).pide;
-    let porFiltro = true;
-    if (filtro === "todos") porFiltro = true;
-    else if (filtro === "q:sinrevisar")   porFiltro = calcSinRevisar(c) != null;
-    else if (filtro === "q:noleidos")     porFiltro = c.no_leidos > 0;
-    else if (filtro === "q:sinresponder") porFiltro = calcEspera(c) != null;
-    else if (filtro === "t:cliente")      porFiltro = c.tipo === "cliente";
-    else if (filtro === "t:prospecto")    porFiltro = !c.tipo || c.tipo === "prospecto";
-    else porFiltro = c.estado === filtro;
-    return porBusq && porCanal && porDest && porPide && porFiltro && aplicaFiltrosIA(c, filtrosIA);
+  // Los contadores de los tabs tienen que contar EXACTAMENTE lo mismo que la
+  // lista muestra, así que comparten este predicado. Si el número y el contenido
+  // se calcularan por separado, terminarían diciendo cosas distintas.
+  const cumpleFiltro = (c, f) => {
+    if (f === "todos") return true;
+    if (f === "q:sinrevisar")   return calcSinRevisar(c) != null;
+    if (f === "q:noleidos")     return c.no_leidos > 0;
+    if (f === "q:sinresponder") return calcEspera(c) != null;
+    if (f === "q:seguimientos") return !!c.seguimiento_at;
+    if (f === "t:cliente")      return c.tipo === "cliente";
+    if (f === "t:prospecto")    return !c.tipo || c.tipo === "prospecto";
+    return c.estado === f;
+  };
+
+  // Base común de los tabs: todo lo que no es el tab en sí (canal, búsqueda,
+  // filtros IA y "piden contacto"). Los contadores se calculan sobre esto, así
+  // reaccionan al canal y a la búsqueda como espera el vendedor.
+  const baseTabs = contactos.filter((c) => {
+    const porBusq  = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
+    const porCanal = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
+    const porPide  = !soloPide || pideContacto(c).pide;
+    return porBusq && porCanal && porPide && aplicaFiltrosIA(c, filtrosIA);
+  });
+
+  const conteoTab = (t) =>
+    t === "favoritos" ? baseTabs.filter((c) => c.destacado).length
+                      : baseTabs.filter((c) => cumpleFiltro(c, t)).length;
+
+  const lista = baseTabs.filter((c) => {
+    const porDest = !soloDestacados || c.destacado;
+    return porDest && cumpleFiltro(c, filtro);
   })
   // Prioridad: primero los que piden contacto, luego los destacados; respeta el orden por fecha.
   .sort((a, b) => (pideContacto(b).pide ? 1 : 0) - (pideContacto(a).pide ? 1 : 0))
@@ -1916,13 +1942,38 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                 <span style={{ background: soloPide ? "#fff" : C.red, color: soloPide ? C.red : "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 9, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{nPide}</span>
               )}
             </button>
-            <button onClick={() => setSoloDestacados(v => !v)}
-              title={soloDestacados ? "Mostrar todos" : "Mostrar solo importantes"}
-              style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 40, borderRadius: 10, cursor: "pointer",
-                border: soloDestacados ? "1.5px solid #F59E0B" : `1.5px solid ${L.border}`,
-                background: soloDestacados ? "#FFFBEB" : L.white, transition: "all .15s" }}>
-              <Star size={16} fill={soloDestacados ? "#F59E0B" : "none"} color={soloDestacados ? "#F59E0B" : L.muted} />
-            </button>
+          </div>
+
+          {/* ── Tabs de la lista ── */}
+          {/* Le devuelven la interfaz al estado `filtro`, que existía pero había
+              quedado sin nadie que lo cambiara (siempre "todos"). "Favoritos"
+              reemplaza al botón de estrella: hacían lo mismo. */}
+          <div className="strip" style={{ display: "flex", gap: 4, padding: "0 12px", borderBottom: `1px solid ${L.border}`, overflowX: "auto", flexShrink: 0 }}>
+            {SIDEBAR_TABS.map(({ key, label }) => {
+              const activa = key === "favoritos" ? soloDestacados : (!soloDestacados && filtro === key);
+              const n = conteoTab(key);
+              return (
+                <button key={key}
+                  onClick={() => {
+                    if (key === "favoritos") { setSoloDestacados(true); setFiltro("todos"); }
+                    else { setSoloDestacados(false); setFiltro(key); }
+                  }}
+                  aria-pressed={activa}
+                  style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "10px 9px", border: "none", background: "none", cursor: "pointer",
+                    fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: activa ? 700 : 500,
+                    color: activa ? C.red : L.muted,
+                    borderBottom: `2px solid ${activa ? C.red : "transparent"}`,
+                    borderRadius: 0, whiteSpace: "nowrap", transition: "color .15s" }}>
+                  {label}
+                  {n > 0 && (
+                    <span style={{ background: activa ? C.red : L.soft, color: activa ? "#fff" : L.muted, fontSize: 10.5, fontWeight: 800,
+                      borderRadius: 7, minWidth: 18, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", fontVariantNumeric: "tabular-nums" }}>
+                      {n}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {modalFiltros && (
