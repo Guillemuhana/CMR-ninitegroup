@@ -114,6 +114,22 @@
       .app-rail    { flex-shrink: 0; width: 236px; height: 100%; }
       .app-sidebar { flex-shrink: 0; width: 380px; height: 100%; }
       .app-main    { flex: 1; min-width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+      .app-right   { flex-shrink: 0; width: 320px; height: 100%; }
+
+      /* Tablet: el chat necesita el ancho, así que el rail queda en íconos y la
+         ficha del cliente se esconde (sigue disponible con "Editar").
+         Se resuelve con clases y no con ternarios de isMobile en JS: así el
+         mismo componente sirve para escritorio y tablet, sin lógica duplicada. */
+      @media (max-width: 1180px) {
+        .app-rail    { width: 72px; }
+        .app-sidebar { width: 304px; }
+        .app-right   { display: none !important; }
+        .rail-label  { display: none !important; }
+        .rail-item   { justify-content: center; padding-left: 0 !important; padding-right: 0 !important; }
+        .rail-badge  { position: absolute; top: 3px; right: 10px; }
+        .rail-brand  { padding-left: 0 !important; padding-right: 0 !important; }
+        .rail-logo   { max-width: 40px !important; }
+      }
 
       @media (max-width: 767px) {
         /* Móvil: sin rail (navega con los tabs), sidebar ocupa todo, panel oculto */

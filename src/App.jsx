@@ -1508,9 +1508,9 @@ function NavRail({ vista, setVista, rol, contactos = [], userName, userEmail, on
       style={{ width: "100%", height: "100%", background: COLOR.navBg, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* Logo */}
-      <div style={{ padding: "16px 18px 14px", flexShrink: 0 }}>
-        <LogoBrillo imgStyle={{ width: "100%", maxWidth: 168, height: 40, objectFit: "contain", objectPosition: "left center", filter: "brightness(0) invert(1)", opacity: 0.96, display: "block" }} />
-        <div style={{ fontSize: 8.5, fontWeight: 700, color: COLOR.navText, letterSpacing: 1.6, textTransform: "uppercase", marginTop: 5, paddingLeft: 2 }}>
+      <div className="rail-brand" style={{ padding: "16px 18px 14px", flexShrink: 0 }}>
+        <LogoBrillo imgStyle={{ width: "100%", maxWidth: 168, height: 40, objectFit: "contain", objectPosition: "center", filter: "brightness(0) invert(1)", opacity: 0.96, display: "block", margin: "0 auto" }} />
+        <div className="rail-label" style={{ fontSize: 8.5, fontWeight: 700, color: COLOR.navText, letterSpacing: 1.6, textTransform: "uppercase", marginTop: 5, paddingLeft: 2 }}>
           Sistema de CRM
         </div>
       </div>
@@ -1522,16 +1522,17 @@ function NavRail({ vista, setVista, rol, contactos = [], userName, userEmail, on
           const n = badge ? conteo(badge) : 0;
           return (
             <button key={key} onClick={() => setVista(key)} aria-current={activo ? "page" : undefined}
-              style={{ display: "flex", alignItems: "center", gap: 11, padding: "10px 12px", border: "none", cursor: "pointer", width: "100%",
+              className="rail-item" title={label}
+              style={{ position: "relative", display: "flex", alignItems: "center", gap: 11, padding: "10px 12px", border: "none", cursor: "pointer", width: "100%",
                 background: activo ? COLOR.navActive : "transparent",
                 color: activo ? COLOR.navTextActive : COLOR.navText,
                 fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: activo ? 700 : 500, textAlign: "left", transition: "background .15s, color .15s" }}
               onMouseEnter={(e) => { if (!activo) { e.currentTarget.style.background = COLOR.navBgHover; e.currentTarget.style.color = "#fff"; } }}
               onMouseLeave={(e) => { if (!activo) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = COLOR.navText; } }}>
               <Icon size={17} style={{ flexShrink: 0 }} />
-              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+              <span className="rail-label" style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
               {n > 0 && (
-                <span style={{ flexShrink: 0, background: activo ? "rgba(255,255,255,.25)" : COLOR.navActive, color: "#fff", fontSize: 10.5, fontWeight: 800,
+                <span className="rail-badge" style={{ flexShrink: 0, background: activo ? "rgba(255,255,255,.25)" : COLOR.navActive, color: "#fff", fontSize: 10.5, fontWeight: 800,
                   borderRadius: 9, minWidth: 19, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", fontVariantNumeric: "tabular-nums" }}>
                   {n}
                 </span>
@@ -1543,9 +1544,10 @@ function NavRail({ vista, setVista, rol, contactos = [], userName, userEmail, on
 
       {/* Usuario · rol · estado */}
       <div style={{ flexShrink: 0, borderTop: `1px solid ${COLOR.navBorder}`, padding: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 8px", borderRadius: 10, background: COLOR.navBgHover }}>
+        <div className="rail-item" style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 8px", borderRadius: 10, background: COLOR.navBgHover }}
+          title={`${userName} · ${rol === "ceo" ? "Propietario" : "Vendedor"}`}>
           <Avatar nombre={userName} size={34} border="none" />
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="rail-label" style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {userName}
             </div>
@@ -1556,7 +1558,7 @@ function NavRail({ vista, setVista, rol, contactos = [], userName, userEmail, on
               </span>
             </div>
           </div>
-          <button onClick={onLogout} title={`Cerrar sesión (${userEmail})`}
+          <button onClick={onLogout} title={`Cerrar sesión (${userEmail})`} className="rail-label"
             style={{ background: "none", border: "none", cursor: "pointer", color: COLOR.navText, display: "flex", padding: 5, flexShrink: 0 }}
             onMouseEnter={(e) => { e.currentTarget.style.color = "#fff"; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.navText; }}>
@@ -2551,6 +2553,145 @@ function MensajeContenido({ texto }) {
 // ============================================================
 // CHAT PANEL
 // ============================================================
+// ============================================================
+// PANEL DERECHO — ficha del cliente (4ª columna de escritorio)
+// ============================================================
+// Solo muestra datos que existen en la tabla `contactos`. Del diseño quedan
+// afuera "Modelo interesado", "Cantidad estimada", "Presupuesto estimado" y
+// "Fecha probable de compra": no hay columnas para eso y agregarlas es una
+// migración. Las pestañas Actividad y Archivos tampoco están: no hay de dónde
+// sacar esos datos todavía.
+
+// El embudo real del CRM, en orden. `pendiente` y `perdido` quedan fuera del
+// stepper porque no son etapas de avance (se ven igual en la cabecera del chat).
+const EMBUDO = ["nuevo", "contactado", "interesado", "cotizacion", "negociando", "vendido"];
+
+function PanelDerecho({ contacto, onUpdateContacto, onEditar }) {
+  const [notas, setNotas]       = useState(contacto.notas || "");
+  const [guardando, setGuard]   = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  // Al cambiar de cliente, recargar sus notas (si no, quedan las del anterior).
+  useEffect(() => { setNotas(contacto.notas || ""); setGuardado(false); }, [contacto.id]);
+
+  const upd = async (campos) => {
+    await supabase.from("contactos").update(campos).eq("id", contacto.id);
+    onUpdateContacto({ ...contacto, ...campos });
+  };
+
+  const guardarNotas = async () => {
+    setGuard(true);
+    await upd({ notas });
+    setGuard(false);
+    setGuardado(true);
+    setTimeout(() => setGuardado(false), 1800);
+  };
+
+  const idxActual = EMBUDO.indexOf(contacto.estado);
+  const fila = (label, valor) => (
+    <div style={{ display: "flex", gap: 10, padding: "6px 0", alignItems: "baseline" }}>
+      <span style={{ fontSize: 11.5, color: L.light, width: 92, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 12.5, color: valor ? L.text : L.light, fontWeight: valor ? 500 : 400, minWidth: 0, overflowWrap: "anywhere" }}>
+        {valor || "—"}
+      </span>
+    </div>
+  );
+
+  const seccion = { background: L.white, border: `1px solid ${L.border}`, borderRadius: 12, padding: "13px 14px" };
+  const titulo  = { fontFamily: FONT_DISPLAY, fontSize: 12.5, fontWeight: 700, color: L.text, marginBottom: 4 };
+
+  return (
+    <aside style={{ width: "100%", height: "100%", background: L.bg, borderLeft: `1px solid ${L.border}`, overflowY: "auto", padding: 12, display: "flex", flexDirection: "column", gap: 12 }} className="scroll-y">
+
+      {/* Datos del contacto */}
+      <div style={seccion}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <span style={titulo}>Datos del contacto</span>
+          <button onClick={onEditar} style={{ background: "none", border: "none", cursor: "pointer", color: C.red, fontSize: 12, fontWeight: 700, fontFamily: FONT_BODY, padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+            <Pencil size={12} /> Editar
+          </button>
+        </div>
+        {fila("Nombre", contacto.nombre)}
+        {fila("Teléfono", contacto.telefono)}
+        {fila("Email", contacto.email)}
+        {fila("Ubicación", contacto.direccion)}
+        {fila("Empresa", contacto.empresa)}
+        {fila("Ingreso", contacto.created_at ? new Date(contacto.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null)}
+        {fila("Vendedor", contacto.vendedor)}
+      </div>
+
+      {/* Embudo de ventas */}
+      <div style={seccion}>
+        <div style={titulo}>Embudo de ventas</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, marginTop: 6 }}>
+          {EMBUDO.map((e, i) => {
+            const est    = ESTADOS[e];
+            const activo = e === contacto.estado;
+            const pasado = idxActual > -1 && i < idxActual;
+            return (
+              <button key={e} onClick={() => upd({ estado: e })} title={`Marcar como ${est.label}`}
+                style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 8px", border: "none", cursor: "pointer", background: activo ? est.bg : "transparent", borderRadius: 8, textAlign: "left", width: "100%", transition: "background .15s" }}
+                onMouseEnter={(e2) => { if (!activo) e2.currentTarget.style.background = L.soft; }}
+                onMouseLeave={(e2) => { if (!activo) e2.currentTarget.style.background = "transparent"; }}>
+                <span style={{ width: 16, height: 16, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                  background: activo ? est.color : pasado ? COLOR.success : "transparent",
+                  border: activo || pasado ? "none" : `1.5px solid ${L.border}` }}>
+                  {(activo || pasado) && <Check size={10} color="#fff" />}
+                </span>
+                <span style={{ fontSize: 12.5, fontWeight: activo ? 700 : 500, color: activo ? est.color : pasado ? L.text : L.muted }}>
+                  {est.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {!EMBUDO.includes(contacto.estado) && (
+          <div style={{ marginTop: 8, fontSize: 11.5, color: L.muted, display: "flex", alignItems: "center", gap: 5 }}>
+            <AlertCircle size={12} /> Estado actual: <strong>{(ESTADOS[contacto.estado] || {}).label || contacto.estado}</strong>
+          </div>
+        )}
+      </div>
+
+      {/* Actividad comercial */}
+      <div style={seccion}>
+        <div style={titulo}>Actividad</div>
+        {fila("Últ. del cliente", contacto.ultimo_in_at ? `hace ${msToStr(Date.now() - new Date(contacto.ultimo_in_at).getTime())}` : null)}
+        {fila("Últ. respuesta", contacto.ultimo_out_at ? `hace ${msToStr(Date.now() - new Date(contacto.ultimo_out_at).getTime())}` : null)}
+        <div style={{ display: "flex", gap: 10, padding: "6px 0", alignItems: "baseline" }}>
+          <span style={{ fontSize: 11.5, color: L.light, width: 92, flexShrink: 0 }}>Seguimiento</span>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: contacto.seguimiento_at ? (new Date(contacto.seguimiento_at) <= new Date() ? COLOR.warning : L.text) : L.light }}>
+            {contacto.seguimiento_at
+              ? new Date(contacto.seguimiento_at).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+              : "Sin agendar"}
+          </span>
+        </div>
+        {contacto.nota_seguimiento && (
+          <div style={{ fontSize: 11.5, color: L.muted, marginTop: 2, fontStyle: "italic" }}>{contacto.nota_seguimiento}</div>
+        )}
+      </div>
+
+      {/* Notas */}
+      <div style={seccion}>
+        <div style={titulo}>Notas</div>
+        <textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={4}
+          placeholder="Anotá lo que no puede perderse de este cliente…"
+          style={{ width: "100%", boxSizing: "border-box", resize: "vertical", marginTop: 6, border: `1.5px solid ${L.border}`, borderRadius: 9, padding: "8px 10px", fontSize: 12.5, fontFamily: FONT_BODY, background: L.soft, color: L.text, outline: "none", lineHeight: 1.5 }} />
+        {notas !== (contacto.notas || "") && (
+          <button onClick={guardarNotas} disabled={guardando}
+            style={{ marginTop: 7, background: C.red, color: "#fff", border: "none", borderRadius: 8, padding: "6px 13px", fontSize: 12, fontWeight: 700, cursor: guardando ? "default" : "pointer", fontFamily: FONT_DISPLAY, display: "flex", alignItems: "center", gap: 5 }}>
+            <Check size={12} /> {guardando ? "Guardando…" : "Guardar nota"}
+          </button>
+        )}
+        {guardado && (
+          <div style={{ marginTop: 7, fontSize: 11.5, fontWeight: 700, color: COLOR.success, display: "flex", alignItems: "center", gap: 4 }}>
+            <Check size={12} /> Nota guardada
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}
+
 function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onBack, isMobile, rol }) {
   // Los leads de Google Ads llegan por email, así que comparten el mismo canal
   // de salida (y la misma desactivación).
@@ -3891,6 +4032,7 @@ export default function App() {
   const [niniPrompt, setNiniPrompt] = useState("");
   const [alertasVistas, setAlertasVistas] = useState(() => new Set()); // ids de alertas ya vistas/descartadas
   const [welcome,   setWelcome]   = useState(false);
+  const [fichaEdit,  setFichaEdit]  = useState(null);                   // contacto a editar desde el panel derecho
   const [asignacionRecibida, setAsignacionRecibida] = useState(null);  // banner al vendedor: { contacto, por }
   const [avisoCEO,  setAvisoCEO]  = useState("");                       // confirmación al CEO tras asignar
   const tuvoSesion   = useRef(false);
@@ -4384,6 +4526,17 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {/* Ficha del cliente: 4ª columna, solo en escritorio y con un chat abierto.
+          En móvil y tablet se sigue usando el cajón (Editar en la cabecera). */}
+      {!isMobile && activo && vista === "chat" && (
+        <div className="app-right">
+          <PanelDerecho contacto={activo} onUpdateContacto={updateContacto} onEditar={() => setFichaEdit(activo)} />
+        </div>
+      )}
+      {fichaEdit && (
+        <ContactoDrawer contacto={fichaEdit} onClose={() => setFichaEdit(null)} onSave={updateContacto} />
+      )}
 
       <AIAsistente contactoActivo={activo} alertas={alertas} contactos={contactos} nombreUsuario={userName} perfilId={perfil?.id} rol={rol} onRefrescar={recargarContactos} niniPrompt={niniPrompt} />
 
