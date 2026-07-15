@@ -9,13 +9,7 @@ import autoTable from "jspdf-autotable";
 import {
   supabase, C, FONT_DISPLAY, FONT_BODY, VENDEDORES, fmtMoneda,
 } from "./lib";
-
-// Paleta light (igual que App.jsx)
-const L = {
-  bg: "#F5F6F8", white: "#FFFFFF", border: "#E4E8ED",
-  text: "#0F172A", muted: "#64748B", light: "#94A3B8",
-  soft: "#F1F5F9", hover: "#FEF2F2",
-};
+import { L } from "./theme";
 
 // Estados del pedido
 export const EP = {

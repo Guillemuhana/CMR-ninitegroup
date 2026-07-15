@@ -5,11 +5,7 @@ import {
   ChevronDown, Check, RefreshCw,
 } from "lucide-react";
 import { supabase, C, FONT_DISPLAY, FONT_BODY, VENDEDORES, ESTADOS, fmtMoneda } from "./lib";
-
-const L = {
-  bg: "#F5F6F8", white: "#FFFFFF", border: "#E4E8ED",
-  text: "#0F172A", muted: "#64748B", light: "#94A3B8", soft: "#F1F5F9",
-};
+import { L } from "./theme";
 
 const inputSt = {
   width: "100%", boxSizing: "border-box", padding: "11px 14px",

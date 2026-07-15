@@ -58,6 +58,31 @@ export const COLOR = {
   bubbleBot: "#FFFBEB",  // bot
 };
 
+// Paleta de superficie: la que leen los estilos inline de las pantallas
+// (`L.text`, `L.border`, …).
+//
+// Vivía duplicada en ocho archivos, y las siete copias de afuera del chat
+// tenían los slate de Tailwind hardcodeados (#0F172A, #64748B, #F1F5F9…) en
+// vez de los tokens. O sea que COLOR re-skineaba el caparazón y el CRM
+// quedaba a dos colores: se notaba al pasar del chat a Pedidos o Agenda.
+// Con una sola definición derivada de COLOR, un token vuelve a alcanzar
+// todas las pantallas.
+//
+// `hover` unifica dos valores que estaban peleados: #EFF6FF (Agenda,
+// Directorio) y el #FEF2F2 de Pedidos, rojizo porque sobró del acento rojo
+// anterior. Pedidos no lo usaba en ningún estilo.
+export const L = {
+  bg:     COLOR.canvas,
+  white:  COLOR.surface,
+  border: COLOR.border,
+  text:   COLOR.ink,
+  muted:  COLOR.inkMuted,
+  light:  COLOR.inkFaint,
+  soft:   COLOR.surfaceAlt,
+  hover:  COLOR.primarySoft,
+  active: COLOR.primarySoft,
+};
+
 // Radios. `btn` es el que aplica la regla global de index.html: hoy vale 10
 // para replicar exactamente el aspecto actual. Cambiarlo acá cambia los 326
 // border-radius inline de golpe.

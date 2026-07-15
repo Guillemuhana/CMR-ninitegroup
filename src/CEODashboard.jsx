@@ -7,16 +7,7 @@ import {
 } from "lucide-react";
 import Agenda from "./Agenda";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-
-const L = {
-  bg:     "#F5F6F8",
-  white:  "#FFFFFF",
-  border: "#E4E8ED",
-  text:   "#0F172A",
-  muted:  "#64748B",
-  light:  "#94A3B8",
-  soft:   "#F1F5F9",
-};
+import { L } from "./theme";
 
 const ANIMOS = {
   excelente: { emoji: "🚀", label: "Excelente", color: "#15803D" },
@@ -378,7 +369,7 @@ export default function CEODashboard({ isMobile, perfil }) {
                         <span style={{ padding: "4px 12px", borderRadius: 20, background: color + "20", color, fontSize: 11.5, fontWeight: 700, fontFamily: FONT_DISPLAY, textTransform: "uppercase", letterSpacing: 0.4 }}>
                           Vendedor
                         </span>
-                        <span style={{ padding: "4px 12px", borderRadius: 20, background: v.activo ? "#DCFCE7" : "#F1F5F9", color: v.activo ? "#16A34A" : L.muted, fontSize: 11.5, fontWeight: 700, fontFamily: FONT_DISPLAY }}>
+                        <span style={{ padding: "4px 12px", borderRadius: 20, background: v.activo ? "#DCFCE7" : L.soft, color: v.activo ? "#16A34A" : L.muted, fontSize: 11.5, fontWeight: 700, fontFamily: FONT_DISPLAY }}>
                           {v.activo ? "Activo" : "Inactivo"}
                         </span>
                       </div>

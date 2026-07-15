@@ -3,12 +3,7 @@ import { Search, Download, Phone, Mail, Users, Filter, X } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiMessenger, SiGoogleads } from "react-icons/si";
 import { supabase, C, FONT_DISPLAY, FONT_BODY, ESTADOS, exportarCSV, fmtFechaLarga } from "./lib";
-
-const L = {
-  bg: "#F5F6F8", white: "#FFFFFF", border: "#E4E8ED",
-  text: "#0F172A", muted: "#64748B", light: "#94A3B8",
-  soft: "#F1F5F9", hover: "#EFF6FF",
-};
+import { L } from "./theme";
 
 const CANAL_INFO = {
   whatsapp:   { label: "WhatsApp",   color: "#25D366", icon: <FaWhatsapp size={13} /> },

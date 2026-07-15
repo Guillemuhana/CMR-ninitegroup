@@ -6,17 +6,7 @@ import {
   Star, CheckCircle2, Send, Lock,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-
-const L = {
-  bg:     "#F5F6F8",
-  white:  "#FFFFFF",
-  border: "#E4E8ED",
-  text:   "#0F172A",
-  muted:  "#64748B",
-  light:  "#94A3B8",
-  soft:   "#F1F5F9",
-  hover:  "#EFF6FF",
-};
+import { L } from "./theme";
 
 const ANIMOS = [
   { key: "excelente", emoji: "🚀", label: "Excelente" },

@@ -17,7 +17,7 @@ import {
   VENDEDORES, ESTADOS, calcularAlertas, getRol, cargarPerfil,
   ELEVENLABS_KEY, ELEVENLABS_VOICE_ID, EMAIL_HABILITADO,
 } from "./lib";
-import { COLOR, RADIUS, SHADOW } from "./theme";
+import { COLOR, RADIUS, SHADOW, L } from "./theme";
 import { activarPush } from "./push";
 import Reportes from "./Reportes";
 import AdminPanel from "./AdminPanel";
@@ -32,18 +32,6 @@ import FiltrosModal, { FILTROS_INICIAL, contarActivos, aplicaFiltrosIA } from ".
 // ============================================================
 // Las claves no cambian: las leen cientos de estilos inline de este archivo.
 // El color se controla desde theme.js.
-const L = {
-  bg:     COLOR.canvas,
-  white:  COLOR.surface,
-  border: COLOR.border,
-  text:   COLOR.ink,
-  muted:  COLOR.inkMuted,
-  light:  COLOR.inkFaint,
-  soft:   COLOR.surfaceAlt,
-  hover:  COLOR.primarySoft,
-  active: COLOR.primarySoft,
-};
-
 // Avatares — colores consistentes por nombre
 const AVT = [
   ["#B91C1C","#fff"],["#1D4ED8","#fff"],["#15803D","#fff"],
@@ -3862,15 +3850,15 @@ function RecordatorioDiario({ perfil, rol, onIr }) {
   };
 
   return (
-    <div style={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 5000, width: "min(440px, calc(100vw - 24px))", background: "#FFFFFF", border: "1px solid #FDE68A", borderLeft: "4px solid #F59E0B", borderRadius: 14, boxShadow: "0 10px 40px rgba(0,0,0,.18)", padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: 12, fontFamily: FONT_BODY }}>
+    <div style={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 5000, width: "min(440px, calc(100vw - 24px))", background: L.white, border: "1px solid #FDE68A", borderLeft: "4px solid #F59E0B", borderRadius: 14, boxShadow: "0 10px 40px rgba(0,0,0,.18)", padding: "14px 16px", display: "flex", alignItems: "flex-start", gap: 12, fontFamily: FONT_BODY }}>
       <div style={{ width: 34, height: 34, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
         <BookOpen size={17} color="#B45309" />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 14, color: "#0F172A", marginBottom: 2 }}>
+        <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 14, color: L.text, marginBottom: 2 }}>
           Te falta el reporte de hoy
         </div>
-        <div style={{ fontSize: 12.5, color: "#64748B", lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12.5, color: L.muted, lineHeight: 1.5 }}>
           {perfil?.nombre?.split(" ")[0] ? `${perfil.nombre.split(" ")[0]}, ` : ""}no te olvides de completar tu <b>Mi Día</b> antes de cerrar. Así Nicolás lo puede revisar.
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
@@ -3879,12 +3867,12 @@ function RecordatorioDiario({ perfil, rol, onIr }) {
             <BookOpen size={13} /> Escribir mi día
           </button>
           <button onClick={cerrar}
-            style={{ padding: "6px 13px", borderRadius: 8, border: "1px solid #E4E8ED", background: "#fff", color: "#64748B", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
+            style={{ padding: "6px 13px", borderRadius: 8, border: `1px solid ${L.border}`, background: L.white, color: L.muted, fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
             Más tarde
           </button>
         </div>
       </div>
-      <button onClick={cerrar} title="Cerrar" style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", padding: 2, flexShrink: 0 }}>
+      <button onClick={cerrar} title="Cerrar" style={{ background: "none", border: "none", cursor: "pointer", color: L.light, padding: 2, flexShrink: 0 }}>
         <X size={16} />
       </button>
     </div>

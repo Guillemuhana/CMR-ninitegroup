@@ -13,7 +13,8 @@
 //   - analizarContacto(c)    llama al backend y guarda los ia_* en Supabase
 //   - FiltrosModal           el modal en sí
 //
-// Estilo: inline styles + tokens del proyecto (C, FONT_DISPLAY, FONT_BODY de ./lib).
+// Estilo: inline styles + tokens del proyecto (C, FONT_DISPLAY, FONT_BODY de
+// ./lib; la paleta de superficie L de ./theme).
 
 import { useState, useEffect } from "react";
 import {
@@ -21,12 +22,7 @@ import {
   DollarSign, Radio, Clock, ChevronDown, RotateCcw, Sparkles, Check, Wand2,
 } from "lucide-react";
 import { supabase, C, FONT_DISPLAY, FONT_BODY } from "./lib";
-
-// Paleta clara local (espejo de L en App.jsx; lib no la exporta).
-const P = {
-  white: "#FFFFFF", border: "#E4E8ED", text: "#0F172A",
-  muted: "#64748B", light: "#94A3B8", soft: "#F1F5F9",
-};
+import { L } from "./theme";
 
 // Canales reales del CRM (mismos que CANALES en App.jsx).
 const CANALES_OPT = [
@@ -264,13 +260,13 @@ export async function analizarPendientes(onProgress, opts) {
 function Seccion({ icon, titulo, activo, children, abiertoInit = false }) {
   const [open, setOpen] = useState(abiertoInit);
   return (
-    <div style={{ borderBottom: `1px solid ${P.border}` }}>
+    <div style={{ borderBottom: `1px solid ${L.border}` }}>
       <button onClick={() => setOpen((o) => !o)}
         style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "13px 4px", background: "none", border: "none", cursor: "pointer", fontFamily: FONT_DISPLAY }}>
         <span style={{ color: C.red, display: "flex" }}>{icon}</span>
-        <span style={{ flex: 1, textAlign: "left", fontSize: 13.5, fontWeight: 800, color: P.text, letterSpacing: 0.2 }}>{titulo}</span>
+        <span style={{ flex: 1, textAlign: "left", fontSize: 13.5, fontWeight: 800, color: L.text, letterSpacing: 0.2 }}>{titulo}</span>
         {activo && <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#EF4444" }} />}
-        <ChevronDown size={16} color={P.light} style={{ transition: "transform .2s", transform: open ? "rotate(180deg)" : "none" }} />
+        <ChevronDown size={16} color={L.light} style={{ transition: "transform .2s", transform: open ? "rotate(180deg)" : "none" }} />
       </button>
       {open && <div style={{ padding: "2px 4px 15px" }}>{children}</div>}
     </div>
@@ -283,15 +279,15 @@ function Chips({ value, onChange, opciones }) {
     <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
       {opciones.map((o) => {
         const sel = value === o.key;
-        const col = o.color || P.muted;
-        const bg = o.bg || P.soft;
+        const col = o.color || L.muted;
+        const bg = o.bg || L.soft;
         return (
           <button key={o.key} onClick={() => onChange(o.key)}
             style={{
               display: "flex", alignItems: "center", gap: 5, padding: "6px 11px", borderRadius: 9,
               fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: FONT_BODY,
-              border: sel ? `1.5px solid ${col}` : `1.5px solid ${P.border}`,
-              background: sel ? bg : P.white, color: sel ? col : P.muted,
+              border: sel ? `1.5px solid ${col}` : `1.5px solid ${L.border}`,
+              background: sel ? bg : L.white, color: sel ? col : L.muted,
               boxShadow: sel ? `0 1px 4px ${col}22` : "none", transition: "all .15s",
             }}>
             {sel && <Check size={13} />}{o.label}
@@ -349,7 +345,7 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
     <div onClick={onClose}
       style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.55)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 460, maxHeight: "90vh", background: P.white, borderRadius: 18, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 70px rgba(15,23,42,.35)", fontFamily: FONT_BODY }}>
+        style={{ width: "100%", maxWidth: 460, maxHeight: "90vh", background: L.white, borderRadius: 18, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 70px rgba(15,23,42,.35)", fontFamily: FONT_BODY }}>
 
         {/* Header */}
         <div style={{ padding: "16px 20px", background: C.gradAI || "linear-gradient(135deg,#3A8DC2,#7C3AED)", color: "#fff", display: "flex", alignItems: "center", gap: 11 }}>
@@ -368,19 +364,19 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
           <div style={{ margin: "12px 0 6px", padding: "12px 13px", borderRadius: 12, background: C.aiSoft, border: `1px solid ${C.ai}33` }}>
               {!corriendo && !prog?.done && (
                 <>
-                  <div style={{ fontSize: 12.5, fontWeight: 800, color: P.text, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: L.text, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
                     <Sparkles size={14} color={C.ai} /> Analizar chats con IA
                   </div>
 
                   {/* Selector de antigüedad */}
-                  <div style={{ fontSize: 10.5, fontWeight: 700, color: P.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 5 }}>Qué chats analizar</div>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 5 }}>Qué chats analizar</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 9 }}>
                     {SCOPE_DIAS.map((s) => {
                       const sel = scopeKey === s.key;
                       return (
                         <button key={s.key} onClick={() => setScopeKey(s.key)}
                           style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: FONT_BODY,
-                            border: sel ? `1.5px solid ${C.ai}` : `1.5px solid ${P.border}`, background: sel ? P.white : P.white, color: sel ? C.ai : P.muted, boxShadow: sel ? `0 1px 4px ${C.ai}22` : "none" }}>
+                            border: sel ? `1.5px solid ${C.ai}` : `1.5px solid ${L.border}`, background: sel ? L.white : L.white, color: sel ? C.ai : L.muted, boxShadow: sel ? `0 1px 4px ${C.ai}22` : "none" }}>
                           {sel && <Check size={12} />}{s.label}
                         </button>
                       );
@@ -388,12 +384,12 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
                   </div>
 
                   {/* Reanalizar los ya hechos */}
-                  <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", marginBottom: 10, fontSize: 11.5, color: P.muted, userSelect: "none" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", marginBottom: 10, fontSize: 11.5, color: L.muted, userSelect: "none" }}>
                     <input type="checkbox" checked={reanalizar} onChange={(e) => setReanalizar(e.target.checked)} style={{ accentColor: C.ai, width: 15, height: 15, cursor: "pointer" }} />
                     Volver a analizar los ya clasificados (reprocesa todo)
                   </label>
 
-                  <div style={{ fontSize: 11, color: P.muted, marginBottom: pend > 0 ? 9 : 0 }}>
+                  <div style={{ fontSize: 11, color: L.muted, marginBottom: pend > 0 ? 9 : 0 }}>
                     {pend === null ? "Contando chats…"
                       : pend === 0 ? (reanalizar ? "No hay chats en este alcance." : "Todos los chats de este alcance ya están analizados ✓")
                       : `${pend} chat${pend === 1 ? "" : "s"} entran en este alcance. Los filtros solo alcanzan a los chats analizados.`}
@@ -408,18 +404,18 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
               )}
               {(corriendo || prog?.done) && prog && (
                 <>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: P.text, marginBottom: 7 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: L.text, marginBottom: 7 }}>
                     {prog.done
                       ? `Listo · ${prog.ok} analizados${prog.fail ? `, ${prog.fail} con error` : ""} ✓`
                       : `Analizando ${prog.hechos}/${prog.total}…`}
                   </div>
-                  <div style={{ height: 7, borderRadius: 99, background: "#E4E8ED", overflow: "hidden" }}>
+                  <div style={{ height: 7, borderRadius: 99, background: L.border, overflow: "hidden" }}>
                     <div style={{ height: "100%", width: `${prog.total ? Math.round((prog.hechos / prog.total) * 100) : 0}%`, background: C.gradAI, borderRadius: 99, transition: "width .3s" }} />
                   </div>
-                  {!prog.done && <div style={{ fontSize: 10.5, color: P.muted, marginTop: 6 }}>Podés seguir usando la app; dejá el modal abierto hasta que termine.</div>}
+                  {!prog.done && <div style={{ fontSize: 10.5, color: L.muted, marginTop: 6 }}>Podés seguir usando la app; dejá el modal abierto hasta que termine.</div>}
                   {prog.done && (
                     <button onClick={() => setProg(null)}
-                      style={{ marginTop: 9, display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${C.ai}`, background: P.white, color: C.ai, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
+                      style={{ marginTop: 9, display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8, border: `1.5px solid ${C.ai}`, background: L.white, color: C.ai, fontWeight: 800, fontSize: 12, cursor: "pointer", fontFamily: FONT_DISPLAY }}>
                       <Wand2 size={13} /> Analizar otro alcance
                     </button>
                   )}
@@ -460,10 +456,10 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
           <Seccion icon={<DollarSign size={16} />} titulo="Rango de presupuesto (USD)" activo={!!(f.presupuestoMin || f.presupuestoMax)}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <input type="number" min="0" value={f.presupuestoMin} onChange={(e) => set({ presupuestoMin: e.target.value })} placeholder="Mín" style={inp} />
-              <span style={{ color: P.light }}>—</span>
+              <span style={{ color: L.light }}>—</span>
               <input type="number" min="0" value={f.presupuestoMax} onChange={(e) => set({ presupuestoMax: e.target.value })} placeholder="Máx" style={inp} />
             </div>
-            <div style={{ fontSize: 11, color: P.light, marginTop: 6 }}>Solo muestra chats donde la IA detectó un monto.</div>
+            <div style={{ fontSize: 11, color: L.light, marginTop: 6 }}>Solo muestra chats donde la IA detectó un monto.</div>
           </Seccion>
 
           <Seccion icon={<Radio size={16} />} titulo="Canal de origen" activo={f.canal !== "todos"}>
@@ -476,9 +472,9 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: "13px 18px", borderTop: `1px solid ${P.border}`, display: "flex", gap: 10, alignItems: "center", background: P.soft }}>
+        <div style={{ padding: "13px 18px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 10, alignItems: "center", background: L.soft }}>
           <button onClick={limpiar}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${P.border}`, background: P.white, color: P.muted, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: FONT_BODY }}>
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 14px", borderRadius: 10, border: `1.5px solid ${L.border}`, background: L.white, color: L.muted, fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: FONT_BODY }}>
             <RotateCcw size={14} /> Limpiar
           </button>
           <button onClick={aplicar}
@@ -493,6 +489,6 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
 
 const inp = {
   width: "100%", boxSizing: "border-box", padding: "9px 11px", borderRadius: 9,
-  border: `1.5px solid ${P.border}`, fontSize: 13, fontFamily: FONT_BODY,
-  background: P.white, color: P.text, outline: "none",
+  border: `1.5px solid ${L.border}`, fontSize: 13, fontFamily: FONT_BODY,
+  background: L.white, color: L.text, outline: "none",
 };

@@ -1,14 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase, C, FONT_DISPLAY, FONT_BODY } from "./lib";
+import { L } from "./theme";
 import {
   ChevronLeft, ChevronRight, Plus, X, Clock, Trash2, Check,
   CalendarDays, Phone, Users, MapPin, RefreshCw, CircleDot, Pencil, Share2,
 } from "lucide-react";
-
-const L = {
-  bg: "#F5F6F8", white: "#FFFFFF", border: "#E4E8ED",
-  text: "#0F172A", muted: "#64748B", light: "#94A3B8", soft: "#F1F5F9", hover: "#EFF6FF",
-};
 
 export const TIPOS = {
   reunion:     { label: "Reunión",     color: "#7C3AED", bg: "#F3E8FF", icon: Users },
