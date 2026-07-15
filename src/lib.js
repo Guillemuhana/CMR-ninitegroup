@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { COLOR, GRAD, FONT } from "./theme";
 
 export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -15,6 +16,17 @@ export const supabase = createClient(
 
 export const N8N_SEND_WEBHOOK        = import.meta.env.VITE_N8N_SEND_WEBHOOK;
 export const N8N_EMAIL_REPLY_WEBHOOK = import.meta.env.VITE_N8N_EMAIL_REPLY_WEBHOOK;
+
+// ─── Canal de email: DESACTIVADO (decisión de negocio, 15/07/2026) ──────────
+// Los dos workflows de email están caídos: "NINIT CRM - Gmail Sync" (entrada)
+// está inactivo y el webhook de respuesta `ninit-crm-email-reply` no existe.
+// Con esto en false el CRM no ofrece responder por email, en vez de aceptar el
+// mensaje y fallar después — que hacía creer al vendedor que el cliente le
+// había llegado la respuesta.
+//
+// Para reactivarlo: poner true y revivir los dos workflows (o construir el
+// endpoint propio). El código de envío por email sigue intacto más abajo.
+export const EMAIL_HABILITADO = false;
 export const MESSENGER_SEND_ENDPOINT = import.meta.env.VITE_MESSENGER_SEND_ENDPOINT || "/api/messenger-send";
 export const ELEVENLABS_KEY          = import.meta.env.VITE_ELEVENLABS_API_KEY;
 export const ELEVENLABS_VOICE_ID     = import.meta.env.VITE_ELEVENLABS_VOICE_ID || "ErXwobaYiN019PkySvjV";
@@ -75,28 +87,31 @@ export const ESTADOS = {
   cerrado:     { label: "Cerrado",             color: "#4a4a4a", bg: "#e3e3e3" },
 };
 
-// Paleta de marca NINIT (azul corporativo / blanco / grafito)
+// Paleta de marca NINIT — deriva de src/theme.js (fuente única de tokens).
+// Las claves se mantienen tal cual (incluida "red", que hoy es azul y viene de
+// una marca anterior) porque las leen ~1.100 estilos inline. Renombrarlas es
+// trabajo de la fase de componentes; el color ya se controla desde theme.js.
 export const C = {
-  red: "#3a8dc2",        // azul principal (del logo) — mantengo la clave "red" por compatibilidad con los componentes
-  redDark: "#2c6e9c",    // azul oscuro
-  gold: "#3a8dc2",       // acento = mismo azul (no hay dorado en NINIT)
-  goldSoft: "#9fc6e0",
-  cream: "#f4f6f8",      // fondo gris muy claro
-  paper: "#ffffff",      // blanco limpio
-  ink: "#1f2933",        // grafito texto
-  charcoal: "#1a1d23",   // casi negro
-  border: "#dde3e9",
-  muted: "#7b8794",
-  sage: "#2c8a6b",       // verde para acentos positivos
-  // ── Acentos "IA" (azul → violeta) ─────────────────────────
-  ai: "#7C3AED",                 // violeta IA (sólido)
-  aiSoft: "#F5F3FF",             // fondo violeta muy claro
-  gradAI: "linear-gradient(120deg, #2c6e9c 0%, #3a8dc2 45%, #6366F1 100%)", // header / acentos
-  gradBtn: "linear-gradient(120deg, #3a8dc2 0%, #6366F1 100%)",             // botones primarios
+  red: COLOR.primary,        // color de acción principal
+  redDark: COLOR.primaryDark,
+  gold: COLOR.primary,       // acento = mismo primario (no hay dorado en NINIT)
+  goldSoft: COLOR.primarySoft,
+  cream: COLOR.canvas,
+  paper: COLOR.surface,
+  ink: COLOR.ink,
+  charcoal: COLOR.navBg,
+  border: COLOR.border,
+  muted: COLOR.inkMuted,
+  sage: COLOR.success,
+  // ── Acentos "IA" ──────────────────────────────────────────
+  ai: COLOR.ai,
+  aiSoft: COLOR.aiSoft,
+  gradAI: GRAD.ai,
+  gradBtn: GRAD.btn,
 };
 
-export const FONT_DISPLAY = "'Manrope', system-ui, sans-serif";
-export const FONT_BODY = "'Inter', system-ui, sans-serif";
+export const FONT_DISPLAY = FONT.display;
+export const FONT_BODY = FONT.body;
 
 // ---------- Utilidades de fecha ----------
 export function rangoFechas(periodo) {

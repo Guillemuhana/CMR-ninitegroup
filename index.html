@@ -91,8 +91,12 @@
       }
 
       /* ── Botones: esquinas suaves pero minimalistas (menos "pastilla") ── */
-      /* Global para unificar todo el CRM sin tocar cientos de estilos inline. */
-      button { border-radius: 10px !important; }
+      /* Global para unificar todo el CRM sin tocar cientos de estilos inline:
+         aplasta los 326 border-radius inline (18 valores distintos) a uno solo.
+         El valor real lo fija src/theme.js (RADIUS.btn) al arrancar la app;
+         el 10px de acá es el fallback si el JS todavía no corrió. */
+      :root { --radius-btn: 10px; }
+      button { border-radius: var(--radius-btn) !important; }
 
       /* ── Micro-interacciones suaves en botones ── */
       button { transition: filter .15s ease, transform .08s ease, box-shadow .15s ease; }
@@ -105,12 +109,15 @@
       }
 
       /* ── Layout responsive principal ── */
+      /* Escritorio: rail de navegación · conversaciones · panel activo */
       .app-layout  { display: flex; height: 100%; overflow: hidden; }
+      .app-rail    { flex-shrink: 0; width: 236px; height: 100%; }
       .app-sidebar { flex-shrink: 0; width: 380px; height: 100%; }
       .app-main    { flex: 1; min-width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
 
       @media (max-width: 767px) {
-        /* Mobile: sidebar ocupa todo, panel oculto */
+        /* Móvil: sin rail (navega con los tabs), sidebar ocupa todo, panel oculto */
+        .app-rail    { display: none !important; }
         .app-sidebar { width: 100% !important; min-width: 0 !important; }
         .app-main    { display: none !important; }
 

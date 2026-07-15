@@ -1,10 +1,10 @@
 // v2.1 — 2026-06-08
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  Bell, Search, LogOut, MessageSquare, BarChart2, Package,
+  Bell, Search, LogOut, MessageSquare, BarChart2,
   Pencil, Bot, User, Calendar, Send, X, Check, Plus,
   Sparkles, Phone, PhoneCall, Mail, Building2, MapPin, FileText,
-  AlertCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
+  AlertCircle, Clock, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
   Image as ImageIcon, Languages, Reply, SlidersHorizontal, Star,
 } from "lucide-react";
@@ -15,8 +15,9 @@ import PedidosPanel, { NuevoPedidoModal, imprimirPedido } from "./Pedidos";
 import {
   supabase, N8N_SEND_WEBHOOK, N8N_EMAIL_REPLY_WEBHOOK, MESSENGER_SEND_ENDPOINT, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
   VENDEDORES, ESTADOS, calcularAlertas, getRol, cargarPerfil,
-  ELEVENLABS_KEY, ELEVENLABS_VOICE_ID,
+  ELEVENLABS_KEY, ELEVENLABS_VOICE_ID, EMAIL_HABILITADO,
 } from "./lib";
+import { COLOR, RADIUS, SHADOW } from "./theme";
 import { activarPush } from "./push";
 import Reportes from "./Reportes";
 import AdminPanel from "./AdminPanel";
@@ -27,18 +28,20 @@ import Directorio from "./Directorio";
 import FiltrosModal, { FILTROS_INICIAL, contarActivos, aplicaFiltrosIA } from "./FiltrosModal";
 
 // ============================================================
-// PALETA LIGHT — tema claro profesional
+// PALETA LIGHT — deriva de src/theme.js (fuente única de tokens)
 // ============================================================
+// Las claves no cambian: las leen cientos de estilos inline de este archivo.
+// El color se controla desde theme.js.
 const L = {
-  bg:     "#F5F6F8",
-  white:  "#FFFFFF",
-  border: "#E4E8ED",
-  text:   "#0F172A",
-  muted:  "#64748B",
-  light:  "#94A3B8",
-  soft:   "#F1F5F9",
-  hover:  "#FEF2F2",
-  active: "#FFF1F0",
+  bg:     COLOR.canvas,
+  white:  COLOR.surface,
+  border: COLOR.border,
+  text:   COLOR.ink,
+  muted:  COLOR.inkMuted,
+  light:  COLOR.inkFaint,
+  soft:   COLOR.surfaceAlt,
+  hover:  COLOR.primarySoft,
+  active: COLOR.primarySoft,
 };
 
 // Avatares — colores consistentes por nombre
@@ -126,6 +129,17 @@ function CronometroRespuesta({ desde }) {
       <Clock size={10} /> {cronoStr(ms)}
     </span>
   );
+}
+
+// ── Preview del último mensaje en la lista ──────────────────
+// n8n re-guarda lo que el CRM ya mandó con el prefijo "*Nombre · NINIT Group:*".
+// El chat oculta esos duplicados (ver ECHO_PREFIX_RE), pero `ultimo_msg` se
+// queda con el eco y el prefijo se colaba en el preview de la lista. Acá se
+// muestra solo el texto del mensaje.
+const ECHO_PREFIX_STRIP = /^\*[^*]*NINIT Group:\*\s*/;
+function previewMsg(txt) {
+  const t = String(txt || "").replace(ECHO_PREFIX_STRIP, "").replace(/\s+/g, " ").trim();
+  return t || "—";
 }
 
 // ── Filtro inteligente: clientes que piden contacto humano ──────
@@ -278,14 +292,13 @@ Cuando te pidan redactar o traducir un mensaje para un cliente (WhatsApp, Messen
 - Cuando termines una respuesta útil, ofrecé siempre el siguiente paso lógico.`;
 
 // ============================================================
-// FONT LOADER
+// THEME LOADER — aplica los tokens de src/theme.js al documento
 // ============================================================
+// Las fuentes ya vienen del <link> de index.html; antes se inyectaban acá otra
+// vez y se pedían dos veces.
 function FontLoader() {
   useEffect(() => {
-    const l = document.createElement("link");
-    l.rel = "stylesheet";
-    l.href = "https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap";
-    document.head.appendChild(l);
+    document.documentElement.style.setProperty("--radius-btn", `${RADIUS.btn}px`);
     document.body.style.background = L.bg;
   }, []);
   return null;
@@ -1454,55 +1467,98 @@ REGLAS ESTRICTAS:
 }
 
 // ============================================================
-// NAV DROPDOWN
+// NAV RAIL — navegación lateral de escritorio (el rail oscuro del diseño)
 // ============================================================
+// Reemplaza a NavTabs SOLO en escritorio; en móvil se siguen usando los tabs
+// hasta que la Fase 7 traiga la bottom navigation.
+//
+// Solo lista secciones que existen de verdad. Del sidebar propuesto faltan
+// Inicio, Oportunidades, Cotizaciones, Catálogo, Automatizaciones y
+// Configuración: no tienen módulo todavía, y un ítem que no lleva a ningún
+// lado es peor que no tenerlo. Se agregan cuando exista a dónde ir.
 const NAV_ITEMS = [
-  { k: "chat",     icon: <MessageSquare size={15} />, label: "Chats" },
-  { k: "pedidos",  icon: <Package size={15} />,       label: "Pedidos" },
-  { k: "reportes", icon: <BarChart2 size={15} />,     label: "Reportes" },
-  { k: "admin",    icon: <Shield size={15} />,        label: "Admin" },
+  { key: "chat",       label: "Conversaciones",  icon: MessageSquare, roles: ["ceo", "vendedor"], badge: "noLeidos" },
+  { key: "prioridad",  label: "Piden contacto",  icon: PhoneCall,     roles: ["ceo", "vendedor"], badge: "pide" },
+  { key: "directorio", label: "Contactos",       icon: Users,         roles: ["ceo"] },
+  { key: "pedidos",    label: "Pedidos",         icon: ShoppingBag,   roles: ["ceo", "vendedor"] },
+  { key: "agenda",     label: "Calendario",      icon: Calendar,      roles: ["ceo", "vendedor"] },
+  { key: "diario",     label: "Mi Día",          icon: BookOpen,      roles: ["vendedor"] },
+  { key: "reportes",   label: "Reportes",        icon: BarChart2,     roles: ["ceo"] },
+  { key: "control",    label: "Control",         icon: Activity,      roles: ["ceo"] },
+  { key: "admin",      label: "Equipo Comercial", icon: Shield,       roles: ["ceo"] },
 ];
 
-function NavDropdown({ vista, setVista, rol }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const items = NAV_ITEMS.filter((i) => i.k !== "admin" || rol === "admin");
-  const actual = items.find((i) => i.k === vista) || items[0];
-
-  useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
+function NavRail({ vista, setVista, rol, contactos = [], userName, userEmail, onLogout }) {
+  const nPide     = contactos.reduce((n, c) => n + (pideContacto(c).pide ? 1 : 0), 0);
+  const nNoLeidos = contactos.reduce((n, c) => n + ((c.no_leidos || 0) > 0 ? 1 : 0), 0);
+  const items     = NAV_ITEMS.filter((i) => i.roles.includes(rol));
+  const conteo    = (b) => (b === "pide" ? nPide : b === "noLeidos" ? nNoLeidos : 0);
 
   return (
-    <div ref={ref} style={{ position: "relative", borderBottom: `1px solid ${L.border}` }}>
-      <button onClick={() => setOpen((v) => !v)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", border: "none", background: open ? L.soft : L.white, cursor: "pointer", fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 12, color: C.red, textTransform: "uppercase", letterSpacing: 0.5, transition: "background .15s" }}>
-        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {actual.icon} {actual.label}
-        </span>
-        <ChevronDown size={15} style={{ transition: "transform .2s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
-      </button>
-      {open && (
-        <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: L.white, border: `1px solid ${L.border}`, borderTop: "none", zIndex: 50, boxShadow: "0 8px 24px rgba(0,0,0,.1)" }}>
-          {items.map(({ k, icon, label }) => (
-            <button key={k} onClick={() => { setVista(k); setOpen(false); }}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", border: "none", background: vista === k ? "#FFF0F0" : L.white, cursor: "pointer", fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 12, color: vista === k ? C.red : L.muted, textTransform: "uppercase", letterSpacing: 0.5, borderLeft: vista === k ? `3px solid ${C.red}` : "3px solid transparent", transition: "all .12s" }}
-              onMouseEnter={(e) => { if (vista !== k) e.currentTarget.style.background = L.soft; }}
-              onMouseLeave={(e) => { if (vista !== k) e.currentTarget.style.background = L.white; }}>
-              {icon} {label}
-            </button>
-          ))}
+    <nav aria-label="Navegación principal"
+      style={{ width: "100%", height: "100%", background: COLOR.navBg, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+      {/* Logo */}
+      <div style={{ padding: "16px 18px 14px", flexShrink: 0 }}>
+        <LogoBrillo imgStyle={{ width: "100%", maxWidth: 168, height: 40, objectFit: "contain", objectPosition: "left center", filter: "brightness(0) invert(1)", opacity: 0.96, display: "block" }} />
+        <div style={{ fontSize: 8.5, fontWeight: 700, color: COLOR.navText, letterSpacing: 1.6, textTransform: "uppercase", marginTop: 5, paddingLeft: 2 }}>
+          Sistema de CRM
         </div>
-      )}
-    </div>
+      </div>
+
+      {/* Secciones */}
+      <div className="scroll-y" style={{ flex: 1, overflowY: "auto", padding: "6px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
+        {items.map(({ key, label, icon: Icon, badge }) => {
+          const activo = vista === key;
+          const n = badge ? conteo(badge) : 0;
+          return (
+            <button key={key} onClick={() => setVista(key)} aria-current={activo ? "page" : undefined}
+              style={{ display: "flex", alignItems: "center", gap: 11, padding: "10px 12px", border: "none", cursor: "pointer", width: "100%",
+                background: activo ? COLOR.navActive : "transparent",
+                color: activo ? COLOR.navTextActive : COLOR.navText,
+                fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: activo ? 700 : 500, textAlign: "left", transition: "background .15s, color .15s" }}
+              onMouseEnter={(e) => { if (!activo) { e.currentTarget.style.background = COLOR.navBgHover; e.currentTarget.style.color = "#fff"; } }}
+              onMouseLeave={(e) => { if (!activo) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = COLOR.navText; } }}>
+              <Icon size={17} style={{ flexShrink: 0 }} />
+              <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+              {n > 0 && (
+                <span style={{ flexShrink: 0, background: activo ? "rgba(255,255,255,.25)" : COLOR.navActive, color: "#fff", fontSize: 10.5, fontWeight: 800,
+                  borderRadius: 9, minWidth: 19, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", fontVariantNumeric: "tabular-nums" }}>
+                  {n}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Usuario · rol · estado */}
+      <div style={{ flexShrink: 0, borderTop: `1px solid ${COLOR.navBorder}`, padding: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 8px", borderRadius: 10, background: COLOR.navBgHover }}>
+          <Avatar nombre={userName} size={34} border="none" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {userName}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 1 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: COLOR.success, flexShrink: 0 }} />
+              <span style={{ fontSize: 10.5, color: COLOR.navText, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {rol === "ceo" ? "Propietario" : "Vendedor"} · En línea
+              </span>
+            </div>
+          </div>
+          <button onClick={onLogout} title={`Cerrar sesión (${userEmail})`}
+            style={{ background: "none", border: "none", cursor: "pointer", color: COLOR.navText, display: "flex", padding: 5, flexShrink: 0 }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.navText; }}>
+            <LogOut size={15} />
+          </button>
+        </div>
+      </div>
+    </nav>
   );
 }
 
-// ============================================================
-// NAV TABS (con hamburguesa para secciones secundarias)
-// ============================================================
 function NavTabs({ vista, setVista, rol, contactos = [] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -1654,7 +1710,7 @@ function PrioridadPanel({ contactos = [], isMobile, onAbrirChat, onQuitar }) {
                       <PhoneCall size={9} /> {b.label}
                     </span>
                   </div>
-                  <div style={{ fontSize: 12.5, color: L.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.ultimo_msg || "—"}</div>
+                  <div style={{ fontSize: 12.5, color: L.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{previewMsg(c.ultimo_msg)}</div>
                   {c.telefono && <div style={{ fontSize: 11.5, color: L.light, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}><Phone size={11} /> {c.telefono}</div>}
                 </div>
                 {/* Quitar de la lista (marcar como atendido) — no borra el contacto */}
@@ -1799,18 +1855,30 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
   return (
     <div style={{ width: "100%", height: "100%", background: L.white, borderRight: `1px solid ${L.border}`, display: "flex", flexDirection: "column" }}>
 
-      {/* ── Brand bar ── */}
-      <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.gradAI, borderBottom: `3px solid ${C.redDark}`, boxShadow: "0 4px 18px rgba(58,141,194,.22)" }}>
-        <LogoBrillo imgStyle={{ width: 210, height: 52, objectFit: "cover", objectPosition: "center 38%", filter: "brightness(0) invert(1)", opacity: 0.95 }} />
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+      {/* ── Cabecera ── */}
+      {/* Móvil: logo (no hay rail). Escritorio: título de la sección — el logo
+          ya está en el NavRail y repetirlo era ruido. */}
+      {isMobile ? (
+        <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.gradAI, borderBottom: `3px solid ${C.redDark}`, boxShadow: SHADOW.md }}>
+          <LogoBrillo imgStyle={{ width: 210, height: 52, objectFit: "cover", objectPosition: "center 38%", filter: "brightness(0) invert(1)", opacity: 0.95 }} />
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }}
+              onDescartar={onDescartarAlerta} onDescartarTodas={onDescartarTodasAlertas} />
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: L.white, borderBottom: `1px solid ${L.border}`, flexShrink: 0 }}>
+          <span style={{ fontFamily: FONT_DISPLAY, fontSize: 17, fontWeight: 700, color: L.text }}>
+            {NAV_ITEMS.find((i) => i.key === vista)?.label || "Conversaciones"}
+          </span>
           <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }}
             onDescartar={onDescartarAlerta} onDescartarTodas={onDescartarTodasAlertas} />
         </div>
-      </div>
+      )}
 
 
-      {/* ── Tabs ── */}
-      <NavTabs vista={vista} setVista={setVista} rol={rol} contactos={contactos} />
+      {/* ── Tabs ── (solo móvil: en escritorio navega el NavRail) */}
+      {isMobile && <NavTabs vista={vista} setVista={setVista} rol={rol} contactos={contactos} />}
 
       {vista === "chat" && (
         <>
@@ -1930,7 +1998,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                       </div>
                     </div>
                     <div style={{ fontSize: 12.5, color: L.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 5 }}>
-                      {c.ultimo_msg || "—"}
+                      {previewMsg(c.ultimo_msg)}
                     </div>
                     <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
                       {pc.pide && (() => { const b = PIDE_BADGE[pc.motivo] || PIDE_BADGE.ventas; return (
@@ -1952,22 +2020,24 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
       )}
       {vista === "reportes" && <div style={{ flex: 1 }} />}
 
-      {/* ── Pie usuario ── */}
-      <div style={{ padding: "12px 14px", borderTop: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 11, background: L.white }}>
-        <div style={{ width: 34, height: 34, borderRadius: "50%", background: C.red, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 14, color: "#fff", flexShrink: 0 }}>
-          {(userName || "U")[0].toUpperCase()}
+      {/* ── Pie usuario ── (solo móvil: en escritorio vive en el NavRail) */}
+      {isMobile && (
+        <div style={{ padding: "12px 14px", borderTop: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 11, background: L.white }}>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: C.red, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 14, color: "#fff", flexShrink: 0 }}>
+            {(userName || "U")[0].toUpperCase()}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: L.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</div>
+            <div style={{ fontSize: 11, color: L.light, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userEmail}</div>
+          </div>
+          <button onClick={onLogout} title="Cerrar sesión"
+            style={{ background: "transparent", border: `1.5px solid ${L.border}`, color: L.muted, borderRadius: 9, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = L.hover; e.currentTarget.style.color = C.red; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = L.muted; }}>
+            <LogOut size={16} />
+          </button>
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 700, color: L.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</div>
-          <div style={{ fontSize: 11, color: L.light, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userEmail}</div>
-        </div>
-        <button onClick={onLogout} title="Cerrar sesión"
-          style={{ background: "transparent", border: `1.5px solid ${L.border}`, color: L.muted, borderRadius: 9, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s" }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = L.hover; e.currentTarget.style.color = C.red; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = L.muted; }}>
-          <LogOut size={16} />
-        </button>
-      </div>
+      )}
 
       {/* ── Menú contextual (click derecho en PC / mantener presionado en celular) ── */}
       {menu && (() => {
@@ -2258,6 +2328,41 @@ const COTIZACIONES = [
 // ============================================================
 // ASISTENTE "AVANZAR" — etiquetas de visualización
 // ============================================================
+
+// Lectura del score de cierre (probabilidad_cierre, 0-100 que devuelve la IA).
+function avScoreLectura(p) {
+  if (p >= 80) return { label: "Muy alto", color: "#16A34A" };
+  if (p >= 60) return { label: "Alto",     color: "#22C55E" };
+  if (p >= 40) return { label: "Medio",    color: "#D97706" };
+  if (p >= 20) return { label: "Bajo",     color: "#EA580C" };
+  return { label: "Muy bajo", color: "#DC2626" };
+}
+
+// `senales_compra` viene de la IA como una lista plana de strings que mezcla
+// señales de compra y de riesgo, sin marcar cuál es cuál. Como el contrato de
+// /api/avanzar no se toca, la única forma de distinguirlas acá es leer la
+// redacción. Es una heurística: ante la duda cuenta como señal de compra.
+const RE_SENAL_RIESGO = /(a[uú]n\s+no|todav[ií]a\s+no|no\s+(ha|han|hay|solicit|pidi|respond|confirm|defini|mostr|dio|dej)|sin\s+(respuesta|definir|confirmar|fecha|presupuesto)|falta[n]?\s|no\s+quiso|dud|demor|silencio|compar(a|ando)\s+(con\s+)?(otros|proveedores|competencia)|se\s+enfri|riesgo|objeci[oó]n)/i;
+function esSenalDeRiesgo(txt) {
+  return RE_SENAL_RIESGO.test(String(txt || ""));
+}
+
+// Donut del score de cierre. SVG puro: sin dependencias y escala sin pixelarse.
+function ScoreDonut({ valor, size = 82 }) {
+  const r = (size - 9) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, valor));
+  const { color } = avScoreLectura(pct);
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0, transform: "rotate(-90deg)" }} aria-hidden>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={L.border} strokeWidth={7} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={7} strokeLinecap="round"
+        strokeDasharray={circ} strokeDashoffset={circ - (circ * pct) / 100}
+        style={{ transition: "stroke-dashoffset .7s cubic-bezier(.22,1,.36,1)" }} />
+    </svg>
+  );
+}
+
 const AV_NIVEL = {
   frio:     { label: "Frío",     color: "#0369A1", bg: "#E0F2FE" },
   tibio:    { label: "Tibio",    color: "#B45309", bg: "#FEF3C7" },
@@ -2396,6 +2501,11 @@ function MensajeContenido({ texto }) {
 // CHAT PANEL
 // ============================================================
 function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onBack, isMobile, rol }) {
+  // Los leads de Google Ads llegan por email, así que comparten el mismo canal
+  // de salida (y la misma desactivación).
+  const esCanalEmail = contacto.canal === "email" || contacto.canal === "google_ads";
+  const emailBloqueado = esCanalEmail && !EMAIL_HABILITADO;
+
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto]       = useState("");
   const [enviando, setEnviando]   = useState(false);
@@ -2425,6 +2535,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [avLoading, setAvLoading] = useState(false);
   const [avErr, setAvErr]         = useState("");
   const [avCopiado, setAvCopiado] = useState(false);
+  const [avEnviado, setAvEnviado] = useState(false);   // confirmación del botón Enviar de la vista previa
   const [avEtapaOk, setAvEtapaOk] = useState(false);
   const [avMsgTrad, setAvMsgTrad]     = useState("");    // traducción al español del mensaje sugerido
   const [avTradOn, setAvTradOn]       = useState(false); // mostrar/ocultar traducción
@@ -2511,6 +2622,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     setAvOpen(true);
     setAvErr("");
     setAvCopiado(false);
+    setAvEnviado(false);
     setAvEtapaOk(false);
     setAvMsgTrad("");
     setAvTradOn(false);
@@ -2543,14 +2655,37 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     setAvLoading(false);
   };
 
+  // Copiar: solo al portapapeles. (Antes también cargaba el input; ahora de eso
+  // se encarga "Editar", que es lo que el vendedor espera de cada botón.)
   const copiarMensajeAv = async () => {
     if (!avData?.mensaje_whatsapp) return;
     try { await navigator.clipboard.writeText(avData.mensaje_whatsapp); }
     catch { /* clipboard no disponible */ }
-    // Además lo dejo cargado en el input para enviarlo directo.
-    setTexto(avData.mensaje_whatsapp);
     setAvCopiado(true);
     setTimeout(() => setAvCopiado(false), 2200);
+  };
+
+  // Editar: carga el mensaje en el cuadro de escritura y cierra la vista previa
+  // para que el vendedor lo retoque antes de mandarlo.
+  const editarMensajeAv = () => {
+    if (!avData?.mensaje_whatsapp) return;
+    setTexto(avData.mensaje_whatsapp);
+    setAvOpen(false);
+  };
+
+  // Enviar: manda el mensaje tal cual por el canal del contacto. Pasa por
+  // `enviarMensaje`, así hereda el guardado en el CRM, el ruteo de canal y el
+  // corte del canal de email — no duplica nada de esa lógica.
+  const enviarMensajeAv = async () => {
+    const cuerpo = avData?.mensaje_whatsapp;
+    if (!cuerpo || enviando || avEnviado) return;
+    setEnviando(true);
+    const ok = await enviarMensaje(cuerpo);
+    setEnviando(false);
+    if (ok) {
+      setAvEnviado(true);
+      setTimeout(() => { setAvOpen(false); setAvEnviado(false); }, 900);
+    }
   };
 
   // Mapea la etapa del embudo IA → estado del CRM y lo aplica al contacto.
@@ -2654,6 +2789,15 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   // Envía un contenido (texto o URL de imagen) por el canal del contacto.
   // Devuelve true si se guardó en el CRM.
   const enviarMensaje = async (cuerpo) => {
+    // Email desactivado: cortar ANTES de guardar. Si se guardara igual, el
+    // mensaje aparecería en el chat como enviado y el vendedor daría por hecho
+    // que el cliente lo recibió. Cubre todas las vías de envío (texto, imagen,
+    // fotos por modelo y el botón Enviar de Avanzar).
+    if (esCanalEmail && !EMAIL_HABILITADO) {
+      setErr("El canal de email está desactivado: el mensaje no se envió ni se guardó. Contactá al cliente por WhatsApp o teléfono.");
+      return false;
+    }
+
     // 1) Guardar en CRM (Supabase)
     const { error } = await supabase.from("mensajes").insert({
       contacto_id: contacto.id, direccion: "out", origen: "agente", agente: userName, contenido: cuerpo,
@@ -2664,7 +2808,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     }
 
     // 2) Enviar por el canal correspondiente (email, Messenger o WhatsApp)
-    const esEmail = contacto.canal === "email" || contacto.canal === "google_ads";
+    const esEmail = esCanalEmail;
     const esMessenger = contacto.canal === "messenger";
     if (esEmail) {
       // Respuesta por email
@@ -2846,8 +2990,8 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 onMouseDown={(e) => { e.currentTarget.style.transform = "scale(.94)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(99,102,241,.3)"; }}
                 onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 8px 22px rgba(99,102,241,.34)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 8px 22px rgba(99,102,241,.34)"; }}
-                style={{ background: C.gradBtn, border: "none", color: "#fff", borderRadius: 13, padding: "11px 24px", cursor: "pointer", fontSize: 14.5, fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: 0.2, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 22px rgba(99,102,241,.34)", transition: "transform .1s ease, box-shadow .12s ease", flexShrink: 0 }}>
-                <Sparkles size={17} /> Avanzar
+                style={{ background: C.gradBtn, border: "none", color: "#fff", borderRadius: 13, padding: "11px 24px", cursor: "pointer", fontSize: 14.5, fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: 0.2, display: "flex", alignItems: "center", gap: 8, boxShadow: SHADOW.ai, transition: "transform .1s ease, box-shadow .12s ease", flexShrink: 0 }}>
+                <Sparkles size={17} /> Avanzar con IA
               </button>
               <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
                 style={{ background: confirmElim ? "#FEE2E2" : L.soft, border: `1.5px solid ${confirmElim ? "#FECACA" : L.border}`, color: confirmElim ? C.red : L.muted, borderRadius: 9, width: 36, height: 36, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}
@@ -2868,8 +3012,8 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
             <button onClick={avanzarIA}
               onTouchStart={(e) => { e.currentTarget.style.transform = "scale(.94)"; }}
               onTouchEnd={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-              style={{ ...btnSt, flexShrink: 0, fontSize: 13, padding: "8px 18px", borderRadius: 12, fontWeight: 700, gap: 7, background: C.gradBtn, color: "#fff", borderColor: "transparent", boxShadow: "0 6px 16px rgba(99,102,241,.3)", transition: "transform .1s ease" }}>
-              <Sparkles size={15} /> Avanzar
+              style={{ ...btnSt, flexShrink: 0, fontSize: 13, padding: "8px 18px", borderRadius: 12, fontWeight: 700, gap: 7, background: C.gradBtn, color: "#fff", borderColor: "transparent", boxShadow: SHADOW.ai, transition: "transform .1s ease" }}>
+              <Sparkles size={15} /> Avanzar con IA
             </button>
             <button onClick={() => upd({ bot_activo: !contacto.bot_activo })}
               style={{ ...btnSt, flexShrink: 0, fontSize: 12, fontWeight: 700, background: contacto.bot_activo ? "#DCFCE7" : "#FEF2F2", color: contacto.bot_activo ? "#15803D" : C.red, borderColor: contacto.bot_activo ? "#86EFAC" : "#FECACA" }}>
@@ -2960,7 +3104,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               {/* Traducción al español del mensaje */}
               {traducciones[m.id] && (
                 <div style={{ marginTop: 4, background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 12, padding: "8px 12px", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                  <div style={{ fontSize: 9.5, fontWeight: 800, color: "#7C3AED", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "flex", alignItems: "center", gap: 4 }}>
+                  <div style={{ fontSize: 9.5, fontWeight: 800, color: C.ai, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2, display: "flex", alignItems: "center", gap: 4 }}>
                     <Languages size={11} /> Traducción
                   </div>
                   <div style={{ fontSize: 13.5, color: L.text }}>{traducciones[m.id]}</div>
@@ -2974,7 +3118,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                   <Reply size={12} /> Responder
                 </button>
                 <button onClick={() => toggleTraducirMensaje(m)} title="Traducir al español"
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 4px", color: "#7C3AED", fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 3, borderRadius: 4 }}>
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 4px", color: C.ai, fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 3, borderRadius: 4 }}>
                   <Languages size={12} /> {tradLoading[m.id] ? "…" : (traducciones[m.id] ? "Ver original" : "Traducir")}
                 </button>
                 {hoverMsg === m.id && (
@@ -2999,10 +3143,10 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
       {/* ── Barra: respondiendo a un mensaje específico ── */}
       {replyTo && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: isMobile ? "8px 12px" : "8px 22px", borderTop: `1px solid ${L.border}`, background: "#F5F3FF" }}>
-          <Reply size={15} color="#7C3AED" style={{ flexShrink: 0 }} />
-          <div style={{ width: 3, alignSelf: "stretch", background: "#7C3AED", borderRadius: 2 }} />
+          <Reply size={15} color={C.ai} style={{ flexShrink: 0 }} />
+          <div style={{ width: 3, alignSelf: "stretch", background: C.ai, borderRadius: 2 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10.5, fontWeight: 800, color: "#7C3AED", textTransform: "uppercase", letterSpacing: 0.4 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 800, color: C.ai, textTransform: "uppercase", letterSpacing: 0.4 }}>
               Respondiendo a {replyTo.esCliente ? "el cliente" : "tu mensaje"}
             </div>
             <div style={{ fontSize: 12.5, color: L.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -3016,7 +3160,24 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
         </div>
       )}
 
-      {/* ── Input ── */}
+      {/* ── Canal de email desactivado: aviso en lugar del cuadro de escritura ── */}
+      {emailBloqueado ? (
+        <div style={{ padding: isMobile ? "14px 12px" : "16px 22px", borderTop: `1px solid ${L.border}`, background: L.soft, display: "flex", gap: 12, alignItems: "flex-start", flexShrink: 0 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 9, background: COLOR.warningSoft, color: COLOR.warning, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Mail size={17} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13.5, fontWeight: 700, color: L.text }}>
+              El canal de email está desactivado
+            </div>
+            <div style={{ fontSize: 12.5, color: L.muted, marginTop: 2, lineHeight: 1.5 }}>
+              {contacto.canal === "google_ads" ? "Este lead entró por Google Ads, que responde por email." : "Este contacto escribió por email."}{" "}
+              Podés seguir leyendo la conversación, pero no enviar respuestas.
+              {contacto.telefono ? " Contactalo por WhatsApp o teléfono." : " No tiene teléfono cargado: agregalo con Editar para poder contactarlo."}
+            </div>
+          </div>
+        </div>
+      ) : (
       <div style={{ padding: isMobile ? "10px 12px" : "14px 22px", borderTop: `1px solid ${L.border}`, background: L.white, display: "flex", gap: 8, alignItems: "flex-end", flexShrink: 0, position: "relative" }}>
         {/* Botón ＋ con desplegable de herramientas */}
         <div style={{ position: "relative", display: "flex", alignItems: "flex-end", gap: 8, flexShrink: 0 }}
@@ -3148,6 +3309,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
           <Send size={16} /> {enviando || isMobile ? (enviando ? "…" : "") : "Enviar"}
         </button>
       </div>
+      )}
 
       {drawer && <ContactoDrawer contacto={contacto} onClose={() => setDrawer(false)} onSave={onUpdateContacto} />}
       {pedidoModal && (
@@ -3171,7 +3333,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
             display: "flex", flexDirection: "column", overflow: "hidden",
           }}>
             <div style={{ padding: "16px 18px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 9, background: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 9, background: C.ai, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Sparkles size={17} color="#fff" />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -3184,7 +3346,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
             </div>
             <div className="scroll-y" style={{ padding: "16px 18px", overflowY: "auto", flex: 1 }}>
               {resumenLoading && (
-                <div style={{ textAlign: "center", color: "#7C3AED", fontSize: 13.5, padding: "26px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                <div style={{ textAlign: "center", color: C.ai, fontSize: 13.5, padding: "26px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
                   <style>{`.spin-slow{animation:spinSlow 1.4s linear infinite}@keyframes spinSlow{to{transform:rotate(360deg)}}`}</style>
                   <Sparkles size={26} className="spin-slow" />
                   Generando resumen de la conversación…
@@ -3234,7 +3396,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                   <Sparkles size={13} /> Regenerar
                 </button>
                 <button onClick={copiarResumen} disabled={!resumenMensaje}
-                  style={{ background: resumenCopiado ? "#15803D" : (resumenMensaje ? "#7C3AED" : L.light), color: "#fff", border: "none", borderRadius: 9, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: resumenMensaje ? "pointer" : "default", fontFamily: FONT_DISPLAY, display: "flex", alignItems: "center", gap: 6 }}>
+                  style={{ background: resumenCopiado ? COLOR.success : (resumenMensaje ? C.ai : L.light), color: "#fff", border: "none", borderRadius: 9, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: resumenMensaje ? "pointer" : "default", fontFamily: FONT_DISPLAY, display: "flex", alignItems: "center", gap: 6 }}>
                   {resumenCopiado ? <><Check size={14} /> Copiado</> : <><FileText size={14} /> Copiar mensaje</>}
                 </button>
               </div>
@@ -3283,38 +3445,21 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               )}
               {avData && !avLoading && (
                 <>
-                  {/* ── Termómetro del negocio: probabilidad + nivel + urgencia ── */}
+                  {/* ── Estado del cliente: nivel + etapa + urgencia ── */}
                   {(() => {
                     const n = AV_NIVEL[avData.nivel_interes] || AV_NIVEL.tibio;
-                    const prob = typeof avData.probabilidad_cierre === "number" ? avData.probabilidad_cierre : null;
-                    const barColor = prob == null ? L.light : prob >= 66 ? "#15803D" : prob >= 33 ? "#B45309" : "#B91C1C";
                     const u = AV_URGENCIA[avData.urgencia] || AV_URGENCIA.media;
                     return (
-                      <div style={{ background: L.soft, border: `1px solid ${L.border}`, borderRadius: 14, padding: "13px 15px", marginBottom: 14 }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: prob == null ? 0 : 9, flexWrap: "wrap", gap: 8 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-                            <span style={{ fontSize: 11.5, fontWeight: 800, padding: "4px 11px", borderRadius: 20, background: n.bg, color: n.color, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                              <span style={{ width: 7, height: 7, borderRadius: "50%", background: n.color }} /> {n.label}
-                            </span>
-                            <span style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 20, background: "#EEF2FF", color: "#4338CA" }}>
-                              {AV_ETAPA[avData.etapa_embudo] || avData.etapa_embudo}
-                            </span>
-                            <span style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 20, background: u.bg, color: u.color, display: "inline-flex", alignItems: "center", gap: 5 }}>
-                              <Zap size={11} /> {u.label}
-                            </span>
-                          </div>
-                          {prob != null && (
-                            <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 20, color: barColor, flexShrink: 0 }}>{prob}%</span>
-                          )}
-                        </div>
-                        {prob != null && (
-                          <>
-                            <div style={{ height: 8, borderRadius: 6, background: "#E5E7EB", overflow: "hidden" }}>
-                              <div style={{ width: `${prob}%`, height: "100%", background: barColor, borderRadius: 6, transition: "width .5s ease" }} />
-                            </div>
-                            <div style={{ fontSize: 10.5, fontWeight: 700, color: L.light, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 6 }}>Probabilidad de cierre</div>
-                          </>
-                        )}
+                      <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 14 }}>
+                        <span style={{ fontSize: 11.5, fontWeight: 800, padding: "4px 11px", borderRadius: 20, background: n.bg, color: n.color, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ width: 7, height: 7, borderRadius: "50%", background: n.color }} /> {n.label}
+                        </span>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 20, background: C.aiSoft, color: C.ai }}>
+                          {AV_ETAPA[avData.etapa_embudo] || avData.etapa_embudo}
+                        </span>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, padding: "4px 11px", borderRadius: 20, background: u.bg, color: u.color, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                          <Zap size={11} /> {u.label}
+                        </span>
                       </div>
                     );
                   })()}
@@ -3324,17 +3469,45 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                     <div style={{ fontSize: 13.5, color: L.text, lineHeight: 1.55, marginBottom: 14 }}>{avData.resumen_cliente}</div>
                   )}
 
-                  {/* Señales detectadas — chips */}
-                  {avData.senales_compra?.length > 0 && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={avLbl}>Señales detectadas</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {avData.senales_compra.map((s, i) => (
-                          <span key={i} style={{ fontSize: 12, fontWeight: 600, color: "#166534", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: "4px 9px", lineHeight: 1.3 }}>{s}</span>
-                        ))}
+                  {/* ── Score de cierre + por qué ── */}
+                  {(() => {
+                    const prob = typeof avData.probabilidad_cierre === "number" ? avData.probabilidad_cierre : null;
+                    const senales = avData.senales_compra || [];
+                    if (prob == null && !senales.length) return null;
+                    const lect = prob == null ? null : avScoreLectura(prob);
+                    return (
+                      <div style={{ display: "flex", gap: 16, alignItems: "flex-start", background: L.soft, border: `1px solid ${L.border}`, borderRadius: 14, padding: "14px 15px", marginBottom: 16, flexWrap: "wrap" }}>
+                        {prob != null && (
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                            <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <ScoreDonut valor={prob} />
+                              <span style={{ position: "absolute", fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 20, color: lect.color, fontVariantNumeric: "tabular-nums" }}>{prob}%</span>
+                            </div>
+                            <div style={{ fontSize: 11.5, fontWeight: 800, color: lect.color }}>{lect.label}</div>
+                            <div style={{ fontSize: 9.5, fontWeight: 700, color: L.light, textTransform: "uppercase", letterSpacing: 0.5 }}>Score de cierre</div>
+                          </div>
+                        )}
+                        {senales.length > 0 && (
+                          <div style={{ flex: 1, minWidth: 168 }}>
+                            <div style={avLbl}>¿Por qué este score?</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                              {senales.map((s, i) => {
+                                const riesgo = esSenalDeRiesgo(s);
+                                return (
+                                  <div key={i} style={{ display: "flex", gap: 7, alignItems: "flex-start", fontSize: 12.5, color: L.text, lineHeight: 1.4 }}>
+                                    <span style={{ color: riesgo ? COLOR.warning : COLOR.success, flexShrink: 0, marginTop: 1, display: "flex" }}>
+                                      {riesgo ? <AlertCircle size={13} /> : <Check size={13} />}
+                                    </span>
+                                    {s}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Objeción + cómo responderla — bloque de acción */}
                   {avData.objecion_detectada && avData.objecion_detectada !== "sin_objecion" && (
@@ -3362,7 +3535,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                           <MessageSquare size={13} /> Mensaje para enviar
                         </span>
                         <button onClick={toggleTraducirAv} disabled={avTradLoading} title="Traducir el mensaje al español (el original en inglés no se toca)"
-                          style={{ background: "none", border: "none", cursor: avTradLoading ? "default" : "pointer", color: "#7C3AED", fontSize: 11.5, fontWeight: 700, fontFamily: FONT_BODY, display: "inline-flex", alignItems: "center", gap: 4, padding: 0, flexShrink: 0 }}>
+                          style={{ background: "none", border: "none", cursor: avTradLoading ? "default" : "pointer", color: C.ai, fontSize: 11.5, fontWeight: 700, fontFamily: FONT_BODY, display: "inline-flex", alignItems: "center", gap: 4, padding: 0, flexShrink: 0 }}>
                           <Languages size={13} /> {avTradLoading ? "Traduciendo…" : (avTradOn ? "Ver original" : "Traducir")}
                         </button>
                       </div>
@@ -3413,7 +3586,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                   {/* Consejo del coach */}
                   {avData.nota_para_vendedor && (
                     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                      <div style={{ width: 24, height: 24, borderRadius: 8, background: "#EEF2FF", color: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                      <div style={{ width: 24, height: 24, borderRadius: 8, background: C.aiSoft, color: C.ai, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
                         <Sparkles size={13} />
                       </div>
                       <div style={{ minWidth: 0 }}>
@@ -3428,19 +3601,39 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
 
             {/* Acciones */}
             {avData && !avLoading && (
-              <div style={{ padding: "12px 18px", borderTop: `1px solid ${L.border}`, display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+              <div style={{ padding: "12px 18px", borderTop: `1px solid ${L.border}`, display: "flex", flexDirection: "column", gap: 9 }}>
                 <button onClick={aplicarEtapaAv} title="Cambiar el estado del cliente al sugerido por la IA"
-                  style={{ background: avEtapaOk ? "#15803D" : L.soft, border: `1.5px solid ${avEtapaOk ? "#15803D" : L.border}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", color: avEtapaOk ? "#fff" : L.muted, fontFamily: FONT_BODY, display: "flex", alignItems: "center", gap: 6, marginRight: "auto" }}>
+                  style={{ background: avEtapaOk ? COLOR.success : L.soft, border: `1.5px solid ${avEtapaOk ? COLOR.success : L.border}`, borderRadius: 9, padding: "7px 14px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", color: avEtapaOk ? "#fff" : L.muted, fontFamily: FONT_BODY, display: "flex", alignItems: "center", gap: 6, alignSelf: "flex-start" }}>
                   {avEtapaOk ? <><Check size={14} /> Etapa aplicada</> : <>Aplicar etapa: {AV_ETAPA[avData.etapa_embudo] || avData.etapa_embudo}</>}
                 </button>
-                <button onClick={avanzarIA}
-                  style={{ background: L.soft, border: `1.5px solid ${L.border}`, borderRadius: 9, padding: "8px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", color: L.muted, fontFamily: FONT_BODY, display: "flex", alignItems: "center", gap: 6 }}>
-                  <Sparkles size={13} /> Regenerar
-                </button>
-                <button onClick={copiarMensajeAv} disabled={!avData.mensaje_whatsapp}
-                  style={{ background: avCopiado ? "#15803D" : (avData.mensaje_whatsapp ? "#7C3AED" : L.light), color: "#fff", border: "none", borderRadius: 9, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: avData.mensaje_whatsapp ? "pointer" : "default", fontFamily: FONT_DISPLAY, display: "flex", alignItems: "center", gap: 6 }}>
-                  {avCopiado ? <><Check size={14} /> Copiado</> : <><FileText size={14} /> Copiar mensaje</>}
-                </button>
+
+                {/* Editar · Generar otra · Copiar · Enviar */}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {[
+                    { key: "editar", label: "Editar", icon: <Pencil size={13} />, onClick: editarMensajeAv, disabled: !avData.mensaje_whatsapp,
+                      title: "Cargar el mensaje en el cuadro de escritura para retocarlo" },
+                    { key: "otra", label: "Generar otra", icon: <Sparkles size={13} />, onClick: avanzarIA, disabled: false,
+                      title: "Volver a analizar la conversación y proponer otro mensaje" },
+                    { key: "copiar", label: avCopiado ? "Copiado" : "Copiar", icon: avCopiado ? <Check size={13} /> : <FileText size={13} />, onClick: copiarMensajeAv, disabled: !avData.mensaje_whatsapp,
+                      title: "Copiar el mensaje al portapapeles" },
+                  ].map((b) => (
+                    <button key={b.key} onClick={b.onClick} disabled={b.disabled} title={b.title}
+                      style={{ flex: "1 1 auto", background: L.soft, border: `1.5px solid ${b.key === "copiar" && avCopiado ? COLOR.success : L.border}`, borderRadius: 9, padding: "9px 12px", fontSize: 13, fontWeight: 600,
+                        cursor: b.disabled ? "default" : "pointer", opacity: b.disabled ? 0.5 : 1,
+                        color: b.key === "copiar" && avCopiado ? COLOR.success : L.muted,
+                        fontFamily: FONT_BODY, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      {b.icon} {b.label}
+                    </button>
+                  ))}
+                  <button onClick={enviarMensajeAv} disabled={!avData.mensaje_whatsapp || enviando || emailBloqueado}
+                    title={emailBloqueado ? "El canal de email está desactivado" : `Enviar ahora por ${esCanalEmail ? "email" : contacto.canal === "messenger" ? "Messenger" : "WhatsApp"}`}
+                    style={{ flex: "1 1 auto", background: avEnviado ? COLOR.success : (!avData.mensaje_whatsapp || emailBloqueado ? L.light : C.gradBtn), color: "#fff", border: "none", borderRadius: 9, padding: "9px 18px", fontSize: 13, fontWeight: 700,
+                      cursor: !avData.mensaje_whatsapp || enviando || emailBloqueado ? "default" : "pointer",
+                      fontFamily: FONT_DISPLAY, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                      boxShadow: avEnviado || !avData.mensaje_whatsapp || emailBloqueado ? "none" : SHADOW.ai }}>
+                    {avEnviado ? <><Check size={14} /> Enviado</> : <><Send size={14} /> {enviando ? "Enviando…" : "Enviar"}</>}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -4033,6 +4226,13 @@ export default function App() {
         <BannerAsignacion info={asignacionRecibida}
           onVer={() => { setActivo(asignacionRecibida.contacto); setVista("chat"); setAsignacionRecibida(null); }}
           onClose={() => setAsignacionRecibida(null)} />
+      )}
+
+      {!isMobile && (
+        <div className="app-rail">
+          <NavRail vista={vista} setVista={setVista} rol={rol} contactos={contactos}
+            userName={userName} userEmail={userEmail} onLogout={handleLogout} />
+        </div>
       )}
 
       <div className="app-sidebar">
