@@ -1476,10 +1476,98 @@ const SIDEBAR_TABS = [
 ];
 
 // ============================================================
+// BOTTOM NAV — navegación de celular
+// ============================================================
+// Reemplaza a los tabs de arriba. Se oculta cuando hay un panel abierto (chat,
+// reportes, etc.): esas pantallas son de pantalla completa y tienen su propio
+// botón de volver, y acá taparía el cuadro de escritura del chat.
+//
+// Del diseño quedan afuera "Inicio" y "Tareas" (no tienen módulo). "Contactos"
+// vive en Más porque hoy es solo del CEO.
+const BOTTOM_NAV = [
+  { key: "chat",      label: "Chats",    icon: MessageSquare, badge: "noLeidos" },
+  { key: "prioridad", label: "Piden",    icon: PhoneCall,     badge: "pide" },
+  { key: "agenda",    label: "Agenda",   icon: Calendar },
+  { key: "pedidos",   label: "Pedidos",  icon: ShoppingBag },
+];
+
+function BottomNav({ vista, setVista, rol, contactos = [], userName, onLogout }) {
+  const [mas, setMas] = useState(false);
+  const nPide     = contactos.reduce((n, c) => n + (pideContacto(c).pide ? 1 : 0), 0);
+  const nNoLeidos = contactos.reduce((n, c) => n + ((c.no_leidos || 0) > 0 ? 1 : 0), 0);
+  const conteo    = (b) => (b === "pide" ? nPide : b === "noLeidos" ? nNoLeidos : 0);
+
+  // Lo que no entra en la barra, por rol.
+  const extras = NAV_ITEMS.filter((i) => i.roles.includes(rol) && !BOTTOM_NAV.some((b) => b.key === i.key));
+  const masActivo = extras.some((i) => i.key === vista);
+
+  const item = (key, label, Icon, n, activo, onClick) => (
+    <button key={key} onClick={onClick} aria-current={activo ? "page" : undefined}
+      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, padding: "7px 2px 5px",
+        border: "none", background: "none", cursor: "pointer", position: "relative", borderRadius: 0,
+        color: activo ? C.red : L.muted, fontFamily: FONT_BODY, fontSize: 10, fontWeight: activo ? 700 : 500 }}>
+      <span style={{ position: "relative", display: "flex" }}>
+        <Icon size={21} />
+        {n > 0 && (
+          <span style={{ position: "absolute", top: -4, right: -7, background: C.red, color: "#fff", fontSize: 9, fontWeight: 800,
+            borderRadius: 8, minWidth: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", border: `1.5px solid ${L.white}` }}>
+            {n}
+          </span>
+        )}
+      </span>
+      {label}
+    </button>
+  );
+
+  return (
+    <>
+      <nav aria-label="Navegación"
+        style={{ flexShrink: 0, display: "flex", alignItems: "stretch", background: L.white, borderTop: `1px solid ${L.border}`,
+          paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -2px 12px rgba(16,24,40,.06)" }}>
+        {BOTTOM_NAV.map(({ key, label, icon, badge }) =>
+          item(key, label, icon, badge ? conteo(badge) : 0, vista === key, () => setVista(key))
+        )}
+        {item("mas", "Más", Menu, 0, masActivo, () => setMas(true))}
+      </nav>
+
+      {/* Hoja "Más" */}
+      {mas && (
+        <div onClick={() => setMas(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(15,23,42,.45)", display: "flex", alignItems: "flex-end" }}>
+          <div onClick={(e) => e.stopPropagation()}
+            className="ninit-mas-sheet"
+            style={{ width: "100%", background: L.white, borderRadius: "16px 16px 0 0", padding: "8px 0 max(10px, env(safe-area-inset-bottom))" }}>
+            {/* Keyframe propio: el `ninitSheetUp` del Sidebar solo se inyecta
+                cuando la vista es "chat", así que desde Pedidos o Agenda esta
+                hoja no habría animado. */}
+            <style>{`.ninit-mas-sheet{animation:ninitMasUp .2s ease}@keyframes ninitMasUp{from{transform:translateY(100%)}to{transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.ninit-mas-sheet{animation:none}}`}</style>
+            <div style={{ width: 38, height: 4, borderRadius: 3, background: L.border, margin: "6px auto 10px" }} />
+            {extras.map(({ key, label, icon: Icon }) => (
+              <button key={key} onClick={() => { setVista(key); setMas(false); }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, padding: "13px 20px", border: "none", cursor: "pointer",
+                  background: vista === key ? L.soft : "none", borderRadius: 0,
+                  fontFamily: FONT_BODY, fontSize: 14.5, fontWeight: vista === key ? 700 : 500, color: vista === key ? C.red : L.text }}>
+                <Icon size={19} color={vista === key ? C.red : L.muted} /> {label}
+              </button>
+            ))}
+            <div style={{ borderTop: `1px solid ${L.border}`, marginTop: 6, paddingTop: 6 }}>
+              <button onClick={onLogout}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, padding: "13px 20px", border: "none", cursor: "pointer", background: "none", borderRadius: 0,
+                  fontFamily: FONT_BODY, fontSize: 14.5, fontWeight: 500, color: L.muted }}>
+                <LogOut size={19} /> Cerrar sesión · {userName}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ============================================================
 // NAV RAIL — navegación lateral de escritorio (el rail oscuro del diseño)
 // ============================================================
-// Reemplaza a NavTabs SOLO en escritorio; en móvil se siguen usando los tabs
-// hasta que la Fase 7 traiga la bottom navigation.
+// Navegación de escritorio y tablet. En celular navega la BottomNav.
 //
 // Solo lista secciones que existen de verdad. Del sidebar propuesto faltan
 // Inicio, Oportunidades, Cotizaciones, Catálogo, Automatizaciones y
@@ -1569,105 +1657,6 @@ function NavRail({ vista, setVista, rol, contactos = [], userName, userEmail, on
     </nav>
   );
 }
-
-function NavTabs({ vista, setVista, rol, contactos = [] }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [open]);
-
-  const nPide = contactos.reduce((n, c) => n + (pideContacto(c).pide ? 1 : 0), 0);
-
-  const primary = [
-    ["chat",      <MessageSquare size={13} />, "Chats"],
-    ["prioridad", <PhoneCall size={13} />,     "Piden contacto"],
-  ];
-  const secondary = rol === "ceo"
-    ? [
-        ["agenda",     <Calendar size={14} />,  "Agenda"],
-        ["directorio", <Users size={14} />,    "Directorio"],
-        ["reportes",   <BarChart2 size={14} />, "Reportes"],
-        ["admin",      <Shield size={14} />,    "Admin"],
-        ["control",    <Activity size={14} />,  "Control"],
-      ]
-    : [
-        ["diario", <BookOpen size={14} />, "Mi Día"],
-        ["agenda", <Calendar size={14} />, "Agenda"],
-      ];
-
-  const secActivo = secondary.some(([k]) => k === vista);
-  const secLabel  = secondary.find(([k]) => k === vista)?.[2];
-
-  const tabSt = (k) => ({
-    flex: 1, border: "none", cursor: "pointer", padding: "11px 0",
-    fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 10.5,
-    textTransform: "uppercase", letterSpacing: 0.4, transition: "all .15s",
-    display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-    whiteSpace: "nowrap", minWidth: 60,
-    color: vista === k ? C.red : L.muted,
-    background: vista === k ? "#EFF6FF" : "transparent",
-    borderBottom: vista === k ? `2px solid ${C.red}` : "2px solid transparent",
-  });
-
-  return (
-    <div className="strip" style={{ display: "flex", borderBottom: `1px solid ${L.border}` }}>
-      {primary.map(([k, icon, l]) => (
-        <button key={k} onClick={() => setVista(k)} style={tabSt(k)}>
-          {icon} {l}
-          {k === "prioridad" && nPide > 0 && (
-            <span style={{ background: C.red, color: "#fff", fontSize: 9.5, fontWeight: 800, borderRadius: 9, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", marginLeft: 2 }}>{nPide}</span>
-          )}
-        </button>
-      ))}
-
-      <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
-        <button onClick={() => setOpen((v) => !v)}
-          style={{
-            border: "none", cursor: "pointer", padding: "11px 14px", height: "100%",
-            fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 10.5, letterSpacing: 0.4,
-            display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",
-            color: secActivo ? C.red : L.muted,
-            background: secActivo ? "#EFF6FF" : "transparent",
-            borderBottom: secActivo ? `2px solid ${C.red}` : "2px solid transparent",
-            transition: "all .15s",
-          }}>
-          <Menu size={14} />
-          {secActivo && <span style={{ fontSize: 10.5, textTransform: "uppercase" }}>{secLabel}</span>}
-        </button>
-        {open && (
-          <div style={{
-            position: "absolute", top: "100%", right: 0, minWidth: 180,
-            background: L.white, border: `1px solid ${L.border}`,
-            borderRadius: "0 0 10px 10px", boxShadow: "0 8px 24px rgba(0,0,0,.12)", zIndex: 100,
-          }}>
-            {secondary.map(([k, icon, l]) => (
-              <button key={k} onClick={() => { setVista(k); setOpen(false); }}
-                style={{
-                  width: "100%", display: "flex", alignItems: "center", gap: 10,
-                  padding: "11px 18px", border: "none", cursor: "pointer",
-                  fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 13,
-                  color: vista === k ? C.red : L.text,
-                  background: vista === k ? "#EFF6FF" : L.white,
-                  borderLeft: vista === k ? `3px solid ${C.red}` : "3px solid transparent",
-                  transition: "all .12s",
-                }}
-                onMouseEnter={(e) => { if (vista !== k) e.currentTarget.style.background = L.soft; }}
-                onMouseLeave={(e) => { if (vista !== k) e.currentTarget.style.background = L.white; }}>
-                {icon} {l}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ============================================================
 // PANTALLA "PIDEN CONTACTO" — clientes que solicitan que los llamen
 // o hablar con un vendedor (filtro inteligente en su propia vista).
@@ -1905,8 +1894,8 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
       )}
 
 
-      {/* ── Tabs ── (solo móvil: en escritorio navega el NavRail) */}
-      {isMobile && <NavTabs vista={vista} setVista={setVista} rol={rol} contactos={contactos} />}
+      {/* La navegación de móvil ahora es la BottomNav (ver App); en escritorio,
+          el NavRail. El Sidebar ya no lleva tabs propios. */}
 
       {vista === "chat" && (
         <>
@@ -4428,7 +4417,8 @@ export default function App() {
         </div>
       )}
 
-      <div className="app-sidebar">
+      <div className="app-sidebar" style={isMobile ? { display: "flex", flexDirection: "column" } : undefined}>
+        <div style={{ flex: 1, minHeight: 0 }}>
         <Sidebar contactos={contactos} activo={activo}
           onSelect={(c) => setActivo(c)}
           onToggleDestacado={toggleDestacado}
@@ -4440,6 +4430,14 @@ export default function App() {
           vista={vista} setVista={setVista} alertas={alertas}
           onDescartarAlerta={descartarAlerta} onDescartarTodasAlertas={descartarTodasAlertas}
           isMobile={isMobile} rol={rol} perfil={perfil} />
+        </div>
+        {/* Barra inferior: solo en la pantalla de listas. Con un panel abierto
+            se oculta, porque esas pantallas son completas y taparía el cuadro
+            de escritura del chat. */}
+        {isMobile && !mobileInPanel && (
+          <BottomNav vista={vista} setVista={setVista} rol={rol} contactos={contactos}
+            userName={userName} onLogout={handleLogout} />
+        )}
       </div>
 
       <div className="app-main">
