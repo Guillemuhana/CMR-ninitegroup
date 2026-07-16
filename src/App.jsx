@@ -165,6 +165,25 @@ const PIDE_BADGE = {
 };
 
 // ============================================================
+// QUIÉN ATIENDE EL CHAT
+// ============================================================
+// Para que dos vendedores no se metan en la misma conversación. La asignación
+// del CEO (`vendedor`) manda; si nadie lo asignó, vale quien de hecho está
+// hablando: el último humano que respondió, que el trigger de `mensajes` deja
+// en `contactos.ultimo_agente` (ver supabase_ultimo_agente_migration.sql).
+// Devuelve { nombre, asignado } o null si no lo agarró nadie todavía.
+function quienAtiende(c) {
+  const asignado = (c?.vendedor || "").trim();
+  if (asignado) return { nombre: asignado, asignado: true };
+  const hablando = (c?.ultimo_agente || "").trim();
+  if (hablando) return { nombre: hablando, asignado: false };
+  return null;
+}
+const primerNombre = (n) => String(n || "").trim().split(/\s+/)[0] || "";
+const mismoVendedor = (a, b) =>
+  !!a && !!b && primerNombre(a).toLowerCase() === primerNombre(b).toLowerCase();
+
+// ============================================================
 // MOBILE HOOK
 // ============================================================
 function useIsMobile(bp = 768) {
@@ -2038,7 +2057,24 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                       ); })()}
                       <span style={{ fontSize: 9.5, padding: "2px 8px", borderRadius: 4, background: est.bg, color: est.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.3 }}>{est.label}</span>
                       {c.tipo === "cliente" && <span style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 4, background: "#DCFCE7", color: "#16A34A", fontWeight: 700 }}>★ Cliente</span>}
-                      {c.vendedor && <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>{c.vendedor}</span>}
+                      {/* Quién está en este chat, al lado del estado: ámbar si lo
+                          atiende OTRO (no te metas), gris si sos vos. */}
+                      {(() => {
+                        const at = quienAtiende(c);
+                        if (!at) return null;
+                        const mio = mismoVendedor(at.nombre, userName);
+                        return (
+                          <span
+                            title={`${at.asignado ? "Asignado a" : "Está hablando"}: ${at.nombre}${mio ? " (vos)" : " — evitá meterte en este chat"}`}
+                            style={{ fontSize: 9.5, padding: "2px 7px 2px 5px", borderRadius: 4, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.3,
+                              display: "inline-flex", alignItems: "center", gap: 3,
+                              background: mio ? L.soft : "#FEF3C7",
+                              color:      mio ? L.muted : "#B45309",
+                              border: `1px solid ${mio ? L.border : "#FDE68A"}` }}>
+                            <User size={9} /> {primerNombre(at.nombre)}
+                          </span>
+                        );
+                      })()}
                       {c.seguimiento_at && new Date(c.seguimiento_at) <= new Date() && <span title="Seguimiento vencido"><Clock size={12} color={C.red} /></span>}
                     </div>
                   </div>
@@ -4501,8 +4537,12 @@ export default function App() {
 
       {!isMobile && (
         <div className="app-rail">
-          <NavRail vista={vista} setVista={setVista} rol={rol} contactos={contactos}
-            userName={userName} userEmail={userEmail} onLogout={handleLogout} />
+          {/* El flyout es el que crece con el hover; el .app-rail de afuera
+              mantiene fijos sus 72px para que el layout no se mueva. */}
+          <div className="rail-flyout">
+            <NavRail vista={vista} setVista={setVista} rol={rol} contactos={contactos}
+              userName={userName} userEmail={userEmail} onLogout={handleLogout} />
+          </div>
         </div>
       )}
 

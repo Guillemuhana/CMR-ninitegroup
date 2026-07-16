@@ -111,7 +111,24 @@
       /* ── Layout responsive principal ── */
       /* Escritorio: rail de navegación · conversaciones · panel activo */
       .app-layout  { display: flex; height: 100%; overflow: hidden; }
-      .app-rail    { flex-shrink: 0; width: 236px; height: 100%; }
+      /* El rail ocupa siempre 72px de layout: solo íconos. Al pasar el mouse el
+         contenido (.rail-flyout) se despliega a 236px POR ENCIMA del resto, sin
+         empujar la lista ni el chat: el espacio reservado nunca cambia. */
+      .app-rail    { flex-shrink: 0; width: 72px; height: 100%; position: relative; z-index: 60; }
+      .rail-flyout { position: absolute; top: 0; bottom: 0; left: 0; width: 72px; overflow: hidden;
+                     transition: width .18s ease, box-shadow .18s ease; }
+      .app-rail:hover .rail-flyout,
+      .app-rail:focus-within .rail-flyout { width: 236px; box-shadow: 8px 0 32px rgba(0,0,0,.32); }
+
+      /* Estado plegado: sin textos, íconos centrados y el badge sobre el ícono. */
+      .app-rail:not(:hover):not(:focus-within) .rail-label { display: none !important; }
+      .app-rail:not(:hover):not(:focus-within) .rail-item  { justify-content: center; padding-left: 0 !important; padding-right: 0 !important; }
+      .app-rail:not(:hover):not(:focus-within) .rail-badge { position: absolute; top: 3px; right: 10px; }
+      .app-rail:not(:hover):not(:focus-within) .rail-brand { padding-left: 0 !important; padding-right: 0 !important; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .rail-flyout { transition: none; }
+      }
       /* Columna flex en TODOS los anchos: adentro lleva la lista (que scrollea
          sola) y, en celular, la BottomNav al pie. Si no es flex, el `flex: 1`
          del envoltorio de la lista es inerte, la lista se dibuja a su alto
@@ -122,19 +139,14 @@
       .app-main    { flex: 1; min-width: 0; height: 100%; overflow: hidden; display: flex; flex-direction: column; }
       .app-right   { flex-shrink: 0; width: 320px; height: 100%; }
 
-      /* Tablet: el chat necesita el ancho, así que el rail queda en íconos y la
-         ficha del cliente se esconde (sigue disponible con "Editar").
+      /* Tablet: el chat necesita el ancho, así que la ficha del cliente se
+         esconde (sigue disponible con "Editar"). El rail ya es de íconos en
+         todos los anchos, así que acá no hace falta tocarlo.
          Se resuelve con clases y no con ternarios de isMobile en JS: así el
          mismo componente sirve para escritorio y tablet, sin lógica duplicada. */
       @media (max-width: 1180px) {
-        .app-rail    { width: 72px; }
         .app-sidebar { width: 304px; }
         .app-right   { display: none !important; }
-        .rail-label  { display: none !important; }
-        .rail-item   { justify-content: center; padding-left: 0 !important; padding-right: 0 !important; }
-        .rail-badge  { position: absolute; top: 3px; right: 10px; }
-        .rail-brand  { padding-left: 0 !important; padding-right: 0 !important; }
-        .rail-logo   { max-width: 40px !important; }
       }
 
       @media (max-width: 767px) {
