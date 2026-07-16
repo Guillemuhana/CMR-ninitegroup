@@ -2665,19 +2665,19 @@ function PanelDerecho({ contacto, onUpdateContacto, onEditar }) {
 
   const idxActual = EMBUDO.indexOf(contacto.estado);
   const fila = (label, valor) => (
-    <div style={{ display: "flex", gap: 10, padding: "6px 0", alignItems: "baseline" }}>
-      <span style={{ fontSize: 11.5, color: L.light, width: 92, flexShrink: 0 }}>{label}</span>
+    <div style={{ display: "flex", gap: 8, padding: "5px 0", alignItems: "baseline" }}>
+      <span style={{ fontSize: 11, color: L.light, width: 74, flexShrink: 0 }}>{label}</span>
       <span style={{ fontSize: 12.5, color: valor ? L.text : L.light, fontWeight: valor ? 500 : 400, minWidth: 0, overflowWrap: "anywhere" }}>
         {valor || "—"}
       </span>
     </div>
   );
 
-  const seccion = { background: L.white, border: `1px solid ${L.border}`, borderRadius: 12, padding: "13px 14px" };
+  const seccion = { background: L.white, border: `1px solid ${L.border}`, borderRadius: 12, padding: "11px 12px" };
   const titulo  = { fontFamily: FONT_DISPLAY, fontSize: 12.5, fontWeight: 700, color: L.text, marginBottom: 4 };
 
   return (
-    <aside style={{ width: "100%", height: "100%", background: L.bg, borderLeft: `1px solid ${L.border}`, overflowY: "auto", padding: 12, display: "flex", flexDirection: "column", gap: 12 }} className="scroll-y">
+    <aside style={{ width: "100%", height: "100%", background: L.bg, borderLeft: `1px solid ${L.border}`, overflowY: "auto", padding: 10, display: "flex", flexDirection: "column", gap: 10 }} className="scroll-y">
 
       {/* Datos del contacto */}
       <div style={seccion}>
@@ -2733,9 +2733,9 @@ function PanelDerecho({ contacto, onUpdateContacto, onEditar }) {
         <div style={titulo}>Actividad</div>
         {fila("Últ. del cliente", contacto.ultimo_in_at ? `hace ${msToStr(Date.now() - new Date(contacto.ultimo_in_at).getTime())}` : null)}
         {fila("Últ. respuesta", contacto.ultimo_out_at ? `hace ${msToStr(Date.now() - new Date(contacto.ultimo_out_at).getTime())}` : null)}
-        <div style={{ display: "flex", gap: 10, padding: "6px 0", alignItems: "baseline" }}>
-          <span style={{ fontSize: 11.5, color: L.light, width: 92, flexShrink: 0 }}>Seguimiento</span>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: contacto.seguimiento_at ? (new Date(contacto.seguimiento_at) <= new Date() ? COLOR.warning : L.text) : L.light }}>
+        <div style={{ display: "flex", gap: 8, padding: "5px 0", alignItems: "baseline" }}>
+          <span style={{ fontSize: 11, color: L.light, width: 74, flexShrink: 0 }}>Seguimiento</span>
+          <span style={{ fontSize: 12, fontWeight: 600, minWidth: 0, overflowWrap: "anywhere", color: contacto.seguimiento_at ? (new Date(contacto.seguimiento_at) <= new Date() ? COLOR.warning : L.text) : L.light }}>
             {contacto.seguimiento_at
               ? new Date(contacto.seguimiento_at).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
               : "Sin agendar"}
