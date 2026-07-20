@@ -2405,6 +2405,10 @@ const PLANTILLAS = [
         label: "Saludo + catálogo",
         texto: `Hi! Thanks for your interest in NINIT Group 🙌\n\nHere's our full catalog with all models and specs:\n👉 https://ninitgroup.com/wp-content/uploads/2026/04/NINITGROUP_CATALOG.pdf\n\nWe have 4 models available:\n• 2-Stall White Marble — boutique events\n• 3-Stall — our most popular unit ⭐\n• 4-Stall — large festivals & high traffic\n• ADA+2 — fully accessible option\n\nWhich one fits your event best?`,
       },
+      {
+        label: "Ready to Go + fabricación (ES)",
+        texto: `Buenos días, mi nombre es Agustina, un gusto saludarte. Te cuento que actualmente disponemos de unidades para entrega inmediata (Ready to Go) en versiones de 2 puertas y 4 puertas a USD 36.500 para que te los lleves hoy mismo.\n\nTambién tenemos la opción de fabricación personalizada por USD 31.500 (con tiempo de producción a coordinar).\n\nTe envié un mensaje al privado para pasarte fotos de los modelos, fichas técnicas y ver cuál se adapta mejor a tu proyecto. ¡Quedo a tu disposición!`,
+      },
     ],
   },
   {
