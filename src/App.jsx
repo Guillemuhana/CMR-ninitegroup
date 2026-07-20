@@ -2407,7 +2407,7 @@ const PLANTILLAS = [
       },
       {
         label: "Ready to Go + fabricación (ES)",
-        texto: `Buenos días, mi nombre es Agustina, un gusto saludarte. Te cuento que actualmente disponemos de unidades para entrega inmediata (Ready to Go) en versiones de 2 puertas y 4 puertas a USD 36.500 para que te los lleves hoy mismo.\n\nTambién tenemos la opción de fabricación personalizada por USD 31.500 (con tiempo de producción a coordinar).\n\nTe envié un mensaje al privado para pasarte fotos de los modelos, fichas técnicas y ver cuál se adapta mejor a tu proyecto. ¡Quedo a tu disposición!`,
+        texto: `Buenos días, mi nombre es Agustina, un gusto saludarte. Te cuento que actualmente disponemos de 2 unidades de 4 puertas (stalls) listas para entrega inmediata (Ready to Go) a USD 36.500 para que te las lleves hoy mismo.\n\nTambién tenemos la opción de fabricación personalizada por USD 31.500 (con tiempo de producción a coordinar).\n\nTe envié un mensaje al privado para pasarte fotos de los modelos, fichas técnicas y ver cuál opción te conviene más. ¡Quedo a tu disposición!`,
       },
     ],
   },
