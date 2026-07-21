@@ -988,17 +988,60 @@ function AIAsistente({ contactoActivo, alertas = [], contactos = [], nombreUsuar
     ).length;
     const segVencidos = alertas.filter((a) => a.tipo === "seguimiento").length;
     const urgentes    = alertas.filter((a) => a.tipo === "sin_respuesta").length;
-
     const primerNombre = (nombreUsuario || "").split(" ")[0] || "equipo";
-    let briefing = `${saludo}, ${primerNombre}.`;
-    if (urgentes > 0)       briefing += ` Hay ${urgentes} cliente${urgentes > 1 ? "s" : ""} esperando respuesta urgente.`;
-    if (segVencidos > 0)    briefing += ` Tenés ${segVencidos} seguimiento${segVencidos > 1 ? "s" : ""} vencido${segVencidos > 1 ? "s" : ""}.`;
-    if (sinRespuesta > 0 && urgentes === 0) briefing += ` Hay ${sinRespuesta} conversación${sinRespuesta > 1 ? "es" : ""} sin responder.`;
-    if (urgentes === 0 && segVencidos === 0 && sinRespuesta === 0) briefing += ` Todo está al día. ¿En qué te ayudo?`;
-    else briefing += ` ¿Arrancamos por eso?`;
 
-    setMsgs([{ from: "ai", text: briefing }]);
-    if (vozOnRef.current) hablar(briefing);
+    const briefingBase = () => {
+      let b = `${saludo}, ${primerNombre}.`;
+      if (urgentes > 0)       b += ` Hay ${urgentes} cliente${urgentes > 1 ? "s" : ""} esperando respuesta urgente.`;
+      if (segVencidos > 0)    b += ` Tenés ${segVencidos} seguimiento${segVencidos > 1 ? "s" : ""} vencido${segVencidos > 1 ? "s" : ""}.`;
+      if (sinRespuesta > 0 && urgentes === 0) b += ` Hay ${sinRespuesta} conversación${sinRespuesta > 1 ? "es" : ""} sin responder.`;
+      if (urgentes === 0 && segVencidos === 0 && sinRespuesta === 0) b += ` Todo está al día. ¿En qué te ayudo?`;
+      else b += ` ¿Arrancamos por eso?`;
+      return b;
+    };
+
+    // Vendedores (y fallback): briefing corto de pendientes.
+    if (rol !== "ceo") {
+      const b = briefingBase();
+      setMsgs([{ from: "ai", text: b }]);
+      if (vozOnRef.current) hablar(b);
+      return;
+    }
+
+    // CEO (Nicolás): reporte del día al instante, como un empleado que lo pone al tanto.
+    (async () => {
+      try {
+        const inicioDia = new Date(); inicioDia.setHours(0, 0, 0, 0);
+        const { data } = await supabase
+          .from("mensajes")
+          .select("agente,direccion,created_at")
+          .gte("created_at", inicioDia.toISOString())
+          .order("created_at", { ascending: false })
+          .limit(3000);
+        const msgsHoy = data || [];
+        const inHoy  = msgsHoy.filter((m) => m.direccion === "in").length;
+        const outHoy = msgsHoy.filter((m) => m.direccion === "out");
+        const nuevosHoy = contactos.filter((c) => c.created_at && new Date(c.created_at) >= inicioDia).length;
+        const map = {};
+        outHoy.forEach((m) => { const a = (m.agente && String(m.agente).trim()) || "el bot"; map[a] = (map[a] || 0) + 1; });
+        const quien = Object.entries(map).sort((a, b) => b[1] - a[1]).map(([a, n]) => `${a} (${n})`).join(", ");
+
+        let b = `${saludo}, ${primerNombre}. Te pongo al día con lo de hoy:\n`;
+        b += `• ${nuevosHoy} lead${nuevosHoy === 1 ? "" : "s"} nuevo${nuevosHoy === 1 ? "" : "s"}\n`;
+        b += `• ${inHoy} consulta${inHoy === 1 ? "" : "s"} de clientes · ${outHoy.length} respuesta${outHoy.length === 1 ? "" : "s"} enviada${outHoy.length === 1 ? "" : "s"}\n`;
+        b += `• Atendió: ${quien || "nadie todavía"}\n`;
+        if (urgentes > 0)    b += `• ⚠️ ${urgentes} cliente${urgentes > 1 ? "s" : ""} esperando respuesta urgente\n`;
+        if (segVencidos > 0) b += `• ⚠️ ${segVencidos} seguimiento${segVencidos > 1 ? "s" : ""} vencido${segVencidos > 1 ? "s" : ""}\n`;
+        if (sinRespuesta > 0 && urgentes === 0) b += `• ${sinRespuesta} conversación${sinRespuesta > 1 ? "es" : ""} sin responder\n`;
+        b += `¿Querés el informe completo del día o el desempeño del equipo?`;
+        setMsgs([{ from: "ai", text: b }]);
+        if (vozOnRef.current) hablar(b.replace(/•/g, "").replace(/\n+/g, ". "));
+      } catch {
+        const b = briefingBase();
+        setMsgs([{ from: "ai", text: b }]);
+        if (vozOnRef.current) hablar(b);
+      }
+    })();
   }, [open]);  // eslint-disable-line
 
   // ── STT ──────────────────────────────────────────────────
@@ -1183,15 +1226,17 @@ CARTERA TOTAL: ${totalLeads} contactos | ${sinAsignar} sin asignar a un vendedor
         if (Date.now() - reporteCEORef.current.ts > 60000) { await cargarReporteCEO(); }
         sysExtra += reporteCEORef.current.texto;
         sysExtra += `\n\n════ CÓMO ARMAR EL REPORTE (sos CEO) ════
-Cuando Nicolás pida un REPORTE, RESUMEN, las "acciones del día", "cómo venimos", la ACTIVIDAD o el DESEMPEÑO del equipo o de un vendedor, armá un informe PROFESIONAL, DETALLADO y ordenado usando el RESUMEN GLOBAL y los DATOS POR VENDEDOR de arriba.
-Empezá SIEMPRE por el panorama del día y de la semana con NÚMEROS CONCRETOS (aunque los leads no estén asignados a un vendedor):
-  1. Actividad de HOY: leads nuevos, consultas entrantes de clientes, respuestas enviadas y QUIÉN de los vendedores habló con los clientes (desglose por agente).
+Hablás con Nicolás, el DUEÑO de NINIT Group. Comportate como su MANO DERECHA / jefe de operaciones: un empleado de máxima confianza que lo pone al día de TODO lo que pasó, con datos exactos, sin que él tenga que preguntar dos veces. Sos claro, directo y honesto: le decís lo bueno y lo que está flojo.
+Cuando Nicolás pida un REPORTE, RESUMEN, "la estadística de hoy", "cuántos contactos/mensajes", "quién atendió", "cómo venimos/estamos", la ACTIVIDAD o el DESEMPEÑO del equipo o de un vendedor, armá un informe PROFESIONAL, COMPLETO y ordenado usando el RESUMEN GLOBAL y los DATOS POR VENDEDOR de arriba.
+Empezá SIEMPRE por el panorama del día con NÚMEROS CONCRETOS (aunque los leads no estén asignados a un vendedor):
+  1. Actividad de HOY: leads nuevos, consultas entrantes de clientes, respuestas enviadas y QUIÉN atendió cada cosa (desglose por agente/vendedor; si respondió el bot, decilo). Nombrá a cada vendedor aunque haya hecho 0.
   2. Llamadas: hechas HOY, en la SEMANA y en el MES (con quién las hizo), agendadas pendientes y clientes marcados "hay que llamar".
   3. Actividad de los ÚLTIMOS 7 DÍAS: leads nuevos, consultas, respuestas y quién respondió.
   4. Cartera total: cuántos contactos hay, cuántos sin asignar, cuántos sin responder y el desglose por estado.
-Mantenelo SIMPLE y claro para Nicolás: números concretos y al grano, sin relleno.
+Mantenelo claro y al grano para Nicolás: números concretos, nombres reales, cero relleno. Usá viñetas y negrita para que se lea de un vistazo.
 Después, si pide desempeño individual, sumá por vendedor: pipeline, ventas del mes, actividad, diario y ánimo, tu valoración y agenda próxima.
-Estructuralo con secciones y viñetas claras, destacá lo bueno y lo que hay que mejorar, y cerrá con 1-2 recomendaciones concretas. NUNCA inventes ni digas "no hay nada registrado" si arriba hay números: usá SOLO los datos provistos; si un dato puntual no está, decí "sin datos" (nunca digas que no tenés acceso).`;
+Cerrá SIEMPRE con: (a) lo que necesita la atención de Nicolás HOY (urgencias, leads calientes, cosas sin responder) y (b) 1-2 recomendaciones concretas y accionables.
+REGLAS DE ORO: NUNCA inventes ni digas "no hay nada registrado" si arriba hay números; usá SOLO los datos provistos. Si un dato puntual no está, decí "sin datos" — nunca digas que no tenés acceso ni le pidas a Nicolás que lo busque él. Si un número es 0, decilo con naturalidad (ej. "hoy todavía no entró ningún lead nuevo").`;
       }
       // Consultas de solo lectura — disponibles para TODOS (vendedores y CEO).
       sysExtra += `\n\n════ CONSULTAR EL CRM (podés buscar datos reales) ════
