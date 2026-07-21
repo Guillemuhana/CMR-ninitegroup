@@ -206,14 +206,14 @@ SÍ decir: "trailers construidos por fabricantes seleccionados", "soporte con ba
 Web: ninitgroup.com · Email: sales@ninitgroup.com · WhatsApp: +1 786 385 9402.
 
 ════ CATÁLOGO Y PRECIOS OFICIALES (venta) ════
-- 2-Stall   → USD 21,500
-- 3-Stall   → USD 25,500  (el más popular, mejor balance)
-- ADA + 2   → USD 28,500  (cumplimiento federal ADA)
-- 4-Stall   → USD 31,500  (festivales / alto flujo)
+- 2-Stall   → USD 22,800
+- 3-Stall   → USD 26,700  (el más popular, mejor balance)
+- 4-Stall   → USD 31,700  (festivales / alto flujo)
+- ADA + 2   → USD 33,500  (cumplimiento federal ADA)
 Estos precios incluyen: producción, logística internacional, entrega al hub logístico de NTG más cercano, ensamblado, inspección y preparación para operar.
 Catálogo: https://ninitgroup.com/wp-content/uploads/2026/04/NINITGROUP_CATALOG.pdf
 
-ALQUILER: también disponible. Precio según fecha, modelo y duración del evento — se cotiza puntualmente.
+NTG SOLO VENDE unidades — NO se ofrece alquiler. Si el cliente pregunta por alquiler/renta, aclará amablemente que trabajamos únicamente con venta y encaminá la charla hacia la compra. Nunca ofrezcas ni cotices alquiler.
 
 ════ HUBS LOGÍSTICOS Y ENVÍO FINAL ════
 Hubs de NTG: Miami · Texas · Long Beach.
@@ -268,7 +268,7 @@ Lead Nuevo → Contactado → Interesado → Cotización Enviada → Negociando 
 ════ LEADS DE META ADS ════
 - Son prospectos calientes — ya vieron el anuncio y se interesaron.
 - Responder RÁPIDO (idealmente dentro de 5 min) aumenta mucho la tasa de cierre.
-- Calificar con una pregunta a la vez: ¿compra o alquiler? · fecha del evento · ZIP/ciudad · cantidad de baños o personas.
+- Calificar con una pregunta a la vez: fecha del evento · ZIP/ciudad · cantidad de baños o personas. (NTG solo vende, no alquila.)
 - Si no responden → follow-up a las 24h y a las 72h.
 
 ════ LEADS CALIENTES → ESCALAR A NICO ════
@@ -2399,7 +2399,7 @@ const PLANTILLAS = [
       },
       {
         label: "Bienvenida Meta Ads",
-        texto: `Hi! Thanks for reaching out to NINIT Group 🚐✨ I'm here to help! I saw you were interested in our luxury restroom trailers. Could you tell me a bit more about your needs?\n\n• Are you looking to buy or rent?\n• What's the event date and location?\n• How many guests are you expecting?\n\nWe'll put together a custom quote for you right away!`,
+        texto: `Hi! Thanks for reaching out to NINIT Group 🚐✨ I'm here to help! I saw you were interested in our luxury restroom trailers. Could you tell me a bit more about your needs?\n\n• What's the event date and location?\n• How many guests are you expecting?\n• Which model are you interested in?\n\nWe'll put together a custom quote for you right away!`,
       },
       {
         label: "Saludo + catálogo",
@@ -2418,10 +2418,6 @@ const PLANTILLAS = [
         label: "Precios de venta",
         texto: `Here's a quick overview of our pricing:\n\n🏆 2-Stall White Marble: $21,500 (pre-sale) / $24,000 (ready to ship)\n⭐ 3-Stall (most popular): $25,000 (pre-sale) / $27,500 (ready to ship)\n🔥 4-Stall: $32,500 (pre-sale) / $35,000 (ready to ship)\n♿ ADA+2 Accessible: $29,500 (pre-sale) / $32,000 (ready to ship)\n\n📦 FREE shipping for Florida clients!\n\nReady-to-ship units have limited stock. Want to reserve yours with a deposit?`,
       },
-      {
-        label: "Solicitar cotización alquiler",
-        texto: `For rental pricing, it depends on the event date, duration, and model. Could you share:\n\n1️⃣ Event date?\n2️⃣ City / location?\n3️⃣ How many hours/days?\n4️⃣ Estimated number of guests?\n\nI'll get you a custom rental quote ASAP 🙌`,
-      },
     ],
   },
   {
@@ -2429,7 +2425,7 @@ const PLANTILLAS = [
     items: [
       {
         label: "Pedir datos del evento",
-        texto: `To prepare your custom quote, I just need a few details:\n\n1. Buy or rent?\n2. Event date?\n3. Event location (city)?\n4. Estimated number of guests?\n5. Any specific model in mind?\n\nWe'll get back to you with a tailored proposal right away! 🚐`,
+        texto: `To prepare your custom quote, I just need a few details:\n\n1. Event date?\n2. Event location (city)?\n3. Estimated number of guests?\n4. Any specific model in mind?\n\nWe'll get back to you with a tailored proposal right away! 🚐`,
       },
     ],
   },

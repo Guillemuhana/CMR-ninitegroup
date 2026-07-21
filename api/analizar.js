@@ -29,7 +29,7 @@ const ENUMS = {
   etapa_embudo:       ["prospeccion", "calificacion", "propuesta", "cierre", "postventa"],
 };
 
-const SYSTEM = `Sos un analista comercial senior de NINIT Group (venta y alquiler de restroom trailers / baños de lujo, base en USA, foco en Miami-Florida).
+const SYSTEM = `Sos un analista comercial senior de NINIT Group (venta de restroom trailers / baños de lujo, base en USA, foco en Miami-Florida).
 Te paso la transcripción de un chat entre un cliente y el equipo (bot + vendedor). Analizá SOLO lo que dijo el cliente para clasificar el lead.
 
 Respondé ÚNICAMENTE con un objeto JSON válido, sin texto adicional, con EXACTAMENTE este esquema y estos valores permitidos:
