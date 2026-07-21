@@ -1178,7 +1178,7 @@ CARTERA TOTAL: ${totalLeads} contactos | ${sinAsignar} sin asignar a un vendedor
       if (vozOnRef.current) sysExtra += "\nMODO VOZ ACTIVO: máximo 2 oraciones, sin listas, sin markdown, lenguaje natural hablado.";
       // El reporte por vendedor es MUY pesado en tokens. Solo lo incluimos cuando
       // la consulta es sobre reportes/desempeño/equipo, para no agotar la cuota de Groq.
-      const pideReporte = /report|resumen|desempe|rendimiento|informe|equipo|vendedor|ranking|compar|c[oó]mo va|como va|c[oó]mo venimos|como venimos|productiv|ventas del|pipeline|m[eé]tricas?|kpi|acciones|actividad|llamad|del d[ií]a|de la semana/i.test(q);
+      const pideReporte = /report|resumen|desempe|rendimiento|informe|equipo|vendedor|ranking|compar|c[oó]mo va|como va|c[oó]mo venimos|como venimos|c[oó]mo estamos|como estamos|c[oó]mo vamos|como vamos|productiv|ventas del|pipeline|m[eé]tricas?|kpi|acciones|actividad|llamad|del d[ií]a|de la semana|estad[íi]stica?s?|cu[aá]nt[oa]s?|qui[eé]n atend|qui[eé]n respond|qui[eé]n habl|atendi[oó]|respondi[oó]|mensajes?|contactos?|leads?|consultas?|n[uú]meros?|movimiento|entr[oó]|entraron|\bhoy\b/i.test(q);
       if (rol === "ceo" && pideReporte) {
         if (Date.now() - reporteCEORef.current.ts > 60000) { await cargarReporteCEO(); }
         sysExtra += reporteCEORef.current.texto;
