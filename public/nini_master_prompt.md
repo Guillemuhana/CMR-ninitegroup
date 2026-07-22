@@ -173,6 +173,8 @@ INTERIORS:
 • 2-Stall:
   - https://ninitgroup.com/wp-content/uploads/2026/07/2d.jpeg
   - https://ninitgroup.com/wp-content/uploads/2026/07/2f.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior2c.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior2b.jpeg
   - (extra photo) https://ninitgroup.com/wp-content/uploads/2026/07/2s.jpeg
 • 3-Stall:
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1-1.jpeg
@@ -182,9 +184,13 @@ INTERIORS:
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-3.jpeg
 • ADA+2: https://ninitgroup.com/wp-content/uploads/2026/01/dfhxvb.png
 FLOOR PLANS:
-• 2-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1-1.jpeg
+• 2-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/plano2.jpeg
 • 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/PHOTO-2026-01-08-01-13-01-1.jpg
 • 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg
+VIDEOS:
+• 2-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/video_2_puertas_con_musica.mp4
+• 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Video-2026-06-18-at-5.18.10-PM.mp4
+• 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/video2_con_musica_avicii.mp4
 COLOR PALETTE (same for every model):
 • https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1.jpeg
 When a customer asks for pictures, share the matching link above (exterior, interior, plan, video or palette).
