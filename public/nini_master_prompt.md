@@ -185,8 +185,6 @@ FLOOR PLANS:
 • 2-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1-1.jpeg
 • 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/PHOTO-2026-01-08-01-13-01-1.jpg
 • 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg
-VIDEO:
-• 2-Stall (walkthrough) → https://ninitgroup.com/wp-content/uploads/2026/06/2_stalls_con_musica.mp4
 COLOR PALETTE (same for every model):
 • https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1.jpeg
 When a customer asks for pictures, share the matching link above (exterior, interior, plan, video or palette).
