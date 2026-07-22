@@ -163,14 +163,18 @@ SHOWROOM QUESTIONS
 Do not claim NTG has a traditional showroom. Most units are built to order, but you can share real photos, the catalog, and production updates.
 OFFICIAL MODEL PHOTOS (use ONLY these links — never invent other image URLs). Each model has an exterior, and depending on the model: interior, floor plan and/or video. The color palette is the same across all models.
 EXTERIORS:
-• 2-Stall White Marble → https://ninitgroup.com/wp-content/uploads/2026/05/2bano.png
+• 2-Stall White Marble → https://ninitgroup.com/wp-content/uploads/2026/07/2.jpeg
 • 3-Stall (most popular) → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM.jpeg
 • 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/4bano.png
 • ADA+2 → https://ninitgroup.com/wp-content/uploads/2026/05/ada22.png
 • 6-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/6bano.png
 • General view / render → https://ninitgroup.com/wp-content/uploads/2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png
 INTERIORS:
-• 2-Stall and 3-Stall (share the same interior):
+• 2-Stall:
+  - https://ninitgroup.com/wp-content/uploads/2026/07/2d.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/2f.jpeg
+  - (extra photo) https://ninitgroup.com/wp-content/uploads/2026/07/2s.jpeg
+• 3-Stall:
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1-1.jpeg
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1.jpeg
 • 4-Stall, 5-Stall and 6-Stall (share the same interior):

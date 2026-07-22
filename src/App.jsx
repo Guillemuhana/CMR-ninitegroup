@@ -237,14 +237,18 @@ NTG no financia directamente. Respuesta correcta: "Trabajamos con socios de fina
 No hay showroom tradicional — la mayoría de las unidades se construyen a pedido, pero se pueden compartir fotos reales, el catálogo y avances de producción.
 IMÁGENES POR MODELO (links oficiales — el vendedor las manda al cliente; vos podés sugerir cuál usar). Cada modelo tiene exterior, y según el modelo: interior, plano y/o video. La paleta de colores es la misma para todos los modelos.
 EXTERIORES:
-- 2-Stall White Marble → https://ninitgroup.com/wp-content/uploads/2026/05/2bano.png
+- 2-Stall White Marble → https://ninitgroup.com/wp-content/uploads/2026/07/2.jpeg
 - 3-Stall (el más popular) → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM.jpeg
 - 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/4bano.png
 - ADA+2 → https://ninitgroup.com/wp-content/uploads/2026/05/ada22.png
 - 6-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/6bano.png
 - Vista general / render → https://ninitgroup.com/wp-content/uploads/2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png
 INTERIORES:
-- 2-Stall y 3-Stall (comparten el mismo interior):
+- 2-Stall:
+  - https://ninitgroup.com/wp-content/uploads/2026/07/2d.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/2f.jpeg
+  - (foto extra) https://ninitgroup.com/wp-content/uploads/2026/07/2s.jpeg
+- 3-Stall:
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1-1.jpeg
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1.jpeg
 - 4-Stall, 5-Stall y 6-Stall (comparten el mismo interior):
@@ -2576,7 +2580,6 @@ const FOTO_PREFIX = "https://ninitgroup.com/wp-content/uploads/";
 
 // Assets compartidos entre modelos
 const FOTO_INTERIOR_456 = `Here's the interior 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM-1-1.jpeg\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-3.jpeg`;
-const FOTO_INTERIOR_23 = `Here's the interior 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1-1.jpeg\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1.jpeg`;
 const FOTO_PALETA = `Here's our color palette 🎨 (same premium finish on every model) 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1.jpeg`;
 
 // Cada modelo tiene varios assets: Exterior / Interior / Plano / Video / Paleta
@@ -2585,8 +2588,9 @@ const FOTOS_MODELOS = [
   {
     label: "2-Stall White Marble",
     assets: [
-      { tipo: "Exterior", texto: `Here's our 2-Stall White Marble unit 👇\n${FOTO_PREFIX}2026/05/2bano.png` },
-      { tipo: "Interior", texto: FOTO_INTERIOR_23 },
+      { tipo: "Exterior", texto: `Here's our 2-Stall White Marble unit 👇\n${FOTO_PREFIX}2026/07/2.jpeg` },
+      { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/07/2d.jpeg\n${FOTO_PREFIX}2026/07/2f.jpeg` },
+      { tipo: "Extra", texto: `Here's another view 👇\n${FOTO_PREFIX}2026/07/2s.jpeg` },
       { tipo: "Plano", texto: `Here's the floor plan of the 2-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1-1.jpeg` },
       { tipo: "Video", texto: `Here's a video walkthrough of the 2-Stall 👇\n${FOTO_PREFIX}2026/06/2_stalls_con_musica.mp4` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
