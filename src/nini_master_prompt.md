@@ -171,10 +171,9 @@ EXTERIORS:
 • General view / render → https://ninitgroup.com/wp-content/uploads/2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png
 INTERIORS:
 • 2-Stall:
-  - https://ninitgroup.com/wp-content/uploads/2026/07/2d.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/2f.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior2c.jpeg
   - https://ninitgroup.com/wp-content/uploads/2026/07/interior2b.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior2c.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/2d.jpeg
   - (extra photo) https://ninitgroup.com/wp-content/uploads/2026/07/2s.jpeg
 • 3-Stall:
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1-1.jpeg

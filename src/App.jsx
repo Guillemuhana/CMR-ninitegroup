@@ -245,10 +245,9 @@ EXTERIORES:
 - Vista general / render → https://ninitgroup.com/wp-content/uploads/2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png
 INTERIORES:
 - 2-Stall:
-  - https://ninitgroup.com/wp-content/uploads/2026/07/2d.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/2f.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior2c.jpeg
   - https://ninitgroup.com/wp-content/uploads/2026/07/interior2b.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior2c.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/2d.jpeg
   - (foto extra) https://ninitgroup.com/wp-content/uploads/2026/07/2s.jpeg
 - 3-Stall:
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1-1.jpeg
@@ -2593,7 +2592,7 @@ const FOTOS_MODELOS = [
     label: "2-Stall White Marble",
     assets: [
       { tipo: "Exterior", texto: `Here's our 2-Stall White Marble unit 👇\n${FOTO_PREFIX}2026/07/2.jpeg` },
-      { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/07/2d.jpeg\n${FOTO_PREFIX}2026/07/2f.jpeg\n${FOTO_PREFIX}2026/07/interior2c.jpeg\n${FOTO_PREFIX}2026/07/interior2b.jpeg` },
+      { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/07/interior2b.jpeg\n${FOTO_PREFIX}2026/07/interior2c.jpeg\n${FOTO_PREFIX}2026/07/2d.jpeg` },
       { tipo: "Extra", texto: `Here's another view 👇\n${FOTO_PREFIX}2026/07/2s.jpeg` },
       { tipo: "Plano", texto: `Here's the floor plan of the 2-Stall 👇\n${FOTO_PREFIX}2026/07/plano2.jpeg` },
       { tipo: "Video", texto: `Here's a video walkthrough of the 2-Stall 👇\n${FOTO_PREFIX}2026/07/video_2_puertas_con_musica.mp4` },
@@ -3597,7 +3596,7 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
             {!isMobile && <span>Fotos</span>}
           </button>
           {showFotos && (
-            <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: isMobile ? "calc(100vw - 24px)" : 320, maxHeight: 460, overflowY: "auto", background: L.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", border: `1px solid ${L.border}`, zIndex: 200 }}>
+            <div style={{ position: isMobile ? "fixed" : "absolute", bottom: isMobile ? 76 : "calc(100% + 8px)", left: isMobile ? 12 : 0, right: isMobile ? 12 : "auto", width: isMobile ? "auto" : 320, maxHeight: isMobile ? "72vh" : 460, overflowY: "auto", background: L.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", border: `1px solid ${L.border}`, zIndex: 200 }}>
               {fotoModelo == null ? (
                 <>
                   <div style={{ padding: "12px 16px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 8 }}>
@@ -3634,9 +3633,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                           style={{ padding: 0, background: L.soft, border: `1px solid ${L.border}`, borderRadius: 10, cursor: enviando ? "default" : "pointer", overflow: "hidden", display: "flex", flexDirection: "column", transition: "all .15s" }}
                           onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#0EA5E9"; e.currentTarget.style.transform = "translateY(-1px)"; }}
                           onMouseLeave={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.transform = "none"; }}>
-                          <div style={{ width: "100%", height: 92, background: "#0F172A0A", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                          <div style={{ width: "100%", height: isMobile ? 120 : 100, background: "#0F172A0A", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                             {thumb
-                              ? <img src={thumb} alt={a.tipo} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              ? <img src={thumb} alt={a.tipo} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                               : <span style={{ fontSize: 26 }}>🎬</span>}
                           </div>
                           <div style={{ padding: "6px 6px 7px", fontSize: 11.5, fontWeight: 700, color: L.text, textAlign: "center", lineHeight: 1.2 }}>{a.tipo}</div>
