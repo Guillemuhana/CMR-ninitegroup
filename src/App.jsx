@@ -2616,7 +2616,9 @@ const FOTOS_MODELOS = [
     assets: [
       { tipo: "Video", texto: `Here's a video walkthrough of the 3-Stall ⭐ 👇\n${FOTO_PREFIX}2026/07/video03.mp4` },
       { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/07/interior01.jpeg\n${FOTO_PREFIX}2026/07/interior02.jpeg\n${FOTO_PREFIX}2026/07/interior03.jpeg\n${FOTO_PREFIX}2026/07/interior04.jpeg` },
-      { tipo: "Video interior", texto: `Here's a look inside on video 👇\n${FOTO_PREFIX}2026/07/videointerior1.mp4\n${FOTO_PREFIX}2026/07/videointerior2.mp4\n${FOTO_PREFIX}2026/07/videointerior3.mp4` },
+      { tipo: "Video interior 1", texto: `Here's a look inside on video 👇\n${FOTO_PREFIX}2026/07/videointerior1.mp4` },
+      { tipo: "Video interior 2", texto: `Here's another look inside on video 👇\n${FOTO_PREFIX}2026/07/videointerior2.mp4` },
+      { tipo: "Video interior 3", texto: `And one more from inside 👇\n${FOTO_PREFIX}2026/07/videointerior3.mp4` },
       { tipo: "Extra", texto: `Here's another view 👇\n${FOTO_PREFIX}2026/07/extras.jpeg` },
       { tipo: "Plano", texto: `Here's the floor plan of the 3-Stall 👇\n${FOTO_PREFIX}2026/05/PHOTO-2026-01-08-01-13-01-1.jpg` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
