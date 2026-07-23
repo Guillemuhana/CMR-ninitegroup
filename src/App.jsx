@@ -7,6 +7,7 @@ import {
   AlertCircle, Clock, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
   Image as ImageIcon, Languages, Reply, SlidersHorizontal, Star,
+  PanelRight, PanelRightClose,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
@@ -2738,31 +2739,48 @@ function PanelDerecho({ contacto, onUpdateContacto, onEditar }) {
   );
 
   const seccion = { background: L.white, border: `1px solid ${L.border}`, borderRadius: 12, padding: "11px 12px" };
-  const titulo  = { fontFamily: FONT_DISPLAY, fontSize: 12.5, fontWeight: 700, color: L.text, marginBottom: 4 };
+  const titulo  = { fontFamily: FONT_DISPLAY, fontSize: 12.5, fontWeight: 700, color: L.text };
+
+  // Cada sección se pliega/despliega tocando su título (menos altura ocupada).
+  const [abiertas, setAbiertas] = useState({ datos: true, embudo: true, actividad: false, notas: false });
+  const toggleSec = (k) => setAbiertas((s) => ({ ...s, [k]: !s[k] }));
+  const cabecera = (id, label, extra) => (
+    <div onClick={() => toggleSec(id)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", userSelect: "none" }}>
+      <span style={{ ...titulo, display: "flex", alignItems: "center", gap: 5 }}>
+        <ChevronRight size={14} color={L.light} style={{ transform: abiertas[id] ? "rotate(90deg)" : "none", transition: "transform .15s", flexShrink: 0 }} />
+        {label}
+      </span>
+      {extra}
+    </div>
+  );
 
   return (
     <aside style={{ width: "100%", height: "100%", background: L.bg, borderLeft: `1px solid ${L.border}`, overflowY: "auto", padding: 10, display: "flex", flexDirection: "column", gap: 10 }} className="scroll-y">
 
       {/* Datos del contacto */}
       <div style={seccion}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-          <span style={titulo}>Datos del contacto</span>
-          <button onClick={onEditar} style={{ background: "none", border: "none", cursor: "pointer", color: C.red, fontSize: 12, fontWeight: 700, fontFamily: FONT_BODY, padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
+        {cabecera("datos", "Datos del contacto",
+          <button onClick={(e) => { e.stopPropagation(); onEditar(); }} style={{ background: "none", border: "none", cursor: "pointer", color: C.red, fontSize: 12, fontWeight: 700, fontFamily: FONT_BODY, padding: 0, display: "flex", alignItems: "center", gap: 4 }}>
             <Pencil size={12} /> Editar
           </button>
-        </div>
-        {fila("Nombre", contacto.nombre)}
-        {fila("Teléfono", contacto.telefono)}
-        {fila("Email", contacto.email)}
-        {fila("Ubicación", contacto.direccion)}
-        {fila("Empresa", contacto.empresa)}
-        {fila("Ingreso", contacto.created_at ? new Date(contacto.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null)}
-        {fila("Vendedor", contacto.vendedor)}
+        )}
+        {abiertas.datos && (
+          <div style={{ marginTop: 4 }}>
+            {fila("Nombre", contacto.nombre)}
+            {fila("Teléfono", contacto.telefono)}
+            {fila("Email", contacto.email)}
+            {fila("Ubicación", contacto.direccion)}
+            {fila("Empresa", contacto.empresa)}
+            {fila("Ingreso", contacto.created_at ? new Date(contacto.created_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" }) : null)}
+            {fila("Vendedor", contacto.vendedor)}
+          </div>
+        )}
       </div>
 
       {/* Embudo de ventas */}
       <div style={seccion}>
-        <div style={titulo}>Embudo de ventas</div>
+        {cabecera("embudo", "Embudo de ventas")}
+        {abiertas.embudo && (<>
         <div style={{ display: "flex", flexDirection: "column", gap: 1, marginTop: 6 }}>
           {EMBUDO.map((e, i) => {
             const est    = ESTADOS[e];
@@ -2790,11 +2808,13 @@ function PanelDerecho({ contacto, onUpdateContacto, onEditar }) {
             <AlertCircle size={12} /> Estado actual: <strong>{(ESTADOS[contacto.estado] || {}).label || contacto.estado}</strong>
           </div>
         )}
+        </>)}
       </div>
 
       {/* Actividad comercial */}
       <div style={seccion}>
-        <div style={titulo}>Actividad</div>
+        {cabecera("actividad", "Actividad")}
+        {abiertas.actividad && (<div style={{ marginTop: 4 }}>
         {fila("Últ. del cliente", contacto.ultimo_in_at ? `hace ${msToStr(Date.now() - new Date(contacto.ultimo_in_at).getTime())}` : null)}
         {fila("Últ. respuesta", contacto.ultimo_out_at ? `hace ${msToStr(Date.now() - new Date(contacto.ultimo_out_at).getTime())}` : null)}
         <div style={{ display: "flex", gap: 8, padding: "5px 0", alignItems: "baseline" }}>
@@ -2808,11 +2828,13 @@ function PanelDerecho({ contacto, onUpdateContacto, onEditar }) {
         {contacto.nota_seguimiento && (
           <div style={{ fontSize: 11.5, color: L.muted, marginTop: 2, fontStyle: "italic" }}>{contacto.nota_seguimiento}</div>
         )}
+        </div>)}
       </div>
 
       {/* Notas */}
       <div style={seccion}>
-        <div style={titulo}>Notas</div>
+        {cabecera("notas", "Notas")}
+        {abiertas.notas && (<>
         <textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={4}
           placeholder="Anotá lo que no puede perderse de este cliente…"
           style={{ width: "100%", boxSizing: "border-box", resize: "vertical", marginTop: 6, border: `1.5px solid ${L.border}`, borderRadius: 9, padding: "8px 10px", fontSize: 12.5, fontFamily: FONT_BODY, background: L.soft, color: L.text, outline: "none", lineHeight: 1.5 }} />
@@ -2827,12 +2849,13 @@ function PanelDerecho({ contacto, onUpdateContacto, onEditar }) {
             <Check size={12} /> Nota guardada
           </div>
         )}
+        </>)}
       </div>
     </aside>
   );
 }
 
-function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onBack, isMobile, rol }) {
+function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onBack, isMobile, rol, fichaAbierta, onToggleFicha }) {
   // Los leads de Google Ads llegan por email, así que comparten el mismo canal
   // de salida (y la misma desactivación).
   const esCanalEmail = contacto.canal === "email" || contacto.canal === "google_ads";
@@ -3316,31 +3339,37 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
             </div>
           </div>
           {!isMobile && (
-            <>
-              <button onClick={() => setDrawer(true)}
-                style={{ background: L.soft, border: `1.5px solid ${L.border}`, color: L.muted, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 600, display: "flex", alignItems: "center", gap: 6, transition: "all .15s", flexShrink: 0 }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.color = L.muted; }}>
-                <Pencil size={14} /> Editar
+            <div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}>
+              <button onClick={avanzarIA} title="Asistente de ventas IA: diagnóstico del cliente + próximo paso + mensaje sugerido"
+                onMouseDown={(e) => { e.currentTarget.style.transform = "scale(.96)"; }}
+                onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+                style={{ height: 34, boxSizing: "border-box", background: C.gradBtn, border: "none", color: "#fff", borderRadius: 9, padding: "0 14px", cursor: "pointer", fontSize: 12.5, fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: 0.2, display: "flex", alignItems: "center", gap: 6, boxShadow: SHADOW.ai, transition: "transform .1s ease", flexShrink: 0 }}>
+                <Sparkles size={14} /> Avanzar con IA
               </button>
               <button onClick={() => upd({ bot_activo: !contacto.bot_activo })} title={contacto.bot_activo ? "El bot atiende este chat — tocá para atenderlo vos" : "Vos atendés este chat — tocá para que lo tome el bot"}
-                style={{ background: contacto.bot_activo ? "#DCFCE7" : "#FEF2F2", border: `1.5px solid ${contacto.bot_activo ? "#86EFAC" : "#FECACA"}`, color: contacto.bot_activo ? "#15803D" : C.red, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontFamily: FONT_BODY, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, transition: "all .15s", flexShrink: 0 }}>
+                style={{ height: 34, boxSizing: "border-box", background: contacto.bot_activo ? "#DCFCE7" : "#FEF2F2", border: `1.5px solid ${contacto.bot_activo ? "#86EFAC" : "#FECACA"}`, color: contacto.bot_activo ? "#15803D" : C.red, borderRadius: 9, padding: "0 11px", cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, transition: "all .15s", flexShrink: 0 }}>
                 {contacto.bot_activo ? <><Bot size={14} /> Bot</> : <><User size={14} /> Yo atiendo</>}
               </button>
-              <button onClick={avanzarIA} title="Asistente de ventas IA: diagnóstico del cliente + próximo paso + mensaje sugerido"
-                onMouseDown={(e) => { e.currentTarget.style.transform = "scale(.94)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(99,102,241,.3)"; }}
-                onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 8px 22px rgba(99,102,241,.34)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 8px 22px rgba(99,102,241,.34)"; }}
-                style={{ background: C.gradBtn, border: "none", color: "#fff", borderRadius: 13, padding: "11px 24px", cursor: "pointer", fontSize: 14.5, fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: 0.2, display: "flex", alignItems: "center", gap: 8, boxShadow: SHADOW.ai, transition: "transform .1s ease, box-shadow .12s ease", flexShrink: 0 }}>
-                <Sparkles size={17} /> Avanzar con IA
+              <button onClick={() => setDrawer(true)} title="Editar datos del contacto"
+                style={{ height: 34, width: 34, boxSizing: "border-box", background: L.soft, border: `1.5px solid ${L.border}`, color: L.muted, borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.color = L.muted; }}>
+                <Pencil size={15} />
               </button>
               <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
-                style={{ background: confirmElim ? "#FEE2E2" : L.soft, border: `1.5px solid ${confirmElim ? "#FECACA" : L.border}`, color: confirmElim ? C.red : L.muted, borderRadius: 9, width: 36, height: 36, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}
+                style={{ height: 34, width: 34, boxSizing: "border-box", background: confirmElim ? "#FEE2E2" : L.soft, border: `1.5px solid ${confirmElim ? "#FECACA" : L.border}`, color: confirmElim ? C.red : L.muted, borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}
                 onMouseEnter={(e) => { if (!confirmElim) { e.currentTarget.style.borderColor = "#FECACA"; e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = C.red; } }}
                 onMouseLeave={(e) => { if (!confirmElim) { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.background = L.soft; e.currentTarget.style.color = L.muted; } }}>
                 <Trash2 size={15} />
               </button>
-            </>
+              {onToggleFicha && (
+                <button className="ficha-toggle" onClick={onToggleFicha} title={fichaAbierta ? "Ocultar ficha del cliente" : "Mostrar ficha del cliente"}
+                  style={{ height: 34, width: 34, boxSizing: "border-box", background: fichaAbierta ? "#EEF2FF" : L.soft, border: `1.5px solid ${fichaAbierta ? "#C7D2FE" : L.border}`, color: fichaAbierta ? "#4F46E5" : L.muted, borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}>
+                  {fichaAbierta ? <PanelRightClose size={16} /> : <PanelRight size={16} />}
+                </button>
+              )}
+            </div>
           )}
         </div>
         {/* Fila 2: acciones (solo móvil; en desktop ya están arriba) */}
@@ -4211,6 +4240,7 @@ export default function App() {
   const [alertasVistas, setAlertasVistas] = useState(() => new Set()); // ids de alertas ya vistas/descartadas
   const [welcome,   setWelcome]   = useState(false);
   const [fichaEdit,  setFichaEdit]  = useState(null);                   // contacto a editar desde el panel derecho
+  const [fichaAbierta, setFichaAbierta] = useState(true);               // ficha derecha desplegada/colapsada (escritorio)
   const [asignacionRecibida, setAsignacionRecibida] = useState(null);  // banner al vendedor: { contacto, por }
   const [avisoCEO,  setAvisoCEO]  = useState("");                       // confirmación al CEO tras asignar
   const tuvoSesion   = useRef(false);
@@ -4689,7 +4719,8 @@ export default function App() {
         ) : activo ? (
           <ChatPanel contacto={activo} onUpdateContacto={updateContacto} onDeleteContacto={deleteContacto} userName={userName}
             onBack={isMobile ? () => setActivo(null) : undefined}
-            isMobile={isMobile} rol={rol} />
+            isMobile={isMobile} rol={rol}
+            fichaAbierta={fichaAbierta} onToggleFicha={() => setFichaAbierta((v) => !v)} />
         ) : (
           <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: L.bg, flexDirection: "column", gap: 20 }}>
             <img src={LOGO_URL} alt="NINIT Group" style={{ width: "min(340px, 62%)", objectFit: "contain", filter: "drop-shadow(0 4px 20px rgba(58,141,194,0.5))" }} />
@@ -4720,7 +4751,7 @@ export default function App() {
 
       {/* Ficha del cliente: 4ª columna, solo en escritorio y con un chat abierto.
           En móvil y tablet se sigue usando el cajón (Editar en la cabecera). */}
-      {!isMobile && activo && vista === "chat" && (
+      {!isMobile && activo && vista === "chat" && fichaAbierta && (
         <div className="app-right">
           <PanelDerecho contacto={activo} onUpdateContacto={updateContacto} onEditar={() => setFichaEdit(activo)} />
         </div>
