@@ -165,7 +165,7 @@ OFFICIAL MODEL PHOTOS (use ONLY these links — never invent other image URLs). 
 EXTERIORS:
 • 2-Stall White Marble → https://ninitgroup.com/wp-content/uploads/2026/07/2.jpeg
 • 3-Stall (most popular) → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM.jpeg
-• 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/4bano.png
+• 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/exterior.jpeg · https://ninitgroup.com/wp-content/uploads/2026/07/exteriror2.jpeg
 • ADA+2 → https://ninitgroup.com/wp-content/uploads/2026/05/ada22.png
 • 6-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/6bano.png
 • General view / render → https://ninitgroup.com/wp-content/uploads/2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png
@@ -176,9 +176,21 @@ INTERIORS:
   - https://ninitgroup.com/wp-content/uploads/2026/07/2d.jpeg
   - (extra photo) https://ninitgroup.com/wp-content/uploads/2026/07/2s.jpeg
 • 3-Stall:
-  - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1-1.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1.jpeg
-• 4-Stall, 5-Stall and 6-Stall (share the same interior):
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior01.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior02.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior03.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior04.jpeg
+  - (extra photo) https://ninitgroup.com/wp-content/uploads/2026/07/extras.jpeg
+  - (interior videos) https://ninitgroup.com/wp-content/uploads/2026/07/videointerior1.mp4 · https://ninitgroup.com/wp-content/uploads/2026/07/videointerior2.mp4 · https://ninitgroup.com/wp-content/uploads/2026/07/videointerior3.mp4
+• 4-Stall:
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior01-1.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior2.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior3.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior4.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior5.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior6.jpeg
+  - (extra photo) https://ninitgroup.com/wp-content/uploads/2026/07/extras.jpeg
+• 5-Stall and 6-Stall (share the same interior):
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM-1-1.jpeg
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-3.jpeg
 • ADA+2: https://ninitgroup.com/wp-content/uploads/2026/01/dfhxvb.png
@@ -187,9 +199,8 @@ FLOOR PLANS:
 • 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/PHOTO-2026-01-08-01-13-01-1.jpg
 • 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg
 VIDEOS:
-• 2-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/video_2_puertas_con_musica.mp4
-• 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Video-2026-06-18-at-5.18.10-PM.mp4
-• 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/video2_con_musica_avicii.mp4
+• 2-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/video2puertas.mp4
+• 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/video03.mp4
 COLOR PALETTE (same for every model):
 • https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1.jpeg
 When a customer asks for pictures, share the matching link above (exterior, interior, plan, video or palette).

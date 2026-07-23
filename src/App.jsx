@@ -239,7 +239,7 @@ IMÁGENES POR MODELO (links oficiales — el vendedor las manda al cliente; vos 
 EXTERIORES:
 - 2-Stall White Marble → https://ninitgroup.com/wp-content/uploads/2026/07/2.jpeg
 - 3-Stall (el más popular) → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM.jpeg
-- 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/4bano.png
+- 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/exterior.jpeg · https://ninitgroup.com/wp-content/uploads/2026/07/exteriror2.jpeg
 - ADA+2 → https://ninitgroup.com/wp-content/uploads/2026/05/ada22.png
 - 6-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/6bano.png
 - Vista general / render → https://ninitgroup.com/wp-content/uploads/2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png
@@ -250,9 +250,21 @@ INTERIORES:
   - https://ninitgroup.com/wp-content/uploads/2026/07/2d.jpeg
   - (foto extra) https://ninitgroup.com/wp-content/uploads/2026/07/2s.jpeg
 - 3-Stall:
-  - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1-1.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-1.jpeg
-- 4-Stall, 5-Stall y 6-Stall (comparten el mismo interior):
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior01.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior02.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior03.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior04.jpeg
+  - (foto extra) https://ninitgroup.com/wp-content/uploads/2026/07/extras.jpeg
+  - (videos interior) https://ninitgroup.com/wp-content/uploads/2026/07/videointerior1.mp4 · https://ninitgroup.com/wp-content/uploads/2026/07/videointerior2.mp4 · https://ninitgroup.com/wp-content/uploads/2026/07/videointerior3.mp4
+- 4-Stall:
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior01-1.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior2.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior3.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior4.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior5.jpeg
+  - https://ninitgroup.com/wp-content/uploads/2026/07/interior6.jpeg
+  - (foto extra) https://ninitgroup.com/wp-content/uploads/2026/07/extras.jpeg
+- 5-Stall y 6-Stall (comparten el mismo interior):
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM-1-1.jpeg
   - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-3.jpeg
 - ADA+2: https://ninitgroup.com/wp-content/uploads/2026/01/dfhxvb.png
@@ -261,9 +273,8 @@ PLANOS (floor plans):
 - 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/PHOTO-2026-01-08-01-13-01-1.jpg
 - 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg
 VIDEOS:
-- 2-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/video_2_puertas_con_musica.mp4
-- 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Video-2026-06-18-at-5.18.10-PM.mp4
-- 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/video2_con_musica_avicii.mp4
+- 2-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/video2puertas.mp4
+- 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/video03.mp4
 PALETA DE COLORES (misma para todos los modelos):
 - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1.jpeg
 Usá SOLO estos links. No inventes otras URLs de imágenes. En el chat el vendedor tiene un botón "Fotos" → elige el modelo → elige Exterior / Interior / Plano / Video / Paleta.
@@ -2595,27 +2606,28 @@ const FOTOS_MODELOS = [
       { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/07/interior2b.jpeg\n${FOTO_PREFIX}2026/07/interior2c.jpeg\n${FOTO_PREFIX}2026/07/2d.jpeg` },
       { tipo: "Extra", texto: `Here's another view 👇\n${FOTO_PREFIX}2026/07/2s.jpeg` },
       { tipo: "Plano", texto: `Here's the floor plan of the 2-Stall 👇\n${FOTO_PREFIX}2026/07/plano2.jpeg` },
-      { tipo: "Video", texto: `Here's a video walkthrough of the 2-Stall 👇\n${FOTO_PREFIX}2026/07/video_2_puertas_con_musica.mp4` },
+      { tipo: "Video", texto: `Here's a video walkthrough of the 2-Stall 👇\n${FOTO_PREFIX}2026/07/video2puertas.mp4` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
     ],
   },
   {
     label: "3-Stall (most popular ⭐)",
     assets: [
-      { tipo: "Exterior", texto: `Here's our 3-Stall unit — our most popular one ⭐ 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-18-at-5.18.09-PM-2.jpeg` },
-      { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-18-at-5.18.09-PM-1.jpeg\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-18-at-5.18.09-PM.jpeg\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-18-at-5.18.10-PM.jpeg` },
+      { tipo: "Video", texto: `Here's a video walkthrough of the 3-Stall ⭐ 👇\n${FOTO_PREFIX}2026/07/video03.mp4` },
+      { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/07/interior01.jpeg\n${FOTO_PREFIX}2026/07/interior02.jpeg\n${FOTO_PREFIX}2026/07/interior03.jpeg\n${FOTO_PREFIX}2026/07/interior04.jpeg` },
+      { tipo: "Video interior", texto: `Here's a look inside on video 👇\n${FOTO_PREFIX}2026/07/videointerior1.mp4\n${FOTO_PREFIX}2026/07/videointerior2.mp4\n${FOTO_PREFIX}2026/07/videointerior3.mp4` },
+      { tipo: "Extra", texto: `Here's another view 👇\n${FOTO_PREFIX}2026/07/extras.jpeg` },
       { tipo: "Plano", texto: `Here's the floor plan of the 3-Stall 👇\n${FOTO_PREFIX}2026/05/PHOTO-2026-01-08-01-13-01-1.jpg` },
-      { tipo: "Video", texto: `Here's a video walkthrough of the 3-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Video-2026-06-18-at-5.18.10-PM.mp4` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
     ],
   },
   {
     label: "4-Stall",
     assets: [
-      { tipo: "Exterior", texto: `Here's our 4-Stall unit 👇\n${FOTO_PREFIX}2026/05/4bano.png` },
-      { tipo: "Interior", texto: FOTO_INTERIOR_456 },
+      { tipo: "Exterior", texto: `Here's our 4-Stall unit 👇\n${FOTO_PREFIX}2026/07/exterior.jpeg\n${FOTO_PREFIX}2026/07/exteriror2.jpeg` },
+      { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/07/interior01-1.jpeg\n${FOTO_PREFIX}2026/07/interior2.jpeg\n${FOTO_PREFIX}2026/07/interior3.jpeg\n${FOTO_PREFIX}2026/07/interior4.jpeg\n${FOTO_PREFIX}2026/07/interior5.jpeg\n${FOTO_PREFIX}2026/07/interior6.jpeg` },
+      { tipo: "Extra", texto: `Here's another view 👇\n${FOTO_PREFIX}2026/07/extras.jpeg` },
       { tipo: "Plano", texto: `Here's the floor plan of the 4-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg` },
-      { tipo: "Video", texto: `Here's a video walkthrough of the 4-Stall 👇\n${FOTO_PREFIX}2026/06/video2_con_musica_avicii.mp4` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
     ],
   },
