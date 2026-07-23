@@ -2709,7 +2709,7 @@ function MensajeContenido({ texto }) {
 // stepper porque no son etapas de avance (se ven igual en la cabecera del chat).
 const EMBUDO = ["nuevo", "contactado", "interesado", "cotizacion", "negociando", "vendido"];
 
-function PanelDerecho({ contacto, onUpdateContacto, onEditar }) {
+function PanelDerecho({ contacto, onUpdateContacto, onEditar, onColapsar }) {
   const [notas, setNotas]       = useState(contacto.notas || "");
   const [guardando, setGuard]   = useState(false);
   const [guardado, setGuardado] = useState(false);
@@ -2758,6 +2758,19 @@ function PanelDerecho({ contacto, onUpdateContacto, onEditar }) {
 
   return (
     <aside style={{ width: "100%", height: "100%", background: L.bg, borderLeft: `1px solid ${L.border}`, overflowY: "auto", padding: 10, display: "flex", flexDirection: "column", gap: 10 }} className="scroll-y">
+
+      {/* Barra superior de la ficha: título + colapsar toda la columna */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2px" }}>
+        <span style={{ fontFamily: FONT_DISPLAY, fontSize: 10.5, fontWeight: 700, color: L.light, textTransform: "uppercase", letterSpacing: 0.7 }}>Ficha del cliente</span>
+        {onColapsar && (
+          <button onClick={onColapsar} title="Ocultar ficha del cliente"
+            style={{ background: L.white, border: `1px solid ${L.border}`, borderRadius: 8, height: 26, padding: "0 8px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, color: L.muted, fontSize: 11.5, fontWeight: 600, fontFamily: FONT_BODY, transition: "all .15s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#C7D2FE"; e.currentTarget.style.color = "#4F46E5"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.color = L.muted; }}>
+            <PanelRightClose size={14} /> Ocultar
+          </button>
+        )}
+      </div>
 
       {/* Datos del contacto */}
       <div style={seccion}>
@@ -3346,29 +3359,29 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 onMouseDown={(e) => { e.currentTarget.style.transform = "scale(.96)"; }}
                 onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-                style={{ height: 34, boxSizing: "border-box", background: C.gradBtn, border: "none", color: "#fff", borderRadius: 9, padding: "0 14px", cursor: "pointer", fontSize: 12.5, fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: 0.2, display: "flex", alignItems: "center", gap: 6, boxShadow: SHADOW.ai, transition: "transform .1s ease", flexShrink: 0 }}>
-                <Sparkles size={14} /> Avanzar con IA
+                style={{ height: 32, boxSizing: "border-box", background: C.gradBtn, border: "none", color: "#fff", borderRadius: 9, padding: "0 12px", cursor: "pointer", fontSize: 12, fontFamily: FONT_DISPLAY, fontWeight: 700, letterSpacing: 0.2, display: "flex", alignItems: "center", gap: 5, boxShadow: SHADOW.ai, transition: "transform .1s ease", flexShrink: 0 }}>
+                <Sparkles size={13} /> Avanzar con IA
               </button>
               <button onClick={() => upd({ bot_activo: !contacto.bot_activo })} title={contacto.bot_activo ? "El bot atiende este chat — tocá para atenderlo vos" : "Vos atendés este chat — tocá para que lo tome el bot"}
-                style={{ height: 34, boxSizing: "border-box", background: contacto.bot_activo ? "#DCFCE7" : "#FEF2F2", border: `1.5px solid ${contacto.bot_activo ? "#86EFAC" : "#FECACA"}`, color: contacto.bot_activo ? "#15803D" : C.red, borderRadius: 9, padding: "0 11px", cursor: "pointer", fontSize: 12.5, fontFamily: FONT_BODY, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, transition: "all .15s", flexShrink: 0 }}>
-                {contacto.bot_activo ? <><Bot size={14} /> Bot</> : <><User size={14} /> Yo atiendo</>}
+                style={{ height: 32, boxSizing: "border-box", background: contacto.bot_activo ? "#DCFCE7" : "#FEF2F2", border: `1.5px solid ${contacto.bot_activo ? "#86EFAC" : "#FECACA"}`, color: contacto.bot_activo ? "#15803D" : C.red, borderRadius: 9, padding: "0 11px", cursor: "pointer", fontSize: 12, fontFamily: FONT_BODY, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, transition: "all .15s", flexShrink: 0 }}>
+                {contacto.bot_activo ? <><Bot size={13} /> Bot</> : <><User size={13} /> Yo atiendo</>}
               </button>
               <button onClick={() => setDrawer(true)} title="Editar datos del contacto"
-                style={{ height: 34, width: 34, boxSizing: "border-box", background: L.soft, border: `1.5px solid ${L.border}`, color: L.muted, borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}
+                style={{ height: 32, width: 32, boxSizing: "border-box", background: L.soft, border: `1.5px solid ${L.border}`, color: L.muted, borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.red; e.currentTarget.style.color = C.red; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.color = L.muted; }}>
-                <Pencil size={15} />
+                <Pencil size={14} />
               </button>
               <button onClick={() => setConfirmElim((v) => !v)} title="Eliminar contacto"
-                style={{ height: 34, width: 34, boxSizing: "border-box", background: confirmElim ? "#FEE2E2" : L.soft, border: `1.5px solid ${confirmElim ? "#FECACA" : L.border}`, color: confirmElim ? C.red : L.muted, borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}
+                style={{ height: 32, width: 32, boxSizing: "border-box", background: confirmElim ? "#FEE2E2" : L.soft, border: `1.5px solid ${confirmElim ? "#FECACA" : L.border}`, color: confirmElim ? C.red : L.muted, borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}
                 onMouseEnter={(e) => { if (!confirmElim) { e.currentTarget.style.borderColor = "#FECACA"; e.currentTarget.style.background = "#FEF2F2"; e.currentTarget.style.color = C.red; } }}
                 onMouseLeave={(e) => { if (!confirmElim) { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.background = L.soft; e.currentTarget.style.color = L.muted; } }}>
-                <Trash2 size={15} />
+                <Trash2 size={14} />
               </button>
               {onToggleFicha && (
                 <button className="ficha-toggle" onClick={onToggleFicha} title={fichaAbierta ? "Ocultar ficha del cliente" : "Mostrar ficha del cliente"}
-                  style={{ height: 34, width: 34, boxSizing: "border-box", background: fichaAbierta ? "#EEF2FF" : L.soft, border: `1.5px solid ${fichaAbierta ? "#C7D2FE" : L.border}`, color: fichaAbierta ? "#4F46E5" : L.muted, borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}>
-                  {fichaAbierta ? <PanelRightClose size={16} /> : <PanelRight size={16} />}
+                  style={{ height: 32, width: 32, boxSizing: "border-box", background: fichaAbierta ? "#EEF2FF" : L.soft, border: `1.5px solid ${fichaAbierta ? "#C7D2FE" : L.border}`, color: fichaAbierta ? "#4F46E5" : L.muted, borderRadius: 9, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s", flexShrink: 0 }}>
+                  {fichaAbierta ? <PanelRightClose size={15} /> : <PanelRight size={15} />}
                 </button>
               )}
             </div>
@@ -4755,7 +4768,7 @@ export default function App() {
           En móvil y tablet se sigue usando el cajón (Editar en la cabecera). */}
       {!isMobile && activo && vista === "chat" && fichaAbierta && (
         <div className="app-right">
-          <PanelDerecho contacto={activo} onUpdateContacto={updateContacto} onEditar={() => setFichaEdit(activo)} />
+          <PanelDerecho contacto={activo} onUpdateContacto={updateContacto} onEditar={() => setFichaEdit(activo)} onColapsar={() => setFichaAbierta(false)} />
         </div>
       )}
       {fichaEdit && (
