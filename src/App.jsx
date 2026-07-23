@@ -239,7 +239,7 @@ No hay showroom tradicional — la mayoría de las unidades se construyen a pedi
 IMÁGENES POR MODELO (links oficiales — el vendedor las manda al cliente; vos podés sugerir cuál usar). Cada modelo tiene exterior, y según el modelo: interior, plano y/o video. La paleta de colores es la misma para todos los modelos.
 EXTERIORES:
 - 2-Stall White Marble → https://ninitgroup.com/wp-content/uploads/2026/07/2.jpeg
-- 3-Stall (el más popular) → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM.jpeg
+- 3-Stall (el más popular) → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-18-at-5.18.09-PM-2-1.jpeg
 - 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/exterior.jpeg · https://ninitgroup.com/wp-content/uploads/2026/07/exteriror2.jpeg
 - ADA+2 → https://ninitgroup.com/wp-content/uploads/2026/05/ada22.png
 - 6-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/6bano.png
@@ -2614,6 +2614,7 @@ const FOTOS_MODELOS = [
   {
     label: "3-Stall (most popular ⭐)",
     assets: [
+      { tipo: "Exterior", texto: `Here's our 3-Stall unit — our most popular one ⭐ 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-18-at-5.18.09-PM-2-1.jpeg` },
       { tipo: "Video", texto: `Here's a video walkthrough of the 3-Stall ⭐ 👇\n${FOTO_PREFIX}2026/07/video03.mp4` },
       { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/07/interior01.jpeg\n${FOTO_PREFIX}2026/07/interior02.jpeg\n${FOTO_PREFIX}2026/07/interior03.jpeg\n${FOTO_PREFIX}2026/07/interior04.jpeg` },
       { tipo: "Video interior 1", texto: `Here's a look inside on video 👇\n${FOTO_PREFIX}2026/07/videointerior1.mp4` },
