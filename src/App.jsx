@@ -4771,6 +4771,20 @@ export default function App() {
           <PanelDerecho contacto={activo} onUpdateContacto={updateContacto} onEditar={() => setFichaEdit(activo)} onColapsar={() => setFichaAbierta(false)} />
         </div>
       )}
+      {/* Solapa lateral: aparece pegada al borde derecho cuando la ficha está
+          oculta. Al tocarla, se despliega de nuevo. Solo en escritorio (>1180px). */}
+      {!isMobile && activo && vista === "chat" && !fichaAbierta && (
+        <button className="ficha-tab" onClick={() => setFichaAbierta(true)} title="Mostrar ficha del cliente"
+          style={{ position: "fixed", right: 0, top: "50%", transform: "translateY(-50%)", zIndex: 150,
+            background: C.gradBtn, color: "#fff", border: "none", borderRadius: "12px 0 0 12px",
+            padding: "16px 6px", cursor: "pointer", boxShadow: "-3px 0 16px rgba(79,70,229,.28)",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 8, transition: "padding .15s" }}
+          onMouseEnter={(e) => { e.currentTarget.style.paddingLeft = "10px"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.paddingLeft = "6px"; }}>
+          <ChevronLeft size={18} />
+          <span style={{ writingMode: "vertical-rl", fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 12, letterSpacing: 1.5 }}>FICHA</span>
+        </button>
+      )}
       {fichaEdit && (
         <ContactoDrawer contacto={fichaEdit} onClose={() => setFichaEdit(null)} onSave={updateContacto} />
       )}
