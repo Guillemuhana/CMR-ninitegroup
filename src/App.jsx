@@ -1936,9 +1936,11 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
     const porDest = !soloDestacados || c.destacado;
     return porDest && cumpleFiltro(c, filtro);
   })
-  // Prioridad: primero los que piden contacto, luego los destacados; respeta el orden por fecha.
-  .sort((a, b) => (pideContacto(b).pide ? 1 : 0) - (pideContacto(a).pide ? 1 : 0))
-  .sort((a, b) => (b.destacado ? 1 : 0) - (a.destacado ? 1 : 0));
+  // Orden estilo WhatsApp: lo más reciente arriba. Un mensaje nuevo o una
+  // respuesta del vendedor toca `updated_at`, así que el chat sube solo.
+  // La estrella y "pide contacto" ya no reordenan la lista (para eso están
+  // los tabs/filtros); antes empujaban los chats activos hacia abajo.
+  .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
 
   return (
     <div style={{ width: "100%", height: "100%", background: L.white, borderRight: `1px solid ${L.border}`, display: "flex", flexDirection: "column" }}>
