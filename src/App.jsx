@@ -355,36 +355,6 @@ function Avatar({ nombre, foto, size = 40, border }) {
 }
 
 // ============================================================
-// WELCOME SPLASH — bienvenida al iniciar sesión (fade + zoom)
-// ============================================================
-function WelcomeSplash({ onDone }) {
-  const [phase, setPhase] = useState("in"); // in → hold → out
-  useEffect(() => {
-    const t1 = setTimeout(() => setPhase("hold"), 60);   // disparar entrada
-    const t2 = setTimeout(() => setPhase("out"), 2200);  // empezar salida
-    const t3 = setTimeout(() => onDone(), 3050);         // desmontar
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, [onDone]);
-
-  const isIn  = phase === "in";
-  const isOut = phase === "out";
-
-  return (
-    <div onClick={() => setPhase("out")}
-      style={{ position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-        background: "radial-gradient(circle at 50% 42%, #0a1726 0%, #03070e 60%, #000 100%)",
-        opacity: isIn || isOut ? 0 : 1, transition: "opacity .8s ease" }}>
-      <img src="/bienvenida.png" alt="NinitGroup — Sistema de CMR"
-        style={{ width: "min(74vw, 460px)", maxHeight: "82vh", objectFit: "contain",
-          opacity: isIn || isOut ? 0 : 1,
-          transform: isIn ? "scale(.82)" : isOut ? "scale(1.1)" : "scale(1)",
-          transition: "transform 1s cubic-bezier(.22,1,.36,1), opacity .85s ease",
-          filter: "drop-shadow(0 0 55px rgba(56,170,255,.4))" }} />
-    </div>
-  );
-}
-
-// ============================================================
 // LOGO CON BRILLO — muestra el logo y hace pasar un destello (sol) por su
 // silueta cada 5s. El destello se recorta a la forma del logo con mask-image,
 // así el brillo viaja "por el contorno" y no en un rectángulo.
@@ -1863,15 +1833,17 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
   const [agendar, setAgendar]     = useState(null);   // contacto a agendar llamada
   const [now, setNow]             = useState(Date.now());
   // Vendedores activos para el submenú "Asignar a vendedor" (solo CEO).
+  // Vendedores a los que se le puede pasar un chat. No es solo del CEO: un
+  // vendedor también puede derivarle un cliente a un compañero. A uno mismo no,
+  // así que el usuario actual queda fuera de la lista.
   const [vendedoresAsign, setVendedoresAsign] = useState([]);
   useEffect(() => {
-    if (rol !== "ceo") return;
     (async () => {
       const { data } = await supabase.from("vendedores")
         .select("id,nombre,role,activo").eq("activo", true).order("nombre");
-      setVendedoresAsign((data || []).filter((v) => v.role === "vendedor"));
+      setVendedoresAsign((data || []).filter((v) => v.role === "vendedor" && v.nombre !== perfil?.nombre));
     })();
-  }, [rol]);
+  }, [perfil?.nombre]);
   // Long-press (mantener presionado) para abrir el menú en celular, donde no
   // existe el click derecho. Se cancela si el dedo se mueve (>10px = scroll).
   const press = useRef({ timer: null, x: 0, y: 0 });
@@ -2216,29 +2188,29 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
               </div>
             </div>
 
-            {/* Asignar a vendedor — solo CEO. Le manda el chat al vendedor y le avisa. */}
-            {rol === "ceo" && (
-              <div style={{ borderTop: `1px solid ${L.border}`, margin: "5px 0 0", paddingTop: 7 }}>
-                <div style={{ fontSize: isMobile ? 11 : 10, fontWeight: 800, color: L.light, textTransform: "uppercase", letterSpacing: 0.4, padding: "0 10px 6px" }}>Asignar a vendedor</div>
-                {vendedoresAsign.length === 0 ? (
-                  <div style={{ fontSize: isMobile ? 12.5 : 11.5, color: L.light, padding: "0 10px 8px" }}>No hay vendedores activos</div>
-                ) : (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, padding: "0 8px 6px" }}>
-                    {vendedoresAsign.map((v) => {
-                      const yaEs = c.vendedor === v.nombre;
-                      return (
-                        <button key={v.id} onClick={() => { if (!yaEs) onAsignarVendedor?.(c, v); setMenu(null); }}
-                          title={yaEs ? "Ya está asignado a este vendedor" : `Asignar a ${v.nombre}`}
-                          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: isMobile ? 12 : 10.5, fontWeight: 700, padding: isMobile ? "7px 11px" : "4px 9px", borderRadius: 7, cursor: yaEs ? "default" : "pointer",
-                            border: `1px solid ${yaEs ? C.red : L.border}`, background: yaEs ? C.aiSoft : L.white, color: yaEs ? C.red : L.text }}>
-                          {yaEs ? <Check size={iconSz - 3} color={C.red} /> : <User size={iconSz - 3} color={L.muted} />} {v.nombre}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+            {/* Pasar el chat a otro vendedor: le queda asignado y le llega un aviso. */}
+            <div style={{ borderTop: `1px solid ${L.border}`, margin: "5px 0 0", paddingTop: 7 }}>
+              <div style={{ fontSize: isMobile ? 11 : 10, fontWeight: 800, color: L.light, textTransform: "uppercase", letterSpacing: 0.4, padding: "0 10px 6px" }}>
+                {rol === "ceo" ? "Asignar a vendedor" : "Pasarle el chat a"}
               </div>
-            )}
+                {vendedoresAsign.length === 0 ? (
+                <div style={{ fontSize: isMobile ? 12.5 : 11.5, color: L.light, padding: "0 10px 8px" }}>No hay otros vendedores activos</div>
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, padding: "0 8px 6px" }}>
+                  {vendedoresAsign.map((v) => {
+                    const yaEs = c.vendedor === v.nombre;
+                    return (
+                      <button key={v.id} onClick={() => { if (!yaEs) onAsignarVendedor?.(c, v); setMenu(null); }}
+                        title={yaEs ? "Ya está asignado a este vendedor" : `${rol === "ceo" ? "Asignar" : "Pasarle el chat"} a ${v.nombre}`}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: isMobile ? 12 : 10.5, fontWeight: 700, padding: isMobile ? "7px 11px" : "4px 9px", borderRadius: 7, cursor: yaEs ? "default" : "pointer",
+                          border: `1px solid ${yaEs ? C.red : L.border}`, background: yaEs ? C.aiSoft : L.white, color: yaEs ? C.red : L.text }}>
+                        {yaEs ? <Check size={iconSz - 3} color={C.red} /> : <User size={iconSz - 3} color={L.muted} />} {v.nombre}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </>
         );
 
@@ -2919,32 +2891,23 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   const [replyTo, setReplyTo] = useState(null); // { id, contenido, esCliente } | null
   const [toolsOpen, setToolsOpen] = useState(false); // desplegable de herramientas del input
   const endRef = useRef(null);
-  const plantillasRef = useRef(null);
-  const cotizacionesRef = useRef(null);
-  const fotosRef = useRef(null);
+  const toolsRef = useRef(null);   // envuelve el botón ＋ y todos sus paneles
   const fileInputRef = useRef(null);
 
+  // El menú ＋ y sus paneles (plantillas / cotizaciones / fotos) son un único
+  // desplegable: se cierran todos juntos, con click afuera o con Escape.
+  const cerrarTools = useCallback(() => {
+    setToolsOpen(false); setShowPlantillas(false); setShowCotizaciones(false); setShowFotos(false); setFotoModelo(null);
+  }, []);
 
   useEffect(() => {
-    if (!showPlantillas) return;
-    const h = (e) => { if (plantillasRef.current && !plantillasRef.current.contains(e.target)) setShowPlantillas(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [showPlantillas]);
-
-  useEffect(() => {
-    if (!showCotizaciones) return;
-    const h = (e) => { if (cotizacionesRef.current && !cotizacionesRef.current.contains(e.target)) setShowCotizaciones(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [showCotizaciones]);
-
-  useEffect(() => {
-    if (!showFotos) return;
-    const h = (e) => { if (fotosRef.current && !fotosRef.current.contains(e.target)) { setShowFotos(false); setFotoModelo(null); } };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [showFotos]);
+    if (!toolsOpen && !showPlantillas && !showCotizaciones && !showFotos) return;
+    const click = (e) => { if (toolsRef.current && !toolsRef.current.contains(e.target)) cerrarTools(); };
+    const esc = (e) => { if (e.key === "Escape") cerrarTools(); };
+    document.addEventListener("mousedown", click);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", click); document.removeEventListener("keydown", esc); };
+  }, [toolsOpen, showPlantillas, showCotizaciones, showFotos, cerrarTools]);
 
   const eliminarContacto = async () => {
     setEliminando(true);
@@ -3281,6 +3244,24 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     setEnviando(false);
   };
 
+  // Geometría común de los paneles del ＋: siempre por encima del compositor y
+  // anclados al botón, así crecen hacia arriba aunque el textarea se agrande.
+  // En mobile ocupan el ancho del compositor (padding de 12px por lado).
+  const toolsAbierto = toolsOpen || showPlantillas || showCotizaciones || showFotos;
+  const panelBase = {
+    position: "absolute",
+    left: 0,
+    bottom: "calc(100% + 10px)",
+    zIndex: 210,
+    width: isMobile ? "calc(100vw - 24px)" : 340,
+    maxHeight: isMobile ? "66vh" : 440,
+    overflowY: "auto",
+    background: L.white,
+    border: `1px solid ${L.border}`,
+    borderRadius: 16,
+    boxShadow: "0 14px 46px rgba(15,23,42,.18)",
+  };
+
   // Comprime/redimensiona la imagen en el navegador antes de subirla (máx 1600px, JPEG).
   const comprimirImagen = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -3575,38 +3556,82 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
         </div>
       ) : (
       <div style={{ padding: isMobile ? "10px 12px" : "14px 22px", borderTop: `1px solid ${L.border}`, background: L.white, display: "flex", gap: 8, alignItems: "flex-end", flexShrink: 0, position: "relative" }}>
-        {/* Botón ＋ con desplegable de herramientas */}
-        <div style={{ position: "relative", display: "flex", alignItems: "flex-end", gap: 8, flexShrink: 0 }}
-          onMouseEnter={() => setToolsOpen(true)}
-          onMouseLeave={() => { if (!showCotizaciones && !showFotos && !showPlantillas) setToolsOpen(false); }}>
-          <style>{`.tools-pop{animation:toolsIn .18s ease}@keyframes toolsIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}`}</style>
-          <button onClick={() => setToolsOpen((v) => !v)} title="Adjuntar y más opciones"
-            style={{ background: toolsOpen ? C.gradBtn : L.soft, color: toolsOpen ? "#fff" : C.red, border: `1.5px solid ${toolsOpen ? "transparent" : L.border}`, borderRadius: 11, width: 42, height: 42, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .18s" }}>
-            <Plus size={20} style={{ transform: toolsOpen ? "rotate(45deg)" : "none", transition: "transform .18s" }} />
+        {/* Botón ＋ — despliega un menú vertical hacia arriba, una opción por fila */}
+        <div ref={toolsRef} style={{ position: "relative", flexShrink: 0 }}>
+          <style>{`
+            .tools-pop{animation:toolsUp .18s cubic-bezier(.2,.85,.3,1);transform-origin:bottom left}
+            @keyframes toolsUp{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+            .tools-item{width:100%;display:flex;align-items:center;gap:11px;padding:9px 10px;background:none;border:none;border-radius:12px;cursor:pointer;text-align:left;font-family:inherit;transition:background .12s}
+            .tools-item:disabled{opacity:.5;cursor:default}
+            .tools-item:not(:disabled):hover{background:rgba(15,23,42,.06)}
+            .tools-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+            .tools-row{width:100%;display:flex;align-items:center;gap:9px;padding:11px 15px;background:none;border:none;border-bottom:1px solid rgba(15,23,42,.06);cursor:pointer;text-align:left;font-family:inherit;font-size:13.5px;line-height:1.35;transition:background .12s}
+            .tools-row:disabled{opacity:.5;cursor:default}
+            .tools-row:not(:disabled):hover{background:rgba(15,23,42,.05)}
+          `}</style>
+          <button onClick={() => (toolsAbierto ? cerrarTools() : setToolsOpen(true))} title="Adjuntar y más opciones" aria-label="Más opciones" aria-expanded={toolsAbierto}
+            style={{ background: toolsAbierto ? C.gradBtn : L.soft, color: toolsAbierto ? "#fff" : C.red, border: `1.5px solid ${toolsAbierto ? "transparent" : L.border}`, borderRadius: 11, width: 42, height: 42, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .18s" }}>
+            <Plus size={20} style={{ transform: toolsAbierto ? "rotate(45deg)" : "none", transition: "transform .18s" }} />
           </button>
+
+          {/* Menú principal */}
           {toolsOpen && (
-          <div className="tools-pop" style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-        {/* Plantillas rápidas */}
-        <div ref={plantillasRef} style={{ position: "relative", flexShrink: 0 }}>
-          <button onClick={() => setShowPlantillas((v) => !v)} title="Plantillas de respuesta rápida"
-            style={{ background: showPlantillas ? C.red : L.soft, color: showPlantillas ? "#fff" : C.red, border: `1.5px solid ${showPlantillas ? C.red : C.red + "55"}`, borderRadius: 11, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, transition: "all .15s", flexShrink: 0 }}>
-            <Zap size={15} />
-            {!isMobile && <span>Plantillas</span>}
-          </button>
+            <div className="tools-pop" style={{ ...panelBase, width: isMobile ? "calc(100vw - 24px)" : 274, padding: 7 }}>
+              <button className="tools-item" onClick={() => { setToolsOpen(false); setShowPlantillas(true); }}>
+                <span className="tools-ico" style={{ background: C.red + "1A", color: C.red }}><Zap size={17} /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: L.text }}>Plantillas</span>
+                  <span style={{ display: "block", fontSize: 11.5, color: L.muted, marginTop: 1 }}>Respuestas rápidas</span>
+                </span>
+                <ChevronRight size={16} color={L.muted} style={{ flexShrink: 0 }} />
+              </button>
+
+              <button className="tools-item" disabled={enviando}
+                onClick={() => { if (COTIZACIONES.length === 1) { cerrarTools(); enviarCotizacion(COTIZACIONES[0].texto); } else { setToolsOpen(false); setShowCotizaciones(true); } }}>
+                <span className="tools-ico" style={{ background: C.gold + "1A", color: C.gold }}><Receipt size={18} weight="duotone" /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: L.text }}>Cotización</span>
+                  <span style={{ display: "block", fontSize: 11.5, color: L.muted, marginTop: 1 }}>{enviando ? "Enviando…" : COTIZACIONES.length === 1 ? "Se envía al cliente al toque" : "Elegí cuál enviar"}</span>
+                </span>
+                {COTIZACIONES.length === 1 ? <Send size={15} color={L.muted} style={{ flexShrink: 0 }} /> : <ChevronRight size={16} color={L.muted} style={{ flexShrink: 0 }} />}
+              </button>
+
+              <button className="tools-item" onClick={() => { setToolsOpen(false); setShowFotos(true); setFotoModelo(null); }}>
+                <span className="tools-ico" style={{ background: "#0EA5E91A", color: "#0EA5E9" }}><ImageIcon size={17} /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: L.text }}>Fotos y videos</span>
+                  <span style={{ display: "block", fontSize: 11.5, color: L.muted, marginTop: 1 }}>Por modelo de trailer</span>
+                </span>
+                <ChevronRight size={16} color={L.muted} style={{ flexShrink: 0 }} />
+              </button>
+
+              <button className="tools-item" disabled={subiendo || enviando} onClick={() => { cerrarTools(); fileInputRef.current?.click(); }}>
+                <span className="tools-ico" style={{ background: "#16A34A1A", color: "#16A34A" }}><ImageIcon size={17} /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: L.text }}>Imagen</span>
+                  <span style={{ display: "block", fontSize: 11.5, color: L.muted, marginTop: 1 }}>{subiendo ? "Subiendo…" : "Subir desde el dispositivo"}</span>
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* Panel: plantillas rápidas */}
           {showPlantillas && (
-            <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: isMobile ? "calc(100vw - 24px)" : 380, maxHeight: 460, overflowY: "auto", background: L.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", border: `1px solid ${L.border}`, zIndex: 200 }}>
-              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="tools-pop" style={{ ...panelBase, width: isMobile ? "calc(100vw - 24px)" : 380 }}>
+              <div style={{ position: "sticky", top: 0, background: L.white, padding: "11px 10px 11px 6px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 4, zIndex: 1 }}>
+                <button onClick={() => { setShowPlantillas(false); setToolsOpen(true); }} title="Volver"
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", color: C.red }}>
+                  <ChevronLeft size={18} />
+                </button>
                 <Zap size={14} color={C.red} />
                 <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.8 }}>Plantillas rápidas</span>
               </div>
               {PLANTILLAS.map((grupo) => (
                 <div key={grupo.grupo}>
-                  <div style={{ padding: "8px 16px 4px", fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{grupo.grupo}</div>
+                  <div style={{ padding: "9px 15px 5px", fontSize: 11, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{grupo.grupo}</div>
                   {grupo.items.map((item) => (
-                    <button key={item.label} onClick={() => { setTexto(item.texto.replaceAll("{VENDEDOR}", (userName || "").split(" ")[0])); setShowPlantillas(false); }}
-                      style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40` }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
+                    <button key={item.label} className="tools-row" style={{ color: L.text }}
+                      onClick={() => { setTexto(item.texto.replaceAll("{VENDEDOR}", (userName || "").split(" ")[0])); cerrarTools(); }}>
                       {item.label}
                     </button>
                   ))}
@@ -3614,96 +3639,65 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               ))}
             </div>
           )}
-        </div>
-        {/* Cotizaciones */}
-        <div ref={cotizacionesRef} style={{ position: "relative", flexShrink: 0 }}>
-          {/* Con una sola cotización el menú es fricción de más: el botón la manda directo. */}
-          <button
-            onClick={() => {
-              if (COTIZACIONES.length === 1) enviarCotizacion(COTIZACIONES[0].texto);
-              else setShowCotizaciones((v) => !v);
-            }}
-            disabled={enviando}
-            title="Enviar la cotización al cliente"
-            style={{
-              background: showCotizaciones ? C.red : L.white,
-              color: showCotizaciones ? "#fff" : C.red,
-              border: `1.5px solid ${showCotizaciones ? C.red : C.red + "40"}`,
-              borderRadius: 10,
-              padding: "10px 14px",
-              cursor: enviando ? "default" : "pointer",
-              opacity: enviando ? 0.6 : 1,
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              fontSize: 13,
-              fontWeight: 600,
-              letterSpacing: 0.1,
-              boxShadow: showCotizaciones ? `0 2px 8px ${C.red}33` : "none",
-              transition: "all .15s",
-              flexShrink: 0,
-            }}>
-            <Receipt size={17} weight={showCotizaciones ? "fill" : "regular"} />
-            {!isMobile && <span>Cotizaciones</span>}
-          </button>
+
+          {/* Panel: cotizaciones (solo aparece si hay más de una) */}
           {showCotizaciones && (
-            <div style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: isMobile ? "calc(100vw - 24px)" : 320, maxHeight: 460, overflowY: "auto", background: L.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", border: `1px solid ${L.border}`, zIndex: 200 }}>
-              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+            <div className="tools-pop" style={{ ...panelBase, width: isMobile ? "calc(100vw - 24px)" : 340 }}>
+              <div style={{ position: "sticky", top: 0, background: L.white, padding: "11px 10px 11px 6px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 4, zIndex: 1 }}>
+                <button onClick={() => { setShowCotizaciones(false); setToolsOpen(true); }} title="Volver"
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", color: C.gold }}>
+                  <ChevronLeft size={18} />
+                </button>
                 <Receipt size={16} weight="duotone" color={C.gold} />
                 <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.8 }}>Cotizaciones</span>
               </div>
+              <div style={{ padding: "8px 15px 2px", fontSize: 11, color: L.muted }}>Tocá una para enviarla directo al cliente 👇</div>
               {COTIZACIONES.map((item) => (
-                <button key={item.label} disabled={enviando} onClick={() => { enviarCotizacion(item.texto); setShowCotizaciones(false); }}
-                  style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: enviando ? "default" : "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40` }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
+                <button key={item.label} className="tools-row" disabled={enviando} style={{ color: L.text }}
+                  onClick={() => { cerrarTools(); enviarCotizacion(item.texto); }}>
                   {item.label}
+                  <Send size={14} color={L.muted} style={{ marginLeft: "auto", flexShrink: 0 }} />
                 </button>
               ))}
             </div>
           )}
-        </div>
-        {/* Fotos por modelo */}
-        <div ref={fotosRef} style={{ position: "relative", flexShrink: 0 }}>
-          <button onClick={() => { setShowFotos((v) => !v); setFotoModelo(null); }} title="Enviar foto del modelo al cliente"
-            style={{ background: showFotos ? "#0EA5E9" : L.soft, color: showFotos ? "#fff" : "#0EA5E9", border: `1.5px solid ${showFotos ? "#0EA5E9" : "#0EA5E955"}`, borderRadius: 11, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, transition: "all .15s", flexShrink: 0 }}>
-            <ImageIcon size={15} />
-            {!isMobile && <span>Fotos</span>}
-          </button>
+
+          {/* Panel: fotos y videos por modelo */}
           {showFotos && (
-            <div style={{ position: isMobile ? "fixed" : "absolute", bottom: isMobile ? 76 : "calc(100% + 8px)", left: isMobile ? 12 : 0, right: isMobile ? 12 : "auto", width: isMobile ? "auto" : 320, maxHeight: isMobile ? "72vh" : 460, overflowY: "auto", background: L.white, borderRadius: 14, boxShadow: "0 8px 40px rgba(0,0,0,.18)", border: `1px solid ${L.border}`, zIndex: 200 }}>
+            <div className="tools-pop" style={{ ...panelBase, width: isMobile ? "calc(100vw - 24px)" : 340 }}>
               {fotoModelo == null ? (
                 <>
-                  <div style={{ padding: "12px 16px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ position: "sticky", top: 0, background: L.white, padding: "11px 10px 11px 6px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 4, zIndex: 1 }}>
+                    <button onClick={() => { setShowFotos(false); setToolsOpen(true); }} title="Volver"
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", color: "#0EA5E9" }}>
+                      <ChevronLeft size={18} />
+                    </button>
                     <ImageIcon size={14} color="#0EA5E9" />
                     <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.8 }}>Fotos por modelo</span>
                   </div>
                   {FOTOS_MODELOS.map((item, i) => (
-                    <button key={item.label} onClick={() => setFotoModelo(i)}
-                      style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40`, display: "flex", alignItems: "center", gap: 8 }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
-                      <ImageIcon size={13} color="#0EA5E9" style={{ flexShrink: 0 }} /> {item.label}
+                    <button key={item.label} className="tools-row" style={{ color: L.text }} onClick={() => setFotoModelo(i)}>
+                      <ImageIcon size={14} color="#0EA5E9" style={{ flexShrink: 0 }} /> {item.label}
                       <ChevronRight size={15} color={L.muted} style={{ marginLeft: "auto", flexShrink: 0 }} />
                     </button>
                   ))}
                 </>
               ) : (
                 <>
-                  <div style={{ padding: "10px 12px 10px 8px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 4 }}>
-                    <button onClick={() => setFotoModelo(null)}
+                  <div style={{ position: "sticky", top: 0, background: L.white, padding: "11px 10px 11px 6px", borderBottom: `1px solid ${L.border}`, display: "flex", alignItems: "center", gap: 4, zIndex: 1 }}>
+                    <button onClick={() => setFotoModelo(null)} title="Volver"
                       style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", color: "#0EA5E9" }}>
                       <ChevronLeft size={18} />
                     </button>
                     <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.6 }}>{FOTOS_MODELOS[fotoModelo].label}</span>
                   </div>
-                  <div style={{ padding: "8px 16px 2px", fontSize: 11, color: L.muted }}>Tocá una foto para enviarla directo al cliente 👇</div>
+                  <div style={{ padding: "8px 15px 2px", fontSize: 11, color: L.muted }}>Tocá una foto para enviarla directo al cliente 👇</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9, padding: 11 }}>
                     {FOTOS_MODELOS[fotoModelo].assets.map((a) => {
                       const thumb = primeraImagen(a.texto);
                       return (
                         <button key={a.tipo} disabled={enviando}
-                          onClick={() => { enviarFotoAsset(a.texto); setShowFotos(false); setFotoModelo(null); }}
+                          onClick={() => { cerrarTools(); enviarFotoAsset(a.texto); }}
                           title={`Enviar ${a.tipo}`}
                           style={{ padding: 0, background: L.soft, border: `1px solid ${L.border}`, borderRadius: 10, cursor: enviando ? "default" : "pointer", overflow: "hidden", display: "flex", flexDirection: "column", transition: "all .15s" }}
                           onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#0EA5E9"; e.currentTarget.style.transform = "translateY(-1px)"; }}
@@ -3722,16 +3716,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
               )}
             </div>
           )}
-        </div>
-        {/* Adjuntar imagen (subir desde el dispositivo) */}
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
-        <button onClick={() => fileInputRef.current?.click()} disabled={subiendo || enviando} title="Adjuntar imagen"
-          style={{ background: subiendo ? C.gold : L.soft, color: subiendo ? "#fff" : "#16A34A", border: `1.5px solid ${subiendo ? C.gold : "#16A34A55"}`, borderRadius: 11, padding: "10px 12px", cursor: subiendo || enviando ? "default" : "pointer", display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, transition: "all .15s", flexShrink: 0 }}>
-          <ImageIcon size={15} />
-          {!isMobile && <span>{subiendo ? "Subiendo…" : "Imagen"}</span>}
-        </button>
-          </div>
-          )}
+
+          {/* Adjuntar imagen: lo dispara la opción "Imagen" del menú */}
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
         </div>
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
@@ -4272,13 +4259,11 @@ export default function App() {
   const [ready,     setReady]     = useState(false);
   const [niniPrompt, setNiniPrompt] = useState("");
   const [alertasVistas, setAlertasVistas] = useState(() => new Set()); // ids de alertas ya vistas/descartadas
-  const [welcome,   setWelcome]   = useState(false);
   const [fichaEdit,  setFichaEdit]  = useState(null);                   // contacto a editar desde el panel derecho
   const [fichaAbierta, setFichaAbierta] = useState(true);               // ficha derecha desplegada/colapsada (escritorio)
   const [asignacionRecibida, setAsignacionRecibida] = useState(null);  // banner al vendedor: { contacto, por }
   const [avisoCEO,  setAvisoCEO]  = useState("");                       // confirmación al CEO tras asignar
   const tuvoSesion   = useRef(false);
-  const welcomeShown = useRef(false);
   const sesionDBId   = useRef(null);
   const heartbeatRef = useRef(null);
   const sesInicioRef = useRef(null);
@@ -4291,11 +4276,6 @@ export default function App() {
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
         setSession(s);
-      }
-      // Bienvenida solo al iniciar sesión (una vez por carga de la app)
-      if (event === "SIGNED_IN" && s && !welcomeShown.current) {
-        welcomeShown.current = true;
-        setWelcome(true);
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -4584,10 +4564,18 @@ export default function App() {
     const { error } = await supabase.from("contactos")
       .update({ vendedor: nombreVend, asignado_por: yo, asignado_at }).eq("id", c.id);
     if (error) {
-      await supabase.from("contactos").update({ vendedor: nombreVend }).eq("id", c.id);
+      const { error: error2 } = await supabase.from("contactos").update({ vendedor: nombreVend }).eq("id", c.id);
+      // Si tampoco entró (permisos), no dejamos la pantalla mintiendo: se
+      // vuelve al vendedor anterior y se avisa en vez de mandar el push.
+      if (error2) {
+        updateContacto(c);
+        setAvisoCEO(`No se pudo pasar el cliente a ${nombreVend}`);
+        console.warn("asignarVendedor:", error2.message);
+        return;
+      }
     }
 
-    setAvisoCEO(`Cliente asignado a ${nombreVend}`);
+    setAvisoCEO(getRol(perfil) === "ceo" ? `Cliente asignado a ${nombreVend}` : `Le pasaste el cliente a ${nombreVend}`);
 
     // Aviso PUSH al vendedor (app cerrada o en segundo plano).
     try {
@@ -4655,7 +4643,6 @@ export default function App() {
     <div className={`app-layout${mobileInPanel ? " in-panel" : ""}`}
       style={{ fontFamily: FONT_BODY, background: L.bg }}>
       <FontLoader />
-      {welcome && <WelcomeSplash onDone={() => setWelcome(false)} />}
       {avisoCEO && <ToastAsignacion texto={avisoCEO} onClose={() => setAvisoCEO("")} />}
       {asignacionRecibida && (
         <BannerAsignacion info={asignacionRecibida}
