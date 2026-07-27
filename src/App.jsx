@@ -2516,7 +2516,7 @@ const PLANTILLAS = [
 const COTIZACIONES = [
   {
     label: "Cotización completa (todos los modelos)",
-    texto: `Thank you for your interest in NINIT Group. Please find our full quote below, including all restroom trailer models, specifications and pricing:\n\nhttps://ninitgroup.com/ninit_quote/\n\nWe remain at your disposal for any questions.`,
+    texto: `Thank you for your interest in NINIT Group! 🚐\n\nHere's our full interactive quote, where you can browse every restroom trailer model and choose the one that best fits your event:\n\nhttps://ninitgroup.com/ninit_quote/\n\nInside you'll find:\n✅ All models (2-Stall, 3-Stall, 4-Stall and ADA+2) with photos\n✅ Full specifications of each unit\n✅ Pre-sale and ready-to-ship pricing\n✅ Shipping and delivery details\n\nTake a look, pick your favorite model, and let me know — I'll confirm availability and walk you through the next steps. Happy to answer any questions! 😊`,
   },
 ];
 
