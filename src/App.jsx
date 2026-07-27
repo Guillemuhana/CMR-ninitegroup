@@ -3273,6 +3273,14 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     setEnviando(false);
   };
 
+  // Envía la cotización directo al cliente, sin pasar por la caja de texto.
+  const enviarCotizacion = async (texto) => {
+    if (!texto || enviando) return;
+    setEnviando(true); setErr("");
+    await enviarMensaje(texto);
+    setEnviando(false);
+  };
+
   // Comprime/redimensiona la imagen en el navegador antes de subirla (máx 1600px, JPEG).
   const comprimirImagen = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -3609,14 +3617,22 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
         </div>
         {/* Cotizaciones */}
         <div ref={cotizacionesRef} style={{ position: "relative", flexShrink: 0 }}>
-          <button onClick={() => setShowCotizaciones((v) => !v)} title="Enviar link de cotización"
+          {/* Con una sola cotización el menú es fricción de más: el botón la manda directo. */}
+          <button
+            onClick={() => {
+              if (COTIZACIONES.length === 1) enviarCotizacion(COTIZACIONES[0].texto);
+              else setShowCotizaciones((v) => !v);
+            }}
+            disabled={enviando}
+            title="Enviar la cotización al cliente"
             style={{
               background: showCotizaciones ? C.red : L.white,
               color: showCotizaciones ? "#fff" : C.red,
               border: `1.5px solid ${showCotizaciones ? C.red : C.red + "40"}`,
               borderRadius: 10,
               padding: "10px 14px",
-              cursor: "pointer",
+              cursor: enviando ? "default" : "pointer",
+              opacity: enviando ? 0.6 : 1,
               display: "flex",
               alignItems: "center",
               gap: 7,
@@ -3637,8 +3653,8 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                 <span style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 13, color: L.text, textTransform: "uppercase", letterSpacing: 0.8 }}>Cotizaciones</span>
               </div>
               {COTIZACIONES.map((item) => (
-                <button key={item.label} onClick={() => { setTexto(item.texto); setShowCotizaciones(false); }}
-                  style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40` }}
+                <button key={item.label} disabled={enviando} onClick={() => { enviarCotizacion(item.texto); setShowCotizaciones(false); }}
+                  style={{ width: "100%", textAlign: "left", padding: "9px 16px", background: "none", border: "none", cursor: enviando ? "default" : "pointer", fontSize: 13.5, color: L.text, fontFamily: FONT_BODY, transition: "background .1s", borderBottom: `1px solid ${L.border}40` }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}>
                   {item.label}
