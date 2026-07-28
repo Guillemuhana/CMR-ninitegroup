@@ -7,7 +7,7 @@
 -- NOTA: la app funciona igual sin correr esto (la asignación en sí usa la
 -- columna `vendedor`, que ya existe). Estas columnas solo agregan el nombre
 -- de quién asignó al aviso. El PUSH al vendedor lo dispara el navegador del
--- CEO vía /api/asignar-push, así que NO hace falta ningún trigger acá.
+-- CEO vía /api/push-send (tipo:"asignacion"), así que NO hace falta trigger acá.
 -- ────────────────────────────────────────────────────────────────
 
 alter table public.contactos add column if not exists asignado_por text;

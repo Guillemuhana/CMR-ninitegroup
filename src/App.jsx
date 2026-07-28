@@ -4209,10 +4209,13 @@ function BannerAsignacion({ info, onVer, onClose }) {
           <User size={20} color={C.red} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14.5, fontWeight: 800, color: L.text, fontFamily: FONT_DISPLAY }}>Se te asignó un cliente</div>
+          <div style={{ fontSize: 14.5, fontWeight: 800, color: L.text, fontFamily: FONT_DISPLAY }}>
+            {info.mas > 0 ? `Se te asignaron ${info.mas + 1} clientes` : "Se te asignó un cliente"}
+          </div>
           <div style={{ fontSize: 13, color: L.muted, marginTop: 2 }}>
             {info.por ? <><b style={{ color: L.text }}>{info.por}</b> te asignó a </> : "Te asignaron a "}
             <b style={{ color: L.text }}>{nombre}</b>
+            {info.mas > 0 && <> y {info.mas} {info.mas === 1 ? "cliente más" : "clientes más"}</>}
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button onClick={onVer}
@@ -4398,7 +4401,7 @@ export default function App() {
 
       // Detecta EN VIVO cuando el CEO me asigna un cliente (con la app abierta)
       // y dispara el cartel "se te asignó un cliente". Con la app cerrada el
-      // aviso llega por PUSH (/api/asignar-push).
+      // aviso llega por PUSH (/api/push-send con tipo:"asignacion").
       const onContactoChange = (payload) => {
         try {
           if (payload.eventType === "UPDATE" && payload.new && p?.nombre) {
@@ -4430,6 +4433,37 @@ export default function App() {
 
   // Mantener el ref de contactos al día para leerlo dentro de callbacks
   useEffect(() => { contactosRef.current = contactos; }, [contactos]);
+
+  // ── Clientes que me asignaron con el CRM CERRADO ──────────────────────
+  // El cartel en vivo lo dispara el Realtime, pero si el vendedor no tenía la
+  // app abierta cuando el CEO le pasó el cliente, al entrar no se enteraba de
+  // nada. Acá comparamos "mis clientes" contra la lista que quedó guardada la
+  // última vez (localStorage, por vendedor y dispositivo) y mostramos el mismo
+  // cartel con lo que apareció nuevo. La primera vez solo sembramos la lista.
+  useEffect(() => {
+    if (!perfil?.nombre || getRol(perfil) === "ceo" || !contactos.length) return;
+    const key = `ninit:mis-clientes:${perfil.nombre}`;
+    const mios = contactos.filter((c) => c.vendedor === perfil.nombre);
+    const ids = mios.map((c) => String(c.id));
+
+    let previos = null;
+    try { previos = JSON.parse(localStorage.getItem(key) || "null"); } catch { previos = null; }
+
+    if (Array.isArray(previos)) {
+      // Nuevos para mí y que no me asigné yo mismo (si falta la columna
+      // asignado_por, queda undefined y el cliente cuenta igual).
+      const nuevos = mios.filter((c) =>
+        !previos.includes(String(c.id)) && (c.asignado_por || "") !== perfil.nombre);
+      if (nuevos.length) {
+        // El más reciente arriba; si llegaron varios, el cartel lo aclara.
+        const orden = [...nuevos].sort((a, b) =>
+          String(b.asignado_at || "").localeCompare(String(a.asignado_at || "")));
+        setAsignacionRecibida({ contacto: orden[0], por: orden[0].asignado_por || null, mas: nuevos.length - 1 });
+      }
+    }
+
+    try { localStorage.setItem(key, JSON.stringify(ids)); } catch { /* sin espacio */ }
+  }, [contactos, perfil]);
 
   // ── Notificaciones PUSH de nuevo mensaje del cliente ─────────
   // Con Web Push la notificación la muestra el service worker (src/sw.js),
@@ -4591,7 +4625,7 @@ export default function App() {
           asignado_por: yo,
         }),
       });
-    } catch (e) { console.warn("asignar-push:", e?.message || e); }
+    } catch (e) { console.warn("push asignacion:", e?.message || e); }
   };
 
   // Aviso "hay que llamar" — se guarda en la DB (columna requiere_llamada) para compartirlo entre vendedores
