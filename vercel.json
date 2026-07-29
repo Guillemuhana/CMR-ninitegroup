@@ -3,6 +3,13 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
+  "functions": {
+    "api/reporte-diario.js": { "maxDuration": 60 }
+  },
+  "crons": [
+    { "path": "/api/reporte-diario", "schedule": "0 1 * * *" },
+    { "path": "/api/reporte-diario", "schedule": "0 2 * * *" }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",

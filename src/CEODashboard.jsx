@@ -3,7 +3,7 @@ import { supabase, C, FONT_DISPLAY, FONT_BODY, fmtDuracion, fmtFechaLarga } from
 import {
   Users, Clock, MessageSquare, ShoppingBag, TrendingUp,
   ChevronDown, ChevronUp, BookOpen, Activity, BarChart2, RefreshCw,
-  Star, CheckCircle2, Save, Calendar,
+  Star, CheckCircle2, Save, Calendar, FileText, Mail,
 } from "lucide-react";
 import Agenda from "./Agenda";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -29,6 +29,97 @@ function StarsInput({ value = 0, onChange, readOnly = false, size = 20 }) {
           color={n <= value ? "#F59E0B" : "#CBD5E1"}
           style={{ cursor: readOnly ? "default" : "pointer", transition: "transform .1s" }} />
       ))}
+    </div>
+  );
+}
+
+// ── Reporte diario en PDF ────────────────────────────────────
+// El cron de Vercel lo manda solo todos los días a las 21:00 (hora de Miami).
+// Esta tarjeta es para verlo antes o reenviarlo a mano.
+function ReporteDiarioCard({ isMobile }) {
+  const [cargando, setCargando] = useState(null); // 'pdf' | 'mail'
+  const [msg, setMsg] = useState(null);           // { tipo, texto }
+  const [ultimo, setUltimo] = useState(null);
+
+  useEffect(() => {
+    supabase.from("reportes_diarios")
+      .select("fecha,enviado_at,estado,destinatarios")
+      .order("fecha", { ascending: false }).limit(1)
+      .then(({ data }) => setUltimo(data?.[0] || null), () => {});
+  }, []);
+
+  const llamar = async (accion) => {
+    setCargando(accion);
+    setMsg(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error("Tu sesión expiró, volvé a entrar.");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      if (accion === "pdf") {
+        const r = await fetch("/api/reporte-diario?preview=1", { headers });
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "No se pudo generar el PDF.");
+        const url = URL.createObjectURL(await r.blob());
+        window.open(url, "_blank", "noopener");
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        setMsg({ tipo: "ok", texto: "PDF generado. Se abrió en otra pestaña." });
+      } else {
+        const r = await fetch("/api/reporte-diario?forzar=1", { method: "POST", headers });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || "No se pudo enviar el reporte.");
+        setMsg({ tipo: "ok", texto: `Reporte enviado a ${(j.destinatarios || []).join(", ")}.` });
+        setUltimo({ fecha: j.fecha, enviado_at: new Date().toISOString(), estado: "enviado" });
+      }
+    } catch (e) {
+      setMsg({ tipo: "error", texto: e.message });
+    } finally {
+      setCargando(null);
+    }
+  };
+
+  const btn = (activo) => ({
+    display: "flex", alignItems: "center", gap: 7, padding: "9px 15px", borderRadius: 10,
+    border: `1.5px solid ${activo ? C.ai : L.border}`, background: activo ? C.aiSoft : L.white,
+    color: activo ? C.ai : L.muted, fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 12,
+    cursor: cargando ? "wait" : "pointer", opacity: cargando ? 0.6 : 1, transition: "all .15s",
+  });
+
+  return (
+    <div style={{
+      background: L.white, borderRadius: 16, border: `1px solid ${L.border}`,
+      padding: "18px 22px", marginBottom: 20,
+      display: "flex", alignItems: isMobile ? "flex-start" : "center",
+      justifyContent: "space-between", gap: 14, flexDirection: isMobile ? "column" : "row",
+    }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FONT_DISPLAY, fontWeight: 800, fontSize: 14.5, color: L.text }}>
+          <FileText size={16} color={C.ai} /> Reporte diario en PDF
+        </div>
+        <div style={{ fontSize: 12.5, color: L.muted, marginTop: 4 }}>
+          El asistente de IA lo manda todos los días a las 21:00 (hora de Miami) a ninitgroup@gmail.com.
+        </div>
+        {ultimo && (
+          <div style={{ fontSize: 11.5, color: ultimo.estado === "error" ? "#DC2626" : L.light, marginTop: 3 }}>
+            {ultimo.estado === "error"
+              ? `El último intento (${ultimo.fecha}) falló.`
+              : `Último envío: ${fmtFechaLarga(ultimo.fecha)}.`}
+          </div>
+        )}
+        {msg && (
+          <div style={{ fontSize: 12, marginTop: 6, fontWeight: 600, color: msg.tipo === "ok" ? "#15803D" : "#DC2626" }}>
+            {msg.texto}
+          </div>
+        )}
+      </div>
+      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        <button disabled={!!cargando} onClick={() => llamar("pdf")} style={btn(false)}>
+          <FileText size={14} /> {cargando === "pdf" ? "Generando…" : "Ver PDF de hoy"}
+        </button>
+        <button disabled={!!cargando} onClick={() => llamar("mail")} style={btn(true)}>
+          <Mail size={14} /> {cargando === "mail" ? "Enviando…" : "Enviar ahora"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -291,6 +382,8 @@ export default function CEODashboard({ isMobile, perfil }) {
           {/* ══════════════ TAB RESUMEN ══════════════ */}
           {tab === "resumen" && (
             <>
+              <ReporteDiarioCard isMobile={isMobile} />
+
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}>
                 <KPICard icon={<MessageSquare size={16} />} label="Mensajes hoy (equipo)" value={totalMsgsHoy} color={C.red} />
                 <KPICard icon={<Users size={16} />} label="Contactos totales" value={totalContactos} color="#7C3AED" />

@@ -14,6 +14,9 @@ hace seguimiento de clientes, recibe alertas y analiza el negocio con reportes d
 - **Reportes**: KPIs (mensajes, nuevos contactos, pedidos, facturación, ticket promedio, % bot),
   gráficos de actividad, rendimiento por vendedor y embudo de estados. Períodos: Hoy / Semana / Mes / Año.
 - **Exportación**: PDF (reporte completo con tablas) y CSV (vendedores).
+- **Reporte diario automático**: todas las noches a las 21 h (hora de Miami) el asistente de IA
+  manda por email un PDF con el resumen del día, el ranking de vendedores y los pendientes.
+  Puesta en marcha y detalle en [REPORTE-DIARIO.md](REPORTE-DIARIO.md).
 - **Seguridad**: RLS activo, solo usuarios autenticados acceden; manejo de errores en envío.
 
 ---
