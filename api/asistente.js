@@ -1,6 +1,6 @@
 // Asistente Ejecutivo IA del CRM (la burbuja flotante).
-// Usa Groq server-side con la MISMA key que el botón "Avanzar" (/api/resumen.js)
-// y /api/traducir.js → rápido, preciso y sin exponer la clave en el navegador.
+// Usa Groq server-side con la MISMA key que el botón "Avanzar" y la traducción
+// (ambos en /api/resumen.js) → rápido, preciso y sin exponer la clave en el navegador.
 //
 // Requiere en Vercel: GROQ_API_KEY (Settings → Environment Variables).
 //   Conseguí la key en https://console.groq.com/keys

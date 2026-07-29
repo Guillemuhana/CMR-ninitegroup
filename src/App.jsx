@@ -3062,9 +3062,9 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
   };
 
   const traducirTexto = async (txt, destino) => {
-    const res = await fetch("/api/traducir", {
+    const res = await fetch("/api/resumen", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ texto: txt, destino }),
+      body: JSON.stringify({ accion: "traducir", texto: txt, destino }),
     });
     const out = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(out.error || "No se pudo traducir.");

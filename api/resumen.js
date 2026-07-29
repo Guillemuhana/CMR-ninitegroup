@@ -1,5 +1,9 @@
-// Genera un resumen IA de la conversación de un cliente para que el vendedor
-// se ponga al día rápido y tenga un mensaje listo para enviarle.
+// Dos tareas de IA sobre la conversación, en un solo endpoint:
+//   POST /api/resumen                         → resumen para el vendedor + mensaje sugerido
+//   POST /api/resumen  { accion: "traducir" } → traduce un texto al idioma destino
+//
+// Van juntas porque el plan Hobby de Vercel permite como máximo 12 Serverless
+// Functions por deploy y ya estamos en el tope (antes esto era /api/traducir).
 //
 // Usa Groq (gratis, API compatible con OpenAI).
 // Requiere en Vercel: GROQ_API_KEY (Settings → Environment Variables).
@@ -15,6 +19,58 @@ const MODELOS = (process.env.GROQ_MODEL
 ).filter((m, i, a) => a.indexOf(m) === i);
 
 const DELIM = "|||MENSAJE|||";
+
+// Llama a Groq recorriendo la cadena de modelos. Devuelve { texto } o { error }.
+async function pedirAGroq({ messages, temperature, errorBase }) {
+  let ultimoError = errorBase;
+  for (const model of MODELOS) {
+    try {
+      const r = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({ model, temperature, max_tokens: 1024, messages }),
+      });
+
+      const data = await r.json().catch(() => ({}));
+      if (r.ok) return { texto: (data?.choices?.[0]?.message?.content || "").trim() };
+
+      ultimoError = data?.error?.message || `Groq devolvió ${r.status}`;
+      // 429 = rate limit / sin cuota → probar el siguiente modelo. Otro error → cortar.
+      const esRateLimit = r.status === 429 || /rate limit|quota|tokens per day|TPD/i.test(ultimoError);
+      if (!esRateLimit) break;
+    } catch (e) {
+      ultimoError = e?.message || errorBase;
+    }
+  }
+  return { error: ultimoError };
+}
+
+// ── Traducción (antes /api/traducir) ──────────────────────────
+async function traducir(req, res) {
+  const texto = (req.body?.texto || "").trim();
+  const destino = req.body?.destino === "en" ? "en" : "es";
+  if (!texto) return res.status(400).json({ error: "No hay texto para traducir." });
+
+  const idioma = destino === "en" ? "English" : "español rioplatense (Argentina)";
+
+  const { texto: traduccion, error } = await pedirAGroq({
+    temperature: 0.2,
+    errorBase: "Error al traducir.",
+    messages: [
+      {
+        role: "system",
+        content: `Sos un traductor profesional. Traducí el texto del usuario al ${idioma}. Devolvé ÚNICAMENTE la traducción: sin comillas, sin notas, sin explicaciones, sin el texto original. Mantené el tono, el sentido y los emojis. Si el texto ya está en ${idioma}, devolvelo tal cual.`,
+      },
+      { role: "user", content: texto },
+    ],
+  });
+
+  if (error) return res.status(500).json({ error });
+  return res.status(200).json({ traduccion });
+}
 
 // Detecta el idioma mirando SOLO los mensajes entrantes del cliente (direccion "in"),
 // para no confundirse con el bot/vendedor que a veces responde en español.
@@ -80,6 +136,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "Falta configurar GROQ_API_KEY en el servidor." });
   }
 
+  if (req.body?.accion === "traducir") return traducir(req, res);
+
   const { mensajes, contacto } = req.body || {};
   if (!Array.isArray(mensajes) || mensajes.length === 0) {
     return res.status(400).json({ error: "No hay mensajes para resumir." });
@@ -120,38 +178,19 @@ export default async function handler(req, res) {
     },
   ];
 
-  let ultimoError = "Error al generar el resumen.";
-  for (const model of MODELOS) {
-    try {
-      const r = await fetch(GROQ_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({ model, temperature: 0.6, max_tokens: 1024, messages }),
-      });
+  const { texto: full, error } = await pedirAGroq({
+    messages,
+    temperature: 0.6,
+    errorBase: "Error al generar el resumen.",
+  });
+  if (error) return res.status(500).json({ error });
 
-      const data = await r.json().catch(() => ({}));
-      if (r.ok) {
-        const full = (data?.choices?.[0]?.message?.content || "").trim();
-        let resumen = full;
-        let mensaje = "";
-        const i = full.indexOf(DELIM);
-        if (i >= 0) {
-          resumen = full.slice(0, i).trim();
-          mensaje = full.slice(i + DELIM.length).trim().replace(/^["'*\s]+|["'*\s]+$/g, "");
-        }
-        return res.status(200).json({ resumen: resumen || "Sin resumen.", mensaje });
-      }
-
-      ultimoError = data?.error?.message || `Groq devolvió ${r.status}`;
-      // 429 = rate limit / sin cuota → probar el siguiente modelo. Otro error → cortar.
-      const esRateLimit = r.status === 429 || /rate limit|quota|tokens per day|TPD/i.test(ultimoError);
-      if (!esRateLimit) break;
-    } catch (e) {
-      ultimoError = e?.message || "Error al generar el resumen.";
-    }
+  let resumen = full;
+  let mensaje = "";
+  const i = full.indexOf(DELIM);
+  if (i >= 0) {
+    resumen = full.slice(0, i).trim();
+    mensaje = full.slice(i + DELIM.length).trim().replace(/^["'*\s]+|["'*\s]+$/g, "");
   }
-  return res.status(500).json({ error: ultimoError });
+  return res.status(200).json({ resumen: resumen || "Sin resumen.", mensaje });
 }
