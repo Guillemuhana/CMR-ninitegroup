@@ -81,7 +81,7 @@ pegarlos a mano una sola vez.
 </p>
 ```
 
-### Facebook Marketplace / eBay (al final de la descripción)
+### Facebook Marketplace (al final de la descripción)
 
 ```
 💳 FINANCING AVAILABLE
@@ -115,8 +115,8 @@ NINIT Group
 ### Purchase Agreements y catálogos digitales
 
 ⚠️ **Pendiente.** No sabemos con qué se generan hoy (¿Word, Canva, PDF a mano?).
-Cuando se sepa, sumar el bloque de "Facebook / eBay" de arriba o el de la firma,
-según el formato.
+Cuando se sepa, sumar el bloque de "Facebook Marketplace" de arriba o el de la
+firma, según el formato.
 
 ---
 
@@ -125,4 +125,5 @@ según el formato.
 1. Correr `supabase_financiamiento.sql` en el SQL Editor de producción — **hecho
    el 29-jul-2026**.
 2. `GROQ_API_KEY` tiene que estar en Vercel (ya estaba: la usa el resto del CRM).
-3. Pegar los textos de arriba en Gmail, Facebook y eBay — **pendiente, es manual**.
+3. Pegar los textos de arriba en Gmail y Facebook Marketplace — **pendiente, es
+   manual**. (eBay quedó fuera: NINIT ya no publica ahí.)
