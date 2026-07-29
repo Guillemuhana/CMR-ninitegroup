@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
+import { detectarSolicitudFinanciamiento } from "./_fin/detectar.js";
 
 // Envía notificaciones PUSH a los vendedores cuando entra un mensaje del
 // cliente. Lo dispara Supabase (trigger pg_net → este endpoint) en cada INSERT
@@ -133,5 +134,10 @@ export default async function handler(req, res) {
     await admin.from("push_subscriptions").delete().in("endpoint", muertas);
   }
 
-  return res.status(200).json({ sent, limpiadas: muertas.length });
+  // Financiamiento: ¿el cliente está avisando que presentó la solicitud?
+  // Va DESPUÉS del push normal para no demorar el aviso del mensaje, y es
+  // best-effort: si falla, no afecta la respuesta.
+  const fin = await detectarSolicitudFinanciamiento({ admin, webpush, rec, contacto });
+
+  return res.status(200).json({ sent, limpiadas: muertas.length, financiamiento: fin });
 }
