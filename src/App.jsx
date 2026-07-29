@@ -7,7 +7,7 @@ import {
   AlertCircle, Clock, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
   Image as ImageIcon, Languages, Reply, SlidersHorizontal, Star,
-  PanelRight, PanelRightClose,
+  PanelRight, PanelRightClose, CreditCard,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
@@ -15,7 +15,7 @@ import { Receipt } from "@phosphor-icons/react";
 import PedidosPanel, { NuevoPedidoModal, imprimirPedido } from "./Pedidos";
 import {
   supabase, N8N_SEND_WEBHOOK, N8N_EMAIL_REPLY_WEBHOOK, MESSENGER_SEND_ENDPOINT, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
-  VENDEDORES, ESTADOS, calcularAlertas, getRol, cargarPerfil,
+  VENDEDORES, ESTADOS, ESTADOS_FIN, SOCIO_FIN, LINK_FIN, calcularAlertas, getRol, cargarPerfil,
   ELEVENLABS_KEY, ELEVENLABS_VOICE_ID, EMAIL_HABILITADO,
 } from "./lib";
 import { COLOR, RADIUS, SHADOW, L } from "./theme";
@@ -2488,9 +2488,13 @@ const PLANTILLAS = [
 const COTIZACIONES = [
   {
     label: "Cotización completa (todos los modelos)",
-    texto: `Thank you for your interest in NINIT Group! 🚐\n\nHere's our full interactive quote, where you can browse every restroom trailer model and choose the one that best fits your event:\n\nhttps://ninitgroup.com/ninit_quote/\n\nInside you'll find:\n✅ All models (2-Stall, 3-Stall, 4-Stall and ADA+2) with photos\n✅ Full specifications of each unit\n✅ Pre-sale and ready-to-ship pricing\n✅ Shipping and delivery details\n\nTake a look, pick your favorite model, and let me know — I'll confirm availability and walk you through the next steps. Happy to answer any questions! 😊`,
+    texto: `Thank you for your interest in NINIT Group! 🚐\n\nHere's our full interactive quote, where you can browse every restroom trailer model and choose the one that best fits your event:\n\nhttps://ninitgroup.com/ninit_quote/\n\nInside you'll find:\n✅ All models (2-Stall, 3-Stall, 4-Stall and ADA+2) with photos\n✅ Full specifications of each unit\n✅ Pre-sale and ready-to-ship pricing\n✅ Shipping and delivery details\n\nTake a look, pick your favorite model, and let me know — I'll confirm availability and walk you through the next steps. Happy to answer any questions! 😊\n\n💳 *Financing available* — you don't need to pay it all upfront. Check your options with Ascentium Capital here:\n${LINK_FIN}`,
   },
 ];
+
+// Mensaje con el link de financiamiento (Ascentium Capital).
+// En inglés como el resto de lo que se le manda al cliente.
+const TEXTO_FINANCIAMIENTO = `Great news — you don't have to pay for your trailer all at once! 💳\n\nWe work with Ascentium Capital, so you can finance your restroom trailer and start using it right away.\n\nApply here (takes just a few minutes):\n${LINK_FIN}\n\n✅ Quick online application\n✅ Flexible terms\n✅ No obligation to check your options\n\nOnce you apply, let me know and I'll follow up to make sure everything goes smoothly. Any questions, I'm here! 😊`;
 
 // ============================================================
 // ASISTENTE "AVANZAR" — etiquetas de visualización
@@ -2684,7 +2688,223 @@ function MensajeContenido({ texto }) {
 // stepper porque no son etapas de avance (se ven igual en la cabecera del chat).
 const EMBUDO = ["nuevo", "contactado", "interesado", "cotizacion", "negociando", "vendido"];
 
-function PanelDerecho({ contacto, onUpdateContacto, onEditar, onColapsar }) {
+// ============================================================
+// FINANCIAMIENTO (Ascentium Capital)
+// ============================================================
+// Ficha de financiamiento del cliente. Vive en la tabla `financiamiento`
+// (una fila por contacto) — ver supabase_financiamiento.sql.
+//
+// Al marcar "link enviado" se crean solos los dos recordatorios que pidió el
+// CEO: primer seguimiento a las 24 h y segundo a los 3 días. Se guardan como
+// eventos de agenda_vendedor, así aparecen en la Agenda que el vendedor ya usa.
+
+const FIN_HORA_SEG = "10:00:00"; // los recordatorios caen a las 10 de la mañana
+
+// Fecha (AAAA-MM-DD) sumando días a partir de hoy.
+const finFechaEn = (dias) => {
+  const d = new Date();
+  d.setDate(d.getDate() + dias);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+// Crea los dos recordatorios de seguimiento en la Agenda del vendedor.
+// Best-effort: si falla, el estado del financiamiento igual queda guardado.
+async function crearRecordatoriosFin(contacto, perfil) {
+  const vendedorId = perfil?.id;
+  if (!vendedorId) return;
+  const cliente = contacto.nombre || contacto.telefono || contacto.email || "Cliente";
+  const eventos = [
+    { dias: 1, titulo: `Seguimiento financiamiento — ${cliente}`,
+      nota: "Primer seguimiento (24 h del envío del link): preguntar si pudo abrirlo y si tiene dudas." },
+    { dias: 3, titulo: `2º seguimiento financiamiento — ${cliente}`,
+      nota: "Segundo seguimiento (3 días del envío del link): consultar si avanzó con la solicitud." },
+  ];
+  await supabase.from("agenda_vendedor").insert(
+    eventos.map((e) => ({
+      vendedor_id: vendedorId,
+      vendedor_nombre: perfil?.nombre || null,
+      fecha: finFechaEn(e.dias),
+      hora: FIN_HORA_SEG,
+      tipo: "seguimiento",
+      titulo: e.titulo,
+      cliente_nombre: cliente,
+      nota: e.nota,
+    }))
+  );
+}
+
+function SeccionFinanciamiento({ contacto, perfil, seccion, cabecera, abierta }) {
+  const [fin, setFin]         = useState(null);
+  const [cargando, setCarg]   = useState(true);
+  const [guardando, setGuard] = useState(false);
+  const [aviso, setAviso]     = useState(null);
+
+  // Cargar (o preparar) la ficha del cliente activo.
+  useEffect(() => {
+    let vivo = true;
+    setCarg(true); setAviso(null);
+    supabase.from("financiamiento").select("*").eq("contacto_id", contacto.id).limit(1)
+      .then(({ data }) => { if (vivo) { setFin(data?.[0] || null); setCarg(false); } },
+            () => { if (vivo) setCarg(false); });
+    return () => { vivo = false; };
+  }, [contacto.id]);
+
+  // Guarda cambios parciales. La fila se crea recién cuando se toca algo.
+  const guardar = async (campos) => {
+    setGuard(true);
+    const payload = {
+      contacto_id: contacto.id,
+      socio: SOCIO_FIN,
+      vendedor_id: perfil?.id || null,
+      ...fin, ...campos,
+    };
+    delete payload.created_at; delete payload.updated_at;
+    const { data, error } = await supabase
+      .from("financiamiento").upsert(payload, { onConflict: "contacto_id" }).select().limit(1);
+    setGuard(false);
+    if (error) { setAviso({ tipo: "error", texto: error.message }); return null; }
+    setFin(data?.[0] || payload);
+    return data?.[0] || payload;
+  };
+
+  // Marca el link como enviado y programa los dos seguimientos.
+  const marcarLinkEnviado = async () => {
+    const ok = await guardar({
+      link_enviado: true,
+      link_enviado_at: new Date().toISOString(),
+      estado: fin?.estado && fin.estado !== "financing_offered" ? fin.estado : "link_sent",
+      seguimiento_fecha: finFechaEn(1),
+    });
+    if (!ok) return;
+    try {
+      await crearRecordatoriosFin(contacto, perfil);
+      setAviso({ tipo: "ok", texto: "Link marcado como enviado. Te agendé los seguimientos de 24 h y 3 días." });
+    } catch {
+      setAviso({ tipo: "ok", texto: "Link marcado como enviado (no se pudieron agendar los recordatorios)." });
+    }
+  };
+
+  const lbl   = { fontSize: 11, color: L.light, width: 74, flexShrink: 0 };
+  const linea = { display: "flex", gap: 8, padding: "5px 0", alignItems: "center" };
+  const input = {
+    flex: 1, minWidth: 0, fontFamily: FONT_BODY, fontSize: 12.5, color: L.text,
+    border: `1px solid ${L.border}`, borderRadius: 8, padding: "5px 8px", background: L.white,
+  };
+  const est = ESTADOS_FIN[fin?.estado];
+
+  return (
+    <div style={seccion}>
+      {cabecera("financiamiento", "Financiamiento",
+        est ? (
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: est.color, background: est.bg, borderRadius: 20, padding: "2px 8px" }}>
+            {est.label}
+          </span>
+        ) : null
+      )}
+
+      {abierta && (cargando ? (
+        <div style={{ fontSize: 12, color: L.light, marginTop: 6 }}>Cargando…</div>
+      ) : (
+        <div style={{ marginTop: 4, opacity: guardando ? 0.6 : 1, transition: "opacity .15s" }}>
+
+          {/* Interés en financiamiento */}
+          <div style={linea}>
+            <span style={lbl}>Interés</span>
+            <div style={{ display: "flex", gap: 6 }}>
+              {[["Sí", true], ["No", false]].map(([txt, val]) => (
+                <button key={txt} onClick={() => guardar({ interes: val })}
+                  style={{
+                    padding: "3px 12px", borderRadius: 20, cursor: "pointer", fontSize: 11.5, fontWeight: 700, fontFamily: FONT_BODY,
+                    border: `1.5px solid ${fin?.interes === val ? C.ai : L.border}`,
+                    background: fin?.interes === val ? C.aiSoft : L.white,
+                    color: fin?.interes === val ? C.ai : L.muted,
+                  }}>{txt}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Estado de la solicitud */}
+          <div style={linea}>
+            <span style={lbl}>Estado</span>
+            <select value={fin?.estado || ""} onChange={(e) => guardar({ estado: e.target.value || null })} style={input}>
+              <option value="">Sin definir</option>
+              {Object.entries(ESTADOS_FIN).map(([k, v]) => (
+                <option key={k} value={k}>{v.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Link enviado */}
+          <div style={linea}>
+            <span style={lbl}>Link</span>
+            {fin?.link_enviado ? (
+              <span style={{ fontSize: 12, color: L.text }}>
+                Enviado{fin.link_enviado_at ? ` el ${new Date(fin.link_enviado_at).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" })}` : ""}
+              </span>
+            ) : (
+              <button onClick={marcarLinkEnviado} disabled={guardando}
+                style={{ ...input, cursor: "pointer", fontWeight: 700, color: C.ai, borderColor: "#C7D2FE", background: C.aiSoft, textAlign: "left" }}>
+                Marcar como enviado
+              </button>
+            )}
+          </div>
+
+          {/* Monto solicitado */}
+          <div style={linea}>
+            <span style={lbl}>Monto</span>
+            <input type="number" min="0" step="100" placeholder="USD" style={input}
+              defaultValue={fin?.monto_estimado ?? ""}
+              onBlur={(e) => {
+                const v = e.target.value === "" ? null : Number(e.target.value);
+                if (v !== (fin?.monto_estimado ?? null)) guardar({ monto_estimado: v });
+              }} />
+          </div>
+
+          {/* Modelo elegido */}
+          <div style={linea}>
+            <span style={lbl}>Modelo</span>
+            <input type="text" placeholder="Ej. 3-Stall" style={input}
+              defaultValue={fin?.modelo || ""}
+              onBlur={(e) => { if (e.target.value !== (fin?.modelo || "")) guardar({ modelo: e.target.value || null }); }} />
+          </div>
+
+          {/* Socio financiero (hoy siempre el mismo) */}
+          <div style={linea}>
+            <span style={lbl}>Socio</span>
+            <span style={{ fontSize: 12.5, color: L.text, fontWeight: 500 }}>{fin?.socio || SOCIO_FIN}</span>
+          </div>
+
+          {/* Próximo seguimiento */}
+          <div style={linea}>
+            <span style={lbl}>Seguimiento</span>
+            <input type="date" style={input}
+              value={fin?.seguimiento_fecha || ""}
+              onChange={(e) => guardar({ seguimiento_fecha: e.target.value || null })} />
+          </div>
+
+          {/* Notas */}
+          <textarea placeholder="Notas del financiamiento…" rows={2}
+            defaultValue={fin?.notas || ""}
+            onBlur={(e) => { if (e.target.value !== (fin?.notas || "")) guardar({ notas: e.target.value || null }); }}
+            style={{ ...input, width: "100%", marginTop: 6, resize: "vertical", fontFamily: FONT_BODY }} />
+
+          {fin?.detectado_por_ia && (
+            <div style={{ fontSize: 11, color: L.muted, marginTop: 5, display: "flex", alignItems: "center", gap: 4 }}>
+              <Sparkles size={11} color={C.ai} /> Estado detectado por la IA en el chat.
+            </div>
+          )}
+          {aviso && (
+            <div style={{ fontSize: 11.5, marginTop: 6, fontWeight: 600, color: aviso.tipo === "ok" ? "#15803D" : "#DC2626" }}>
+              {aviso.texto}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PanelDerecho({ contacto, perfil, onUpdateContacto, onEditar, onColapsar }) {
   const [notas, setNotas]       = useState(contacto.notas || "");
   const [guardando, setGuard]   = useState(false);
   const [guardado, setGuardado] = useState(false);
@@ -2719,7 +2939,7 @@ function PanelDerecho({ contacto, onUpdateContacto, onEditar, onColapsar }) {
   const titulo  = { fontFamily: FONT_DISPLAY, fontSize: 12.5, fontWeight: 700, color: L.text };
 
   // Cada sección se pliega/despliega tocando su título (menos altura ocupada).
-  const [abiertas, setAbiertas] = useState({ datos: true, embudo: true, actividad: false, notas: false });
+  const [abiertas, setAbiertas] = useState({ datos: true, embudo: true, financiamiento: false, actividad: false, notas: false });
   const toggleSec = (k) => setAbiertas((s) => ({ ...s, [k]: !s[k] }));
   const cabecera = (id, label, extra) => (
     <div onClick={() => toggleSec(id)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", userSelect: "none" }}>
@@ -2801,6 +3021,10 @@ function PanelDerecho({ contacto, onUpdateContacto, onEditar, onColapsar }) {
         </>)}
       </div>
 
+      {/* Financiamiento (Ascentium Capital) */}
+      <SeccionFinanciamiento contacto={contacto} perfil={perfil}
+        seccion={seccion} cabecera={cabecera} abierta={abiertas.financiamiento} />
+
       {/* Actividad comercial */}
       <div style={seccion}>
         {cabecera("actividad", "Actividad")}
@@ -2845,7 +3069,7 @@ function PanelDerecho({ contacto, onUpdateContacto, onEditar, onColapsar }) {
   );
 }
 
-function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onBack, isMobile, rol, fichaAbierta, onToggleFicha }) {
+function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userName, onBack, isMobile, rol, fichaAbierta, onToggleFicha }) {
   // Los leads de Google Ads llegan por email, así que comparten el mismo canal
   // de salida (y la misma desactivación).
   const esCanalEmail = contacto.canal === "email" || contacto.canal === "google_ads";
@@ -3244,6 +3468,28 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
     setEnviando(false);
   };
 
+  // Manda el link de financiamiento y, de paso, deja registrada la ficha:
+  // marca el link como enviado y agenda los seguimientos de 24 h y 3 días.
+  const enviarFinanciamiento = async () => {
+    if (enviando) return;
+    setEnviando(true); setErr("");
+    await enviarMensaje(TEXTO_FINANCIAMIENTO);
+    try {
+      await supabase.from("financiamiento").upsert({
+        contacto_id: contacto.id,
+        socio: SOCIO_FIN,
+        vendedor_id: perfil?.id || null,
+        interes: true,
+        link_enviado: true,
+        link_enviado_at: new Date().toISOString(),
+        estado: "link_sent",
+        seguimiento_fecha: finFechaEn(1),
+      }, { onConflict: "contacto_id" });
+      await crearRecordatoriosFin(contacto, perfil);
+    } catch { /* el mensaje ya salió: la ficha se puede completar a mano */ }
+    setEnviando(false);
+  };
+
   // Geometría común de los paneles del ＋: siempre por encima del compositor y
   // anclados al botón, así crecen hacia arriba aunque el textarea se agrande.
   // En mobile ocupan el ancho del compositor (padding de 12px por lado).
@@ -3594,6 +3840,18 @@ function ChatPanel({ contacto, onUpdateContacto, onDeleteContacto, userName, onB
                   <span style={{ display: "block", fontSize: 11.5, color: L.muted, marginTop: 1 }}>{enviando ? "Enviando…" : COTIZACIONES.length === 1 ? "Se envía al cliente al toque" : "Elegí cuál enviar"}</span>
                 </span>
                 {COTIZACIONES.length === 1 ? <Send size={15} color={L.muted} style={{ flexShrink: 0 }} /> : <ChevronRight size={16} color={L.muted} style={{ flexShrink: 0 }} />}
+              </button>
+
+              <button className="tools-item" disabled={enviando}
+                onClick={() => { cerrarTools(); enviarFinanciamiento(); }}>
+                <span className="tools-ico" style={{ background: "#15803D1A", color: "#15803D" }}><CreditCard size={17} /></span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: L.text }}>Financiamiento</span>
+                  <span style={{ display: "block", fontSize: 11.5, color: L.muted, marginTop: 1 }}>
+                    {enviando ? "Enviando…" : "Manda el link y agenda los seguimientos"}
+                  </span>
+                </span>
+                <Send size={15} color={L.muted} style={{ flexShrink: 0 }} />
               </button>
 
               <button className="tools-item" onClick={() => { setToolsOpen(false); setShowFotos(true); setFotoModelo(null); }}>
@@ -4772,7 +5030,7 @@ export default function App() {
             <div className="scroll-y" style={{ flex: 1, overflowY: "auto" }}><PedidosPanel /></div>
           </>
         ) : activo ? (
-          <ChatPanel contacto={activo} onUpdateContacto={updateContacto} onDeleteContacto={deleteContacto} userName={userName}
+          <ChatPanel contacto={activo} perfil={perfil} onUpdateContacto={updateContacto} onDeleteContacto={deleteContacto} userName={userName}
             onBack={isMobile ? () => setActivo(null) : undefined}
             isMobile={isMobile} rol={rol}
             fichaAbierta={fichaAbierta} onToggleFicha={() => setFichaAbierta((v) => !v)} />
@@ -4808,7 +5066,7 @@ export default function App() {
           En móvil y tablet se sigue usando el cajón (Editar en la cabecera). */}
       {!isMobile && activo && vista === "chat" && fichaAbierta && (
         <div className="app-right">
-          <PanelDerecho contacto={activo} onUpdateContacto={updateContacto} onEditar={() => setFichaEdit(activo)} onColapsar={() => setFichaAbierta(false)} />
+          <PanelDerecho contacto={activo} perfil={perfil} onUpdateContacto={updateContacto} onEditar={() => setFichaEdit(activo)} onColapsar={() => setFichaAbierta(false)} />
         </div>
       )}
       {/* Solapa lateral: aparece pegada al borde derecho cuando la ficha está

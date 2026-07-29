@@ -87,6 +87,31 @@ export const ESTADOS = {
   cerrado:     { label: "Cerrado",             color: "#4a4a4a", bg: "#e3e3e3" },
 };
 
+// ─── Financiamiento (Ascentium Capital) ─────────────────────
+// Las claves son las que se guardan en la tabla `financiamiento` (en inglés,
+// que es el vocabulario del CEO y del socio financiero); el label es lo que ve
+// el vendedor en la app. El orden es el del recorrido real de una solicitud.
+export const ESTADOS_FIN = {
+  financing_offered:     { label: "Financiamiento ofrecido",    color: "#1D4ED8", bg: "#DBEAFE" },
+  link_sent:             { label: "Link enviado",               color: "#7C3AED", bg: "#EDE9FE" },
+  customer_reviewing:    { label: "Cliente evaluando",          color: "#9333EA", bg: "#F3E8FF" },
+  application_started:   { label: "Solicitud iniciada",         color: "#D97706", bg: "#FEF9C3" },
+  application_submitted: { label: "Solicitud presentada",       color: "#0E7490", bg: "#CFFAFE" },
+  approved:              { label: "Aprobado",                   color: "#15803D", bg: "#DCFCE7" },
+  info_required:         { label: "Falta información",          color: "#92400E", bg: "#FEF3C7" },
+  declined:              { label: "Rechazado",                  color: "#9b2c2c", bg: "#f5dcdc" },
+  funded:                { label: "Desembolsado ✓",             color: "#15803D", bg: "#BBF7D0" },
+  closed_not_interested: { label: "Cerrado / ya no interesa",   color: "#4a4a4a", bg: "#e3e3e3" },
+};
+
+// Socio financiero por defecto (hoy el único).
+export const SOCIO_FIN = "Ascentium Capital";
+
+// Link de la solicitud de financiamiento (Ascentium Capital / iCalc).
+// Es el único lugar donde vive el link: cambiándolo acá se actualiza el botón del
+// chat, el texto de la cotización y los mensajes de seguimiento.
+export const LINK_FIN = "https://icalcpayment.com/customericalc/99c2d069-0666-4798-8c3d-8d32787b0d5f";
+
 // Paleta de marca NINIT — deriva de src/theme.js (fuente única de tokens).
 // Las claves se mantienen tal cual (incluida "red", que hoy es azul y viene de
 // una marca anterior) porque las leen ~1.100 estilos inline. Renombrarlas es
