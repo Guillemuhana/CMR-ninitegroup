@@ -27,6 +27,7 @@ import CEODashboard from "./CEODashboard";
 import Agenda from "./Agenda";
 import Directorio from "./Directorio";
 import FiltrosModal, { FILTROS_INICIAL, contarActivos, aplicaFiltrosIA } from "./FiltrosModal";
+import { cargarConsultaronFin } from "./finConsultas";
 
 // ============================================================
 // PALETA LIGHT — deriva de src/theme.js (fuente única de tokens)
@@ -1507,13 +1508,17 @@ REGLAS ESTRICTAS:
   );
 }
 
-// Tabs de la lista de conversaciones. Las claves son las que ya entendía el
-// filtro del Sidebar; "favoritos" usa el flag `destacado` del contacto.
+// Tabs de la lista de conversaciones. Antes había tres cosas distintas para
+// filtrar (estos tabs, el botón del teléfono y el de la estrella), cada una con
+// su propio estado: se combinaban entre sí y nadie entendía qué estaba viendo.
+// Ahora es UNA sola tira: se elige un chip y la lista muestra eso.
 const SIDEBAR_TABS = [
-  { key: "todos",          label: "Todos" },
-  { key: "q:sinresponder", label: "Sin responder" },
-  { key: "q:seguimientos", label: "Seguimientos" },
-  { key: "favoritos",      label: "Favoritos" },
+  { key: "todos",            label: "Todos",                            color: C.red },
+  { key: "q:sinresponder",   label: "Sin responder",  icon: Clock,      color: "#B45309" },
+  { key: "q:pidecontacto",   label: "Piden contacto", icon: PhoneCall,  color: C.red },
+  { key: "q:financiamiento", label: "Financiamiento", icon: CreditCard, color: "#7C3AED" },
+  { key: "q:seguimientos",   label: "Seguimientos",   icon: Calendar,   color: "#0E7490" },
+  { key: "favoritos",        label: "Favoritos",      icon: Star,       color: "#B45309" },
 ];
 
 // ============================================================
@@ -1784,17 +1789,16 @@ const CANALES = [
   { key: "google_ads", label: "Google Ads", icon: <SiGoogleads size={17} />,   color: "#4285F4", bg: "#EFF6FF" },
 ];
 
+// Se abre con click y NO con hover: ahora vive en la misma tira que los chips
+// de la lista, y abrirse solo al pasar el mouse empujaba todos los chips al
+// costado sin que nadie lo hubiera pedido.
 function CanalSelector({ canal, setCanal }) {
   const [open, setOpen] = useState(false);
-  const closeT = useRef(null);
   const sel = CANALES.find((c) => c.key === canal) || CANALES[0];
   const otros = CANALES.filter((c) => c.key !== sel.key);
 
-  const abrir  = () => { if (closeT.current) clearTimeout(closeT.current); setOpen(true); };
-  const cerrar = () => { closeT.current = setTimeout(() => setOpen(false), 160); };
-
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }} onMouseEnter={abrir} onMouseLeave={cerrar}>
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       {/* Píldora del canal activo */}
       <button onClick={() => setOpen((o) => !o)}
         style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", borderRadius: 11, border: "none", cursor: "pointer", background: sel.bg, boxShadow: `inset 0 0 0 1.5px ${sel.color}33`, transition: "all .2s" }}>
@@ -1806,7 +1810,7 @@ function CanalSelector({ canal, setCanal }) {
       {/* Canales que se deslizan desde el costado */}
       <div style={{ display: "flex", gap: 6, overflow: "hidden", maxWidth: open ? 320 : 0, opacity: open ? 1 : 0, transition: "max-width .32s cubic-bezier(.34,1.2,.4,1), opacity .22s ease" }}>
         {otros.map((c, i) => (
-          <button key={c.key} onClick={() => { setCanal(c.key); }} title={c.label}
+          <button key={c.key} onClick={() => { setCanal(c.key); setOpen(false); }} title={c.label}
             onMouseEnter={(e) => { e.currentTarget.style.background = c.color; e.currentTarget.firstChild.style.color = "#fff"; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = c.bg; e.currentTarget.firstChild.style.color = c.color; }}
             style={{ flexShrink: 0, width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 11, border: "none", cursor: "pointer", background: c.bg, boxShadow: `inset 0 0 0 1.5px ${c.color}33`, transform: open ? "translateX(0)" : "translateX(-14px)", transition: `transform .3s cubic-bezier(.34,1.2,.4,1) ${open ? i * 45 : 0}ms, background .15s`, }}>
@@ -1824,8 +1828,6 @@ function CanalSelector({ canal, setCanal }) {
 function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContacto, onToggleLlamada, onMarcarLlamada, onAsignarVendedor, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
   const [filtro, setFiltro]       = useState("todos");
   const [busqueda, setBusqueda]   = useState("");
-  const [soloDestacados, setSoloDestacados] = useState(false);
-  const [soloPide, setSoloPide]   = useState(false);   // solo los que piden contacto
   const [canal, setCanal]         = useState("todos");
   const [filtrosIA, setFiltrosIA] = useState(FILTROS_INICIAL);
   const [modalFiltros, setModalFiltros] = useState(false);
@@ -1873,41 +1875,48 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
     return () => clearInterval(t);
   }, []);
 
-  // Clientes que piden contacto (para el contador y el filtro de prioridad).
-  const nPide = contactos.reduce((n, c) => n + (pideContacto(c).pide ? 1 : 0), 0);
+  // Clientes que en algún momento consultaron por financiamiento (ficha cargada
+  // o el tema apareció en el chat). Se carga una vez; mientras tanto el chip
+  // muestra 0 y no filtra nada de más.
+  const [finIds, setFinIds] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    cargarConsultaronFin()
+      .then((s) => vivo && setFinIds(s))
+      .catch(() => vivo && setFinIds(new Set()));
+    return () => { vivo = false; };
+  }, []);
+  const esFin = useCallback((c) => !!finIds && finIds.has(c.id), [finIds]);
 
-  // Los contadores de los tabs tienen que contar EXACTAMENTE lo mismo que la
+  // Los contadores de los chips tienen que contar EXACTAMENTE lo mismo que la
   // lista muestra, así que comparten este predicado. Si el número y el contenido
   // se calcularan por separado, terminarían diciendo cosas distintas.
   const cumpleFiltro = (c, f) => {
     if (f === "todos") return true;
-    if (f === "q:sinrevisar")   return calcSinRevisar(c) != null;
-    if (f === "q:noleidos")     return c.no_leidos > 0;
-    if (f === "q:sinresponder") return calcEspera(c) != null;
-    if (f === "q:seguimientos") return !!c.seguimiento_at;
-    if (f === "t:cliente")      return c.tipo === "cliente";
-    if (f === "t:prospecto")    return !c.tipo || c.tipo === "prospecto";
+    if (f === "favoritos")        return !!c.destacado;
+    if (f === "q:pidecontacto")   return pideContacto(c).pide;
+    if (f === "q:financiamiento") return esFin(c);
+    if (f === "q:sinrevisar")     return calcSinRevisar(c) != null;
+    if (f === "q:noleidos")       return c.no_leidos > 0;
+    if (f === "q:sinresponder")   return calcEspera(c) != null;
+    if (f === "q:seguimientos")   return !!c.seguimiento_at;
+    if (f === "t:cliente")        return c.tipo === "cliente";
+    if (f === "t:prospecto")      return !c.tipo || c.tipo === "prospecto";
     return c.estado === f;
   };
 
-  // Base común de los tabs: todo lo que no es el tab en sí (canal, búsqueda,
-  // filtros IA y "piden contacto"). Los contadores se calculan sobre esto, así
-  // reaccionan al canal y a la búsqueda como espera el vendedor.
+  // Base común de los chips: todo lo que no es el chip en sí (canal, búsqueda y
+  // filtros IA). Los contadores se calculan sobre esto, así reaccionan al canal
+  // y a la búsqueda como espera el vendedor.
   const baseTabs = contactos.filter((c) => {
     const porBusq  = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
     const porCanal = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
-    const porPide  = !soloPide || pideContacto(c).pide;
-    return porBusq && porCanal && porPide && aplicaFiltrosIA(c, filtrosIA);
+    return porBusq && porCanal && aplicaFiltrosIA(c, filtrosIA, esFin);
   });
 
-  const conteoTab = (t) =>
-    t === "favoritos" ? baseTabs.filter((c) => c.destacado).length
-                      : baseTabs.filter((c) => cumpleFiltro(c, t)).length;
+  const conteoTab = (t) => baseTabs.filter((c) => cumpleFiltro(c, t)).length;
 
-  const lista = baseTabs.filter((c) => {
-    const porDest = !soloDestacados || c.destacado;
-    return porDest && cumpleFiltro(c, filtro);
-  })
+  const lista = baseTabs.filter((c) => cumpleFiltro(c, filtro))
   // Orden estilo WhatsApp: lo más reciente arriba. Un mensaje nuevo o una
   // respuesta del vendedor toca `updated_at`, así que el chat sube solo.
   // La estrella y "pide contacto" ya no reordenan la lista (para eso están
@@ -1944,20 +1953,21 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
 
       {vista === "chat" && (
         <>
-          {/* ── Canal selector (desplegable) ── */}
-          <div style={{ padding: "10px 12px 8px", borderBottom: `1px solid ${L.border}` }}>
-            <CanalSelector canal={canal} setCanal={setCanal} />
-          </div>
-
-          {/* ── Búsqueda + Filtros IA ── */}
-          <div style={{ padding: "12px 14px", borderBottom: `1px solid ${L.border}`, display: "flex", gap: 8 }}>
+          {/* ── Fila 1: búsqueda + filtros avanzados ── */}
+          <div style={{ padding: "12px 14px 9px", display: "flex", gap: 8 }}>
             <div style={{ position: "relative", flex: 1 }}>
               <Search size={15} color={L.light} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
               <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar contacto o número…"
-                style={{ width: "100%", boxSizing: "border-box", padding: "9px 12px 9px 34px", borderRadius: 10, border: `1.5px solid ${L.border}`, fontSize: 13.5, fontFamily: FONT_BODY, background: L.soft, color: L.text, outline: "none" }} />
+                placeholder="Buscar por nombre, teléfono o email…"
+                style={{ width: "100%", boxSizing: "border-box", padding: "9px 30px 9px 34px", borderRadius: 10, border: `1.5px solid ${L.border}`, fontSize: 13.5, fontFamily: FONT_BODY, background: L.soft, color: L.text, outline: "none" }} />
+              {busqueda && (
+                <button onClick={() => setBusqueda("")} title="Limpiar"
+                  style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: L.light, display: "flex", padding: 3 }}>
+                  <X size={14} />
+                </button>
+              )}
             </div>
-            <button onClick={() => setModalFiltros(true)} title="Filtrado inteligente"
+            <button onClick={() => setModalFiltros(true)} title="Más filtros (ubicación, presupuesto, etapa…)"
               style={{ position: "relative", flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "0 12px", borderRadius: 10, cursor: "pointer", fontFamily: FONT_DISPLAY, fontSize: 12.5, fontWeight: 800, letterSpacing: 0.2,
                 border: contarActivos(filtrosIA) > 0 ? `1.5px solid ${C.ai}` : `1.5px solid ${L.border}`,
                 background: contarActivos(filtrosIA) > 0 ? C.aiSoft : L.white,
@@ -1967,42 +1977,33 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                 <span style={{ background: C.ai, color: "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 9, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{contarActivos(filtrosIA)}</span>
               )}
             </button>
-            <button onClick={() => setSoloPide((v) => !v)}
-              title={`Piden contacto (llamada / hablar con ventas)${nPide ? ` — ${nPide}` : ""}`}
-              style={{ position: "relative", flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "0 11px", borderRadius: 10, cursor: "pointer", transition: "all .15s",
-                border: (soloPide || nPide > 0) ? `1.5px solid ${C.red}` : `1.5px solid ${L.border}`,
-                background: soloPide ? C.red : (nPide > 0 ? "#FEF2F2" : L.white),
-                color: soloPide ? "#fff" : (nPide > 0 ? C.red : L.muted) }}>
-              <PhoneCall size={16} />
-              {nPide > 0 && (
-                <span style={{ background: soloPide ? "#fff" : C.red, color: soloPide ? C.red : "#fff", fontSize: 10.5, fontWeight: 800, borderRadius: 9, minWidth: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{nPide}</span>
-              )}
-            </button>
           </div>
 
-          {/* ── Tabs de la lista ── */}
-          {/* Le devuelven la interfaz al estado `filtro`, que existía pero había
-              quedado sin nadie que lo cambiara (siempre "todos"). "Favoritos"
-              reemplaza al botón de estrella: hacían lo mismo. */}
-          <div className="strip" style={{ display: "flex", gap: 4, padding: "0 12px", borderBottom: `1px solid ${L.border}`, overflowX: "auto", flexShrink: 0 }}>
-            {SIDEBAR_TABS.map(({ key, label }) => {
-              const activa = key === "favoritos" ? soloDestacados : (!soloDestacados && filtro === key);
+          {/* ── Fila 2: canal + chips de la lista ── */}
+          {/* Una sola tira: el canal a la izquierda y, al lado, QUÉ lista estoy
+              viendo. Antes esto eran tres controles en tres filas distintas
+              (tabs + botón teléfono + botón estrella) que además se combinaban
+              entre sí; ahora se elige un chip y listo. */}
+          <div className="strip" style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 12px 10px", borderBottom: `1px solid ${L.border}`, overflowX: "auto", flexShrink: 0 }}>
+            <CanalSelector canal={canal} setCanal={setCanal} />
+            <div style={{ flexShrink: 0, width: 1, height: 22, background: L.border, margin: "0 3px" }} />
+            {SIDEBAR_TABS.map(({ key, label, icon: Icono, color }) => {
+              const activa = filtro === key;
               const n = conteoTab(key);
+              const col = color || L.muted;
               return (
-                <button key={key}
-                  onClick={() => {
-                    if (key === "favoritos") { setSoloDestacados(true); setFiltro("todos"); }
-                    else { setSoloDestacados(false); setFiltro(key); }
-                  }}
-                  aria-pressed={activa}
-                  style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "10px 9px", border: "none", background: "none", cursor: "pointer",
-                    fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: activa ? 700 : 500,
-                    color: activa ? C.red : L.muted,
-                    borderBottom: `2px solid ${activa ? C.red : "transparent"}`,
-                    borderRadius: 0, whiteSpace: "nowrap", transition: "color .15s" }}>
+                <button key={key} onClick={() => setFiltro(key)} aria-pressed={activa}
+                  title={key === "q:financiamiento" ? "Consultaron por financiamiento (en el chat o con ficha cargada)" : label}
+                  style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 11px", borderRadius: 999, cursor: "pointer",
+                    fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: activa ? 800 : 600,
+                    border: `1.5px solid ${activa ? col : L.border}`,
+                    background: activa ? col : L.white,
+                    color: activa ? "#fff" : (n > 0 ? col : L.muted),
+                    whiteSpace: "nowrap", transition: "all .15s" }}>
+                  {Icono && <Icono size={13} />}
                   {label}
                   {n > 0 && (
-                    <span style={{ background: activa ? C.red : L.soft, color: activa ? "#fff" : L.muted, fontSize: 10.5, fontWeight: 800,
+                    <span style={{ background: activa ? "rgba(255,255,255,.25)" : L.soft, color: activa ? "#fff" : L.muted, fontSize: 10.5, fontWeight: 800,
                       borderRadius: 7, minWidth: 18, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", fontVariantNumeric: "tabular-nums" }}>
                       {n}
                     </span>
@@ -2022,7 +2023,12 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
           <div className="scroll-y" style={{ overflowY: "auto", flex: 1 }}>
             {lista.length === 0 && (
               <div style={{ padding: 36, color: L.light, fontSize: 13.5, textAlign: "center" }}>
-                {busqueda ? "Sin resultados para la búsqueda" : "Sin conversaciones"}
+                {busqueda ? "Sin resultados para la búsqueda"
+                  : filtro === "q:financiamiento"
+                    ? (finIds === null ? "Buscando quién consultó por financiamiento…"
+                                       : "Nadie consultó por financiamiento todavía")
+                    : filtro !== "todos" ? `Sin conversaciones en “${SIDEBAR_TABS.find((t) => t.key === filtro)?.label}”`
+                    : "Sin conversaciones"}
               </div>
             )}
             {lista.map((c) => {
@@ -2649,6 +2655,12 @@ const esVideoURL  = (u) => /\.(mp4|webm|mov)(\?.*)?$/i.test(u);
 // estos son duplicados y no se muestran (evita imágenes/mensajes repetidos).
 const ECHO_PREFIX_RE = /^\*.*NINIT Group:\*/;
 const primeraImagen = (txt) => (String(txt).match(URL_RE) || []).find(esImagenURL);
+
+// Mensajes sin nada que mostrar. Aparecen como burbujas vacías en el chat:
+// con el bot pausado, el flujo de n8n igual deja la fila en `mensajes` con el
+// contenido vacío. No hay columna de media aparte —texto e imágenes van los dos
+// en `contenido`—, así que sin contenido no hay nada para renderizar.
+const sinContenido = (m) => !String(m?.contenido ?? "").trim();
 
 function MensajeContenido({ texto }) {
   if (!texto) return null;
@@ -3682,10 +3694,13 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
         {mensajes.length === 0 && (
           <div style={{ textAlign: "center", color: L.light, fontSize: 13.5, marginTop: 40 }}>Sin mensajes en esta conversación aún.</div>
         )}
-        {mensajes.filter((m) => !ECHO_PREFIX_RE.test(m.contenido || "")).map((m) => {
+        {mensajes.filter((m) => !sinContenido(m) && !ECHO_PREFIX_RE.test(m.contenido || "")).map((m) => {
           const esCliente = m.direccion === "in";
-          const esBot     = m.origen === "bot";
-          const esAgente  = m.origen === "agente";
+          // Las etiquetas "Bot ·" y "Agente ·" son de lo que MANDAMOS nosotros
+          // (van alineadas a la derecha). Sin mirar la dirección, un mensaje
+          // entrante guardado con origen "bot" salía firmado por el bot.
+          const esBot     = !esCliente && m.origen === "bot";
+          const esAgente  = !esCliente && m.origen === "agente";
           const hora      = (() => {
             const d = new Date(m.created_at);
             const hoy = new Date();

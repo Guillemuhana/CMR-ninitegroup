@@ -18,8 +18,7 @@
 
 import { useState, useEffect } from "react";
 import {
-  X, MapPin, TrendingUp, PhoneCall, Zap, Smile, GitBranch,
-  DollarSign, Radio, Clock, ChevronDown, RotateCcw, Sparkles, Check, Wand2,
+  X, ChevronDown, RotateCcw, Sparkles, Check, Wand2, SlidersHorizontal,
 } from "lucide-react";
 import { supabase, C, FONT_DISPLAY, FONT_BODY } from "./lib";
 import { L } from "./theme";
@@ -83,7 +82,17 @@ const SCOPE_DIAS = [
   { key: "hoy",   label: "Hoy", hoy: true },
 ];
 
+// Consultó por financiamiento: sale de `financiamiento` + menciones en el chat
+// (ver src/finConsultas.js). El Sidebar pasa el predicado `esFin` porque el
+// dato no vive en el contacto.
+const FINANCIAMIENTO = [
+  { key: "todos", label: "Todos" },
+  { key: "si",    label: "Consultaron",    color: "#7C3AED", bg: "#F3E8FF" },
+  { key: "no",    label: "No consultaron", color: "#64748B", bg: "#F1F5F9" },
+];
+
 export const FILTROS_INICIAL = {
+  financiamiento: "todos",
   ciudad: "",
   estadoProvincia: "",
   nivelInteres: "todos",
@@ -100,6 +109,7 @@ export const FILTROS_INICIAL = {
 // Cuántos filtros hay activos (para el badge del botón "Filtros").
 export function contarActivos(f) {
   let n = 0;
+  if ((f.financiamiento || "todos") !== "todos") n++;
   if (f.ciudad.trim()) n++;
   if (f.estadoProvincia.trim()) n++;
   if (f.nivelInteres !== "todos") n++;
@@ -129,8 +139,18 @@ function esDeHoy(c) {
 }
 
 // Predicado puro: ¿el contacto pasa los filtros avanzados?
-export function aplicaFiltrosIA(c, f) {
+// `esFin(c)` (opcional) dice si el contacto consultó por financiamiento alguna
+// vez; sin él, ese filtro no se aplica (el dato todavía está cargando).
+export function aplicaFiltrosIA(c, f, esFin) {
   const inc = (a, b) => (a || "").toLowerCase().includes(b.trim().toLowerCase());
+
+  const fin = f.financiamiento || "todos";
+  if (fin !== "todos" && esFin) {
+    const consulto = esFin(c);
+    if (fin === "si" && !consulto) return false;
+    if (fin === "no" && consulto) return false;
+  }
+
   if (f.ciudad.trim() && !inc(c.ia_ciudad, f.ciudad)) return false;
   if (f.estadoProvincia.trim() && !inc(c.ia_estado_provincia, f.estadoProvincia)) return false;
   if (f.nivelInteres !== "todos" && c.ia_nivel_interes !== f.nivelInteres) return false;
@@ -257,6 +277,19 @@ export async function analizarPendientes(onProgress, opts) {
 
 // ── UI primitives ───────────────────────────────────────────
 
+// Filtro siempre a la vista: etiqueta chiquita + control. Los de arriba del
+// modal usan esto en vez de un acordeón — eran los que se usan siempre y tener
+// que abrir nueve desplegables para encontrarlos era medio absurdo.
+function Grupo({ titulo, nota, children }) {
+  return (
+    <div style={{ marginBottom: 15 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 800, color: L.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 7 }}>{titulo}</div>
+      {children}
+      {nota && <div style={{ fontSize: 11, color: L.light, marginTop: 6 }}>{nota}</div>}
+    </div>
+  );
+}
+
 function Seccion({ icon, titulo, activo, children, abiertoInit = false }) {
   const [open, setOpen] = useState(abiertoInit);
   return (
@@ -351,21 +384,78 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
         <div style={{ padding: "16px 20px", background: C.gradAI || "linear-gradient(135deg,#3A8DC2,#7C3AED)", color: "#fff", display: "flex", alignItems: "center", gap: 11 }}>
           <Sparkles size={19} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: FONT_DISPLAY, letterSpacing: 0.3 }}>Filtrado inteligente</div>
-            <div style={{ fontSize: 11.5, opacity: 0.85 }}>Metadatos extraídos por IA de cada conversación</div>
+            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: FONT_DISPLAY, letterSpacing: 0.3 }}>Filtros</div>
+            <div style={{ fontSize: 11.5, opacity: 0.85 }}>Achicá la lista por lo que dijo el cliente en el chat</div>
           </div>
           <button onClick={onClose} style={{ background: "rgba(255,255,255,.18)", border: "none", borderRadius: 9, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff" }}><X size={17} /></button>
         </div>
 
         {/* Body scrollable */}
-        <div className="scroll-y" style={{ overflowY: "auto", padding: "4px 18px", flex: 1 }}>
+        <div className="scroll-y" style={{ overflowY: "auto", padding: "14px 18px 4px", flex: 1 }}>
 
-          {/* Banner: analizar chats para llenar los datos de IA (con alcance elegible) */}
-          <div style={{ margin: "12px 0 6px", padding: "12px 13px", borderRadius: 12, background: C.aiSoft, border: `1px solid ${C.ai}33` }}>
+          {/* ── Los filtros de todos los días, a la vista ── */}
+          <Grupo titulo="Financiamiento"
+            nota="Incluye a los que preguntaron en el chat aunque no tengan la ficha cargada.">
+            <Chips value={f.financiamiento || "todos"} onChange={(v) => set({ financiamiento: v })} opciones={FINANCIAMIENTO} />
+          </Grupo>
+
+          <Grupo titulo="Nivel de interés">
+            <Chips value={f.nivelInteres} onChange={(v) => set({ nivelInteres: v })} opciones={NIVEL} />
+          </Grupo>
+
+          <Grupo titulo="Urgencia">
+            <Chips value={f.urgencia} onChange={(v) => set({ urgencia: v })} opciones={URGENCIA} />
+          </Grupo>
+
+          <Grupo titulo="Última actividad">
+            <Chips value={f.actividad} onChange={(v) => set({ actividad: v })} opciones={ACTIVIDAD} />
+          </Grupo>
+
+          {/* ── Lo que casi nunca se toca, plegado ── */}
+          <Seccion icon={<SlidersHorizontal size={16} />} titulo="Más filtros"
+            activo={!!(f.ciudad.trim() || f.estadoProvincia.trim() || f.intencion !== "todos" || f.sentimiento !== "todos" || f.etapa !== "todos" || f.presupuestoMin || f.presupuestoMax || f.canal !== "todos")}>
+
+            <Grupo titulo="Ubicación">
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={f.ciudad} onChange={(e) => set({ ciudad: e.target.value })} placeholder="Ciudad (ej. Miami)" style={inp} />
+                <input value={f.estadoProvincia} onChange={(e) => set({ estadoProvincia: e.target.value })} placeholder="Estado / Provincia" style={inp} />
+              </div>
+            </Grupo>
+
+            <Grupo titulo="Intención de acción">
+              <Chips value={f.intencion} onChange={(v) => set({ intencion: v })} opciones={INTENCION} />
+            </Grupo>
+
+            <Grupo titulo="Sentimiento del lead">
+              <Chips value={f.sentimiento} onChange={(v) => set({ sentimiento: v })} opciones={SENTIMIENTO} />
+            </Grupo>
+
+            <Grupo titulo="Etapa del embudo">
+              <Chips value={f.etapa} onChange={(v) => set({ etapa: v })} opciones={ETAPA} />
+            </Grupo>
+
+            <Grupo titulo="Presupuesto (USD)" nota="Solo muestra chats donde la IA detectó un monto.">
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input type="number" min="0" value={f.presupuestoMin} onChange={(e) => set({ presupuestoMin: e.target.value })} placeholder="Mín" style={inp} />
+                <span style={{ color: L.light }}>—</span>
+                <input type="number" min="0" value={f.presupuestoMax} onChange={(e) => set({ presupuestoMax: e.target.value })} placeholder="Máx" style={inp} />
+              </div>
+            </Grupo>
+
+            <Grupo titulo="Canal de origen">
+              <Chips value={f.canal} onChange={(v) => set({ canal: v })} opciones={CANALES_OPT} />
+            </Grupo>
+          </Seccion>
+
+          {/* Mantenimiento: llenar los datos de IA. Estaba arriba de todo y era
+              lo primero que veía el vendedor, cuando en realidad se corre una
+              vez cada tanto. */}
+          <Seccion icon={<Wand2 size={16} />} titulo="Analizar chats con IA" activo={corriendo}>
+          <div style={{ margin: "2px 0 6px", padding: "12px 13px", borderRadius: 12, background: C.aiSoft, border: `1px solid ${C.ai}33` }}>
               {!corriendo && !prog?.done && (
                 <>
-                  <div style={{ fontSize: 12.5, fontWeight: 800, color: L.text, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                    <Sparkles size={14} color={C.ai} /> Analizar chats con IA
+                  <div style={{ fontSize: 11.5, color: L.muted, marginBottom: 9 }}>
+                    Los filtros de arriba leen datos que la IA saca de cada conversación. Acá se procesan los chats que todavía no analizó.
                   </div>
 
                   {/* Selector de antigüedad */}
@@ -422,52 +512,6 @@ export default function FiltrosModal({ filtros, setFiltros, onClose }) {
                 </>
               )}
           </div>
-
-          <Seccion icon={<MapPin size={16} />} titulo="Ubicación geográfica" abiertoInit
-            activo={!!(f.ciudad.trim() || f.estadoProvincia.trim())}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input value={f.ciudad} onChange={(e) => set({ ciudad: e.target.value })} placeholder="Ciudad (ej. Miami)"
-                style={inp} />
-              <input value={f.estadoProvincia} onChange={(e) => set({ estadoProvincia: e.target.value })} placeholder="Estado / Provincia"
-                style={inp} />
-            </div>
-          </Seccion>
-
-          <Seccion icon={<TrendingUp size={16} />} titulo="Nivel de interés" activo={f.nivelInteres !== "todos"}>
-            <Chips value={f.nivelInteres} onChange={(v) => set({ nivelInteres: v })} opciones={NIVEL} />
-          </Seccion>
-
-          <Seccion icon={<PhoneCall size={16} />} titulo="Intención de acción" activo={f.intencion !== "todos"}>
-            <Chips value={f.intencion} onChange={(v) => set({ intencion: v })} opciones={INTENCION} />
-          </Seccion>
-
-          <Seccion icon={<Zap size={16} />} titulo="Nivel de urgencia" activo={f.urgencia !== "todos"}>
-            <Chips value={f.urgencia} onChange={(v) => set({ urgencia: v })} opciones={URGENCIA} />
-          </Seccion>
-
-          <Seccion icon={<Smile size={16} />} titulo="Sentimiento del lead" activo={f.sentimiento !== "todos"}>
-            <Chips value={f.sentimiento} onChange={(v) => set({ sentimiento: v })} opciones={SENTIMIENTO} />
-          </Seccion>
-
-          <Seccion icon={<GitBranch size={16} />} titulo="Etapa del embudo" activo={f.etapa !== "todos"}>
-            <Chips value={f.etapa} onChange={(v) => set({ etapa: v })} opciones={ETAPA} />
-          </Seccion>
-
-          <Seccion icon={<DollarSign size={16} />} titulo="Rango de presupuesto (USD)" activo={!!(f.presupuestoMin || f.presupuestoMax)}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input type="number" min="0" value={f.presupuestoMin} onChange={(e) => set({ presupuestoMin: e.target.value })} placeholder="Mín" style={inp} />
-              <span style={{ color: L.light }}>—</span>
-              <input type="number" min="0" value={f.presupuestoMax} onChange={(e) => set({ presupuestoMax: e.target.value })} placeholder="Máx" style={inp} />
-            </div>
-            <div style={{ fontSize: 11, color: L.light, marginTop: 6 }}>Solo muestra chats donde la IA detectó un monto.</div>
-          </Seccion>
-
-          <Seccion icon={<Radio size={16} />} titulo="Canal de origen" activo={f.canal !== "todos"}>
-            <Chips value={f.canal} onChange={(v) => set({ canal: v })} opciones={CANALES_OPT} />
-          </Seccion>
-
-          <Seccion icon={<Clock size={16} />} titulo="Última actividad" activo={f.actividad !== "todas"}>
-            <Chips value={f.actividad} onChange={(v) => set({ actividad: v })} opciones={ACTIVIDAD} />
           </Seccion>
         </div>
 
