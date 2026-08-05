@@ -1,5 +1,5 @@
 // v2.1 — 2026-06-08
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import {
   Bell, Search, LogOut, MessageSquare, BarChart2,
   Pencil, Bot, User, Calendar, Send, X, Check, Plus,
@@ -1522,6 +1522,62 @@ const SIDEBAR_TABS = [
 ];
 
 // ============================================================
+// TIEMPO — pestañas y encabezados de la lista
+// ============================================================
+// Cuántos DÍAS DE CALENDARIO atrás quedó una fecha. Se compara medianoche
+// contra medianoche a propósito: un mensaje de anoche a las 23:50 tiene que
+// decir "Ayer", no "hace 9 horas" (que caería en "hoy").
+function diasAtras(fecha) {
+  if (!fecha) return Infinity;
+  const d = new Date(fecha);
+  if (isNaN(d.getTime())) return Infinity;
+  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const h = new Date();
+  const b = new Date(h.getFullYear(), h.getMonth(), h.getDate());
+  return Math.round((b - a) / 86400000);
+}
+
+// Pestañas de tiempo. Son un eje DISTINTO de los chips de arriba: los chips
+// dicen QUÉ chats (sin responder, favoritos…) y estas dicen DE CUÁNDO. Por eso
+// van en su propia fila y no mezcladas en la misma tira.
+const PERIODOS = [
+  { key: "todos",  label: "Todos",      test: () => true },
+  { key: "hoy",    label: "Hoy",        test: (d) => d <= 0 },
+  { key: "semana", label: "7 días",     test: (d) => d <= 7 },
+  { key: "mes",    label: "30 días",    test: (d) => d <= 30 },
+  { key: "viejos", label: "Más viejos", test: (d) => d > 30 },
+];
+
+// Encabezado del tramo al que pertenece un chat. Los tramos son más finos que
+// las pestañas (Hoy / Ayer / …) porque acá el objetivo es separar visualmente,
+// no filtrar: aunque estés en "Todos", lo de hoy no se mezcla con lo de marzo.
+function grupoTiempo(fecha) {
+  const dias = diasAtras(fecha);
+  if (dias === Infinity) return "Sin fecha";
+  if (dias <= 0)  return "Hoy";
+  if (dias === 1) return "Ayer";
+  if (dias <= 7)  return "Esta semana";
+  if (dias <= 30) return "Este mes";
+  const d = new Date(fecha);
+  const mismoAnio = d.getFullYear() === new Date().getFullYear();
+  const txt = d.toLocaleDateString("es-AR", { month: "long", ...(mismoAnio ? {} : { year: "numeric" }) });
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
+}
+
+// Corta una lista YA ORDENADA de más nuevo a más viejo en secciones por tramo.
+// Al venir ordenada, los de un mismo tramo caen juntos y alcanza con comparar
+// contra la sección anterior.
+function agruparPorTiempo(items, campoFecha = "updated_at") {
+  const out = [];
+  for (const it of items) {
+    const titulo = grupoTiempo(it[campoFecha]);
+    if (!out.length || out[out.length - 1].titulo !== titulo) out.push({ titulo, items: [] });
+    out[out.length - 1].items.push(it);
+  }
+  return out;
+}
+
+// ============================================================
 // BOTTOM NAV — navegación de celular
 // ============================================================
 // Reemplaza a los tabs de arriba. Se oculta cuando hay un panel abierto (chat,
@@ -1827,6 +1883,12 @@ function CanalSelector({ canal, setCanal }) {
 // ============================================================
 function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContacto, onToggleLlamada, onMarcarLlamada, onAsignarVendedor, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
   const [filtro, setFiltro]       = useState("todos");
+  // Pestaña de tiempo. Se recuerda entre sesiones: el que trabaja siempre con
+  // "7 días" no tiene que volver a elegirlo cada vez que abre el CRM.
+  const [periodo, setPeriodo]     = useState(() => {
+    try { return localStorage.getItem("ninit_periodo") || "todos"; } catch { return "todos"; }
+  });
+  useEffect(() => { try { localStorage.setItem("ninit_periodo", periodo); } catch {} }, [periodo]);
   const [busqueda, setBusqueda]   = useState("");
   const [canal, setCanal]         = useState("todos");
   const [filtrosIA, setFiltrosIA] = useState(FILTROS_INICIAL);
@@ -1905,16 +1967,29 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
     return c.estado === f;
   };
 
-  // Base común de los chips: todo lo que no es el chip en sí (canal, búsqueda y
-  // filtros IA). Los contadores se calculan sobre esto, así reaccionan al canal
-  // y a la búsqueda como espera el vendedor.
-  const baseTabs = contactos.filter((c) => {
+  const cumplePeriodo = (c, p) => {
+    const def = PERIODOS.find((x) => x.key === p) || PERIODOS[0];
+    return def.test(diasAtras(c.updated_at));
+  };
+
+  // Base común: lo que no depende ni del chip ni de la pestaña de tiempo
+  // (canal, búsqueda y filtros IA). Los contadores se calculan sobre esto, así
+  // reaccionan al canal y a la búsqueda como espera el vendedor.
+  const base = contactos.filter((c) => {
     const porBusq  = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
     const porCanal = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
     return porBusq && porCanal && aplicaFiltrosIA(c, filtrosIA, esFin);
   });
 
-  const conteoTab = (t) => baseTabs.filter((c) => cumpleFiltro(c, t)).length;
+  // Cada contador cuenta sobre el OTRO eje ya aplicado: el número del chip
+  // "Sin responder" respeta la pestaña de tiempo elegida, y el número de "Hoy"
+  // respeta el chip elegido. Si no, los chips prometen chats que la lista no
+  // muestra porque la pestaña los dejó afuera.
+  const baseTabs    = base.filter((c) => cumplePeriodo(c, periodo));
+  const basePeriodo = base.filter((c) => cumpleFiltro(c, filtro));
+
+  const conteoTab    = (t) => baseTabs.filter((c) => cumpleFiltro(c, t)).length;
+  const conteoPeriodo = (p) => basePeriodo.filter((c) => cumplePeriodo(c, p)).length;
 
   const lista = baseTabs.filter((c) => cumpleFiltro(c, filtro))
   // Orden estilo WhatsApp: lo más reciente arriba. Un mensaje nuevo o una
@@ -1922,6 +1997,10 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
   // La estrella y "pide contacto" ya no reordenan la lista (para eso están
   // los tabs/filtros); antes empujaban los chats activos hacia abajo.
   .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+
+  // La lista se muestra cortada en tramos (Hoy / Ayer / Esta semana / …) con un
+  // encabezado pegajoso: el orden no cambia, solo deja de ser un bloque plano.
+  const secciones = agruparPorTiempo(lista);
 
   return (
     <div style={{ width: "100%", height: "100%", background: L.white, borderRight: `1px solid ${L.border}`, display: "flex", flexDirection: "column" }}>
@@ -2013,6 +2092,29 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
             })}
           </div>
 
+          {/* ── Fila 3: pestañas de tiempo ── */}
+          {/* Estilo subrayado (no píldora) a propósito: se tiene que ver que es
+              otro eje distinto de los chips de arriba y que se combinan. */}
+          <div className="strip" role="tablist" aria-label="Período"
+            style={{ display: "flex", alignItems: "stretch", gap: 2, padding: "0 12px", borderBottom: `1px solid ${L.border}`, overflowX: "auto", flexShrink: 0, background: L.soft }}>
+            {PERIODOS.map(({ key, label }) => {
+              const activa = periodo === key;
+              const n = conteoPeriodo(key);
+              return (
+                <button key={key} onClick={() => setPeriodo(key)} role="tab" aria-selected={activa} title={label}
+                  style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "9px 11px 8px", cursor: "pointer",
+                    background: "transparent", border: "none",
+                    borderBottom: `2.5px solid ${activa ? C.red : "transparent"}`,
+                    fontFamily: FONT_DISPLAY, fontSize: 12.5, fontWeight: activa ? 800 : 600, letterSpacing: 0.2,
+                    color: activa ? C.red : (n > 0 ? L.text : L.light),
+                    whiteSpace: "nowrap", transition: "color .15s, border-color .15s" }}>
+                  {label}
+                  <span style={{ fontSize: 10.5, fontWeight: 800, color: activa ? C.red : L.light, fontVariantNumeric: "tabular-nums", opacity: n > 0 ? 1 : 0.5 }}>{n}</span>
+                </button>
+              );
+            })}
+          </div>
+
           {modalFiltros && (
             <FiltrosModal filtros={filtrosIA} setFiltros={setFiltrosIA} onClose={() => setModalFiltros(false)} />
           )}
@@ -2027,11 +2129,23 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                   : filtro === "q:financiamiento"
                     ? (finIds === null ? "Buscando quién consultó por financiamiento…"
                                        : "Nadie consultó por financiamiento todavía")
-                    : filtro !== "todos" ? `Sin conversaciones en “${SIDEBAR_TABS.find((t) => t.key === filtro)?.label}”`
+                    : filtro !== "todos" ? `Sin conversaciones en “${SIDEBAR_TABS.find((t) => t.key === filtro)?.label}”${periodo !== "todos" ? ` dentro de “${PERIODOS.find((p) => p.key === periodo)?.label}”` : ""}`
+                    : periodo !== "todos" ? `Sin conversaciones en “${PERIODOS.find((p) => p.key === periodo)?.label}”`
                     : "Sin conversaciones"}
               </div>
             )}
-            {lista.map((c) => {
+            {secciones.map((sec) => (
+            <div key={sec.titulo}>
+              {/* Encabezado pegajoso: mientras scrolleás siempre se ve en qué
+                  tramo de tiempo estás parado. */}
+              <div style={{ position: "sticky", top: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+                padding: "6px 14px", background: L.soft, borderBottom: `1px solid ${L.border}`,
+                fontFamily: FONT_DISPLAY, fontSize: 10.5, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase", color: L.muted,
+                backdropFilter: "blur(6px)" }}>
+                <span>{sec.titulo}</span>
+                <span style={{ fontVariantNumeric: "tabular-nums", color: L.light }}>{sec.items.length}</span>
+              </div>
+              {sec.items.map((c) => {
               const est  = ESTADOS[c.estado] || ESTADOS.nuevo;
               const sel  = activo?.id === c.id;
               const llamar = c.requiere_llamada;
@@ -2124,7 +2238,9 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                   </div>
                 </div>
               );
-            })}
+              })}
+            </div>
+            ))}
           </div>
         </>
       )}
@@ -3694,8 +3810,23 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
         {mensajes.length === 0 && (
           <div style={{ textAlign: "center", color: L.light, fontSize: 13.5, marginTop: 40 }}>Sin mensajes en esta conversación aún.</div>
         )}
-        {mensajes.filter((m) => !sinContenido(m) && !ECHO_PREFIX_RE.test(m.contenido || "")).map((m) => {
+        {mensajes.filter((m) => !sinContenido(m) && !ECHO_PREFIX_RE.test(m.contenido || "")).map((m, i, visibles) => {
           const esCliente = m.direccion === "in";
+          // Separador de día: se dibuja cuando este mensaje cae en una fecha
+          // distinta de la del anterior. En chats largos (meses de historial)
+          // era imposible ver dónde terminaba una conversación y empezaba otra.
+          const dia = new Date(m.created_at);
+          const previo = i > 0 ? new Date(visibles[i - 1].created_at) : null;
+          const nuevoDia = !previo || dia.toDateString() !== previo.toDateString();
+          const etiquetaDia = (() => {
+            const d = diasAtras(m.created_at);
+            if (d === Infinity) return "Sin fecha";
+            if (d <= 0)  return "Hoy";
+            if (d === 1) return "Ayer";
+            const mismoAnio = dia.getFullYear() === new Date().getFullYear();
+            const txt = dia.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long", ...(mismoAnio ? {} : { year: "numeric" }) });
+            return txt.charAt(0).toUpperCase() + txt.slice(1);
+          })();
           // Las etiquetas "Bot ·" y "Agente ·" son de lo que MANDAMOS nosotros
           // (van alineadas a la derecha). Sin mirar la dirección, un mensaje
           // entrante guardado con origen "bot" salía firmado por el bot.
@@ -3710,7 +3841,17 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
             return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", ...(mismoAnio ? {} : { year: "2-digit" }) }) + " · " + time;
           })();
           return (
-            <div key={m.id}
+            <Fragment key={m.id}>
+            {nuevoDia && (
+              <div style={{ alignSelf: "center", position: "sticky", top: 0, zIndex: 1, margin: "4px 0",
+                background: "rgba(255,255,255,.92)", border: `1px solid ${L.border}`, borderRadius: 999,
+                padding: "3px 13px", fontFamily: FONT_DISPLAY, fontSize: 10.5, fontWeight: 800,
+                letterSpacing: 0.5, textTransform: "uppercase", color: L.muted,
+                boxShadow: "0 1px 4px rgba(0,0,0,.06)", backdropFilter: "blur(6px)" }}>
+                {etiquetaDia}
+              </div>
+            )}
+            <div
               onMouseEnter={() => setHoverMsg(m.id)}
               onMouseLeave={() => setHoverMsg(null)}
               style={{ alignSelf: esCliente ? "flex-start" : "flex-end", maxWidth: "70%", display: "flex", flexDirection: "column", gap: 4, position: "relative" }}>
@@ -3769,6 +3910,7 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
                 )}
               </div>
             </div>
+            </Fragment>
           );
         })}
         <div ref={endRef} />
