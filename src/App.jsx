@@ -1859,11 +1859,15 @@ function CanalSelector({ canal, setCanal }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       {/* Píldora del canal activo */}
+      {/* El canal es un selector, no una alarma: va en gris salvo el ícono, que
+          alcanza para saber si estás mirando WhatsApp, email o todo. */}
       <button onClick={() => setOpen((o) => !o)}
-        style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 9, padding: "8px 12px", borderRadius: 11, border: "none", cursor: "pointer", background: sel.bg, boxShadow: `inset 0 0 0 1.5px ${sel.color}33`, transition: "all .2s" }}>
+        style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "6px 9px", borderRadius: 9, border: "none", cursor: "pointer", background: open ? L.active : "transparent", transition: "background .15s" }}
+        onMouseEnter={(e) => { if (!open) e.currentTarget.style.background = L.hover; }}
+        onMouseLeave={(e) => { if (!open) e.currentTarget.style.background = "transparent"; }}>
         <span style={{ color: sel.color, display: "flex", lineHeight: 1 }}>{sel.icon}</span>
-        <span style={{ fontSize: 12.5, fontWeight: 800, color: sel.color, fontFamily: FONT_DISPLAY, letterSpacing: 0.3, textTransform: "uppercase", whiteSpace: "nowrap" }}>{sel.label}</span>
-        <ChevronRight size={15} color={sel.color} style={{ transition: "transform .25s", transform: open ? "rotate(90deg)" : "none" }} />
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: L.muted, fontFamily: FONT_BODY, whiteSpace: "nowrap" }}>{sel.label}</span>
+        <ChevronRight size={14} color={L.light} style={{ transition: "transform .25s", transform: open ? "rotate(90deg)" : "none" }} />
       </button>
 
       {/* Canales que se deslizan desde el costado */}
@@ -2101,17 +2105,21 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
               return (
                 <button key={key} onClick={() => setFiltro(key)} aria-pressed={activa}
                   title={key === "q:financiamiento" ? "Consultaron por financiamiento (en el chat o con ficha cargada)" : label}
-                  style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "7px 11px", borderRadius: 999, cursor: "pointer",
-                    fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: activa ? 800 : 600,
-                    border: `1.5px solid ${activa ? col : L.border}`,
-                    background: activa ? col : L.white,
-                    color: activa ? "#fff" : (n > 0 ? col : L.muted),
-                    whiteSpace: "nowrap", transition: "all .15s" }}>
+                  /* Sin borde propio ni relleno de color: el chip apagado es
+                     solo texto y el elegido, un fondo suave. Siete píldoras de
+                     colores compitiendo entre sí no ayudan a elegir ninguna. */
+                  style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 9, cursor: "pointer",
+                    fontFamily: FONT_BODY, fontSize: 12.5, fontWeight: activa ? 700 : 500,
+                    border: "none",
+                    background: activa ? L.active : "transparent",
+                    color: activa ? col : L.muted,
+                    whiteSpace: "nowrap", transition: "background .15s, color .15s" }}
+                  onMouseEnter={(e) => { if (!activa) e.currentTarget.style.background = L.hover; }}
+                  onMouseLeave={(e) => { if (!activa) e.currentTarget.style.background = "transparent"; }}>
                   {Icono && <Icono size={13} />}
                   {label}
                   {n > 0 && (
-                    <span style={{ background: activa ? "rgba(255,255,255,.25)" : L.soft, color: activa ? "#fff" : L.muted, fontSize: 10.5, fontWeight: 800,
-                      borderRadius: 7, minWidth: 18, height: 17, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", fontVariantNumeric: "tabular-nums" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: activa ? col : L.light, opacity: activa ? 1 : 0.8, fontVariantNumeric: "tabular-nums" }}>
                       {n}
                     </span>
                   )}
@@ -2252,7 +2260,10 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                   onTouchMove={(e) => moverPress(e)}
                   onTouchEnd={cancelarPress}
                   onTouchCancel={cancelarPress}
-                  style={{ padding: "13px 14px", borderBottom: `1px solid ${L.border}`, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start", background: sel ? L.active : (llamar ? "#FEF2F2" : "transparent"), borderLeft: sel ? `4px solid ${C.red}` : (llamar ? `3px solid ${C.red}` : "3px solid transparent"), transform: sel ? "translateX(10px)" : "translateX(0)", boxShadow: sel ? `-2px 0 0 ${C.red}, 0 2px 10px rgba(0,0,0,.06)` : "none", borderRadius: sel ? "0 10px 10px 0" : 0, transition: "transform .18s ease, background .12s, box-shadow .18s", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}
+                  /* La fila elegida se marca con fondo y una barra fina, y nada
+                     más: antes se corría 10px, ganaba sombra, borde de 4px y
+                     esquinas redondeadas: cuatro señales para decir lo mismo. */
+                  style={{ padding: "12px 14px", borderBottom: `1px solid ${L.border}`, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start", background: sel ? L.active : (llamar ? "#FEF6F6" : "transparent"), borderLeft: `2px solid ${sel || llamar ? C.red : "transparent"}`, transition: "background .12s", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}
                   onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = L.hover; }}
                   onMouseLeave={(e) => { if (!sel) e.currentTarget.style.background = llamar ? "#FEF2F2" : "transparent"; }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
@@ -2292,34 +2303,43 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                     <div style={{ fontSize: 12.5, color: L.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginBottom: 5 }}>
                       {previewMsg(c.ultimo_msg)}
                     </div>
-                    <div style={{ display: "flex", gap: 5, alignItems: "center", flexWrap: "wrap" }}>
-                      {pc.pide && (() => { const b = PIDE_BADGE[pc.motivo] || PIDE_BADGE.ventas; return (
-                        <span style={{ fontSize: 9.5, padding: "2px 8px", borderRadius: 4, background: b.bg, color: b.color, border: `1px solid ${b.border}`, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.3, display: "inline-flex", alignItems: "center", gap: 3 }}>
-                          <PhoneCall size={9} /> {b.label}
-                        </span>
-                      ); })()}
-                      <span style={{ fontSize: 9.5, padding: "2px 8px", borderRadius: 4, background: est.bg, color: est.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.3 }}>{est.label}</span>
-                      {c.tipo === "cliente" && <span style={{ fontSize: 9.5, padding: "2px 7px", borderRadius: 4, background: "#DCFCE7", color: "#16A34A", fontWeight: 700 }}>★ Cliente</span>}
-                      {/* Quién está en este chat, al lado del estado: ámbar si lo
-                          atiende OTRO (no te metas), gris si sos vos. */}
-                      {(() => {
-                        const at = quienAtiende(c);
-                        if (!at) return null;
-                        const mio = mismoVendedor(at.nombre, userName);
-                        return (
-                          <span
-                            title={`${at.asignado ? "Asignado a" : "Está hablando"}: ${at.nombre}${mio ? " (vos)" : " — evitá meterte en este chat"}`}
-                            style={{ fontSize: 9.5, padding: "2px 7px 2px 5px", borderRadius: 4, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.3,
-                              display: "inline-flex", alignItems: "center", gap: 3,
-                              background: mio ? L.soft : "#FEF3C7",
-                              color:      mio ? L.muted : "#B45309",
-                              border: `1px solid ${mio ? L.border : "#FDE68A"}` }}>
-                            <User size={9} /> {primerNombre(at.nombre)}
-                          </span>
-                        );
-                      })()}
-                      {c.seguimiento_at && new Date(c.seguimiento_at) <= new Date() && <span title="Seguimiento vencido"><Clock size={12} color={C.red} /></span>}
-                    </div>
+                    {/* Una sola línea de contexto, en gris y sin cajas. El color
+                        queda reservado para lo urgente ("quiere hablar"), que
+                        es lo único que cambia lo que el vendedor hace ahora.
+                        Antes cada fila tenía tres cajas de colores y ninguna
+                        resaltaba, porque resaltaban todas. */}
+                    {(() => {
+                      const at = quienAtiende(c);
+                      const mio = at && mismoVendedor(at.nombre, userName);
+                      // "Lead Nuevo" lo tienen casi todos: decirlo en cada fila
+                      // no distingue nada. El estado se muestra recién cuando
+                      // el cliente avanzó en el embudo.
+                      const mostrarEstado = c.estado && c.estado !== "nuevo";
+                      const vencido = c.seguimiento_at && new Date(c.seguimiento_at) <= new Date();
+                      const partes = [
+                        mostrarEstado && est.label,
+                        c.tipo === "cliente" && "Cliente",
+                        at && primerNombre(at.nombre),
+                      ].filter(Boolean);
+                      if (!pc.pide && !partes.length && !vencido) return null;
+                      return (
+                        <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", fontSize: 11, color: L.light, minWidth: 0 }}>
+                          {pc.pide && (() => { const b = PIDE_BADGE[pc.motivo] || PIDE_BADGE.ventas; return (
+                            <span title="Pidió hablar con un vendedor"
+                              style={{ display: "inline-flex", alignItems: "center", gap: 4, color: b.color, fontWeight: 700 }}>
+                              <PhoneCall size={11} /> {b.label}
+                            </span>
+                          ); })()}
+                          {partes.length > 0 && (
+                            <span title={at ? `${at.asignado ? "Asignado a" : "Está hablando"}: ${at.nombre}${mio ? " (vos)" : " — evitá meterte en este chat"}` : undefined}
+                              style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: at && !mio ? "#B45309" : L.light }}>
+                              {partes.join(" · ")}
+                            </span>
+                          )}
+                          {vencido && <span title="Seguimiento vencido" style={{ display: "flex" }}><Clock size={11} color={C.red} /></span>}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               );
@@ -3892,7 +3912,9 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
       )}
 
       {/* ── Mensajes ── */}
-      <div className="scroll-y" style={{ flex: 1, overflowY: "auto", padding: isMobile ? "14px 12px" : "18px 22px", background: L.bg, backgroundImage: `radial-gradient(${L.border} 0.5px, transparent 0.5px)`, backgroundSize: "20px 20px", display: "flex", flexDirection: "column", gap: 11 }}>
+      {/* Fondo liso: la trama de puntitos competía con el texto de cada burbuja
+          sin aportar nada. */}
+      <div className="scroll-y" style={{ flex: 1, overflowY: "auto", padding: isMobile ? "14px 12px" : "18px 22px", background: L.bg, display: "flex", flexDirection: "column", gap: 11 }}>
         {mensajes.length === 0 && (
           <div style={{ textAlign: "center", color: L.light, fontSize: 13.5, marginTop: 40 }}>Sin mensajes en esta conversación aún.</div>
         )}
@@ -3928,12 +3950,13 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
           })();
           return (
             <Fragment key={m.id}>
+            {/* Sin `sticky`: como son hermanos dentro del mismo contenedor, al
+                scrollear se quedaban todos pegados arriba y se pisaban entre
+                sí ("MIÉRCO…HOY…E JULIO" encimado). Ahora acompañan al scroll. */}
             {nuevoDia && (
-              <div style={{ alignSelf: "center", position: "sticky", top: 0, zIndex: 1, margin: "4px 0",
-                background: "rgba(255,255,255,.92)", border: `1px solid ${L.border}`, borderRadius: 999,
-                padding: "3px 13px", fontFamily: FONT_DISPLAY, fontSize: 10.5, fontWeight: 800,
-                letterSpacing: 0.5, textTransform: "uppercase", color: L.muted,
-                boxShadow: "0 1px 4px rgba(0,0,0,.06)", backdropFilter: "blur(6px)" }}>
+              <div style={{ alignSelf: "center", margin: "6px 0 2px",
+                padding: "2px 10px", fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600,
+                color: L.light, background: L.white, borderRadius: 999 }}>
                 {etiquetaDia}
               </div>
             )}
@@ -3948,22 +3971,28 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
                   <span style={{ fontSize: 11.5, color: L.muted, fontWeight: 700 }}>{contacto.nombre || contacto.telefono}</span>
                 </div>
               )}
+              {/* Quién escribió: texto gris, no una cápsula de color. Se repite
+                  en cada mensaje nuestro, así que tiene que pesar poco. */}
               {esBot && (
                 <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5 }}>
-                  <span style={{ fontSize: 10.5, background: "#FEF9C3", color: "#713F12", padding: "2px 9px", borderRadius: 10, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontSize: 10.5, color: L.light, padding: "0 2px", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                     <Bot size={11} /> Bot · NINIT Group
                   </span>
                 </div>
               )}
               {esAgente && (
                 <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5 }}>
-                  <span style={{ fontSize: 10.5, background: "#FEE2E2", color: C.red, padding: "2px 9px", borderRadius: 10, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontSize: 10.5, color: L.light, padding: "0 2px", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                     <User size={11} /> {m.agente || "Agente"} · NINIT Group
                   </span>
                 </div>
               )}
               {/* Burbuja */}
-              <div style={{ background: esCliente ? L.white : esAgente ? "#FEF2F2" : "#FFFBEB", borderRadius: esCliente ? "3px 14px 14px 14px" : "14px 3px 14px 14px", borderLeft: esCliente ? `3px solid ${L.border}` : "none", borderRight: !esCliente ? `3px solid ${esAgente ? C.red : C.gold}` : "none", padding: "10px 14px", fontSize: 14, color: L.text, boxShadow: "0 1px 4px rgba(0,0,0,.07)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+              {/* Dos fondos y nada más: blanco lo que dice el cliente, gris
+                  suave lo que mandamos nosotros. Antes cada burbuja sumaba una
+                  barra lateral de color, sombra y esquinas asimétricas para
+                  repetir algo que la posición izquierda/derecha ya dice. */}
+              <div style={{ background: esCliente ? L.white : (esAgente ? "#FDF1F1" : L.soft), borderRadius: 14, border: `1px solid ${esCliente ? L.border : "transparent"}`, padding: "10px 14px", fontSize: 14, color: L.text, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
                 <MensajeContenido texto={m.contenido} />
               </div>
               {/* Traducción al español del mensaje */}
@@ -3976,16 +4005,22 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
                 </div>
               )}
               {/* Hora + traducir + eliminar */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: esCliente ? "flex-start" : "flex-end" }}>
+              {/* Responder / Traducir / Eliminar aparecen al pasar el mouse por
+                  el mensaje. Fijas, repetían tres botones por burbuja y en un
+                  chat largo tapaban la conversación. En celular no hay hover,
+                  así que ahí siguen siempre a la vista. */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: esCliente ? "flex-start" : "flex-end", minHeight: 17 }}>
                 <div style={{ fontSize: 10.5, color: L.light }}>{hora}</div>
+                {(isMobile || hoverMsg === m.id || traducciones[m.id] || tradLoading[m.id]) && (<>
                 <button onClick={() => setReplyTo({ id: m.id, contenido: m.contenido, esCliente })} title="Responder a este mensaje"
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 4px", color: L.muted, fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 3, borderRadius: 4 }}>
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 4px", color: L.light, fontSize: 10.5, fontWeight: 600, display: "flex", alignItems: "center", gap: 3, borderRadius: 4 }}>
                   <Reply size={12} /> Responder
                 </button>
                 <button onClick={() => toggleTraducirMensaje(m)} title="Traducir al español"
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 4px", color: C.ai, fontSize: 10.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 3, borderRadius: 4 }}>
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: "1px 4px", color: L.light, fontSize: 10.5, fontWeight: 600, display: "flex", alignItems: "center", gap: 3, borderRadius: 4 }}>
                   <Languages size={12} /> {tradLoading[m.id] ? "…" : (traducciones[m.id] ? "Ver original" : "Traducir")}
                 </button>
+                </>)}
                 {hoverMsg === m.id && (
                   <button onClick={() => eliminarMensaje(m.id)} title="Eliminar mensaje"
                     style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 4px", color: "#EF4444", display: "flex", alignItems: "center", borderRadius: 4, opacity: 0.75 }}
