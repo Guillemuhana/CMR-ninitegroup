@@ -1540,12 +1540,14 @@ function diasAtras(fecha) {
 // Pestañas de tiempo. Son un eje DISTINTO de los chips de arriba: los chips
 // dicen QUÉ chats (sin responder, favoritos…) y estas dicen DE CUÁNDO. Por eso
 // van en su propia fila y no mezcladas en la misma tira.
+// En celular las cinco pestañas tienen que entrar en ~360px sin scroll lateral,
+// así que ahí se usa la etiqueta corta.
 const PERIODOS = [
-  { key: "todos",  label: "Todos",      test: () => true },
-  { key: "hoy",    label: "Hoy",        test: (d) => d <= 0 },
-  { key: "semana", label: "7 días",     test: (d) => d <= 7 },
-  { key: "mes",    label: "30 días",    test: (d) => d <= 30 },
-  { key: "viejos", label: "Más viejos", test: (d) => d > 30 },
+  { key: "todos",  label: "Todos",      corto: "Todos", test: () => true },
+  { key: "hoy",    label: "Hoy",        corto: "Hoy",   test: (d) => d <= 0 },
+  { key: "semana", label: "7 días",     corto: "7d",    test: (d) => d <= 7 },
+  { key: "mes",    label: "30 días",    corto: "30d",   test: (d) => d <= 30 },
+  { key: "viejos", label: "Más viejos", corto: "Viejos", test: (d) => d > 30 },
 ];
 
 // Encabezado del tramo al que pertenece un chat. Los tramos son más finos que
@@ -2032,7 +2034,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
       {/* Móvil: logo (no hay rail). Escritorio: título de la sección — el logo
           ya está en el NavRail y repetirlo era ruido. */}
       {isMobile ? (
-        <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.gradAI, borderBottom: `3px solid ${C.redDark}`, boxShadow: SHADOW.md }}>
+        <div style={{ padding: "10px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: C.gradAI, borderBottom: `3px solid ${C.redDark}`, boxShadow: SHADOW.md, flexShrink: 0 }}>
           <LogoBrillo imgStyle={{ width: 210, height: 52, objectFit: "cover", objectPosition: "center 38%", filter: "brightness(0) invert(1)", opacity: 0.95 }} />
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <AlertasBtn alertas={alertas} onSelect={(c) => { setVista("chat"); onSelect(c); }}
@@ -2056,7 +2058,10 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
       {vista === "chat" && (
         <>
           {/* ── Fila 1: búsqueda + filtros avanzados ── */}
-          <div style={{ padding: "12px 14px 9px", display: "flex", gap: 8 }}>
+          {/* flexShrink:0 en las tres filas de arriba: con la lista pidiendo
+              flex:1, en pantallas bajas el buscador se aplastaba y quedaba
+              cortado. Lo que se achica es la lista, que para eso scrollea. */}
+          <div style={{ padding: "12px 14px 9px", display: "flex", gap: 8, flexShrink: 0 }}>
             <div style={{ position: "relative", flex: 1 }}>
               <Search size={15} color={L.light} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
               <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
@@ -2118,20 +2123,24 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
           {/* ── Fila 3: pestañas de tiempo ── */}
           {/* Estilo subrayado (no píldora) a propósito: se tiene que ver que es
               otro eje distinto de los chips de arriba y que se combinan. */}
+          {/* En celular las 5 se reparten el ancho (flex:1) y usan etiqueta
+              corta, así entran sin scroll lateral; en escritorio van a su ancho
+              natural y, si el panel es angosto, la tira scrollea. */}
           <div className="strip" role="tablist" aria-label="Período"
-            style={{ display: "flex", alignItems: "stretch", gap: 2, padding: "0 12px", borderBottom: `1px solid ${L.border}`, overflowX: "auto", flexShrink: 0, background: L.soft }}>
-            {PERIODOS.map(({ key, label }) => {
+            style={{ display: "flex", alignItems: "stretch", gap: 2, padding: isMobile ? 0 : "0 12px", borderBottom: `1px solid ${L.border}`, overflowX: isMobile ? "hidden" : "auto", flexShrink: 0, background: L.soft }}>
+            {PERIODOS.map(({ key, label, corto }) => {
               const activa = periodo === key;
               const n = conteoPeriodo(key);
               return (
                 <button key={key} onClick={() => setPeriodo(key)} role="tab" aria-selected={activa} title={label}
-                  style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "9px 11px 8px", cursor: "pointer",
+                  style={{ flex: isMobile ? "1 1 0" : "0 0 auto", minWidth: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                    padding: isMobile ? "9px 2px 8px" : "9px 11px 8px", cursor: "pointer",
                     background: "transparent", border: "none",
                     borderBottom: `2.5px solid ${activa ? C.red : "transparent"}`,
-                    fontFamily: FONT_DISPLAY, fontSize: 12.5, fontWeight: activa ? 800 : 600, letterSpacing: 0.2,
+                    fontFamily: FONT_DISPLAY, fontSize: isMobile ? 11.5 : 12.5, fontWeight: activa ? 800 : 600, letterSpacing: 0.2,
                     color: activa ? C.red : (n > 0 ? L.text : L.light),
-                    whiteSpace: "nowrap", transition: "color .15s, border-color .15s" }}>
-                  {label}
+                    whiteSpace: "nowrap", overflow: "hidden", transition: "color .15s, border-color .15s" }}>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{isMobile ? corto : label}</span>
                   <span style={{ fontSize: 10.5, fontWeight: 800, color: activa ? C.red : L.light, fontVariantNumeric: "tabular-nums", opacity: n > 0 ? 1 : 0.5 }}>{n}</span>
                 </button>
               );
@@ -2145,7 +2154,9 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
 
           {/* ── Lista contactos ── */}
           <style>{`@keyframes ninitPhonePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(220,38,38,.5)}50%{transform:scale(1.12);box-shadow:0 0 0 5px rgba(220,38,38,0)}}@keyframes ninitSheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
-          <div className="scroll-y" style={{ overflowY: "auto", flex: 1 }}>
+          {/* minHeight:0 — sin esto, en una columna flex la lista crece con su
+              contenido en vez de scrollear y empuja el pie fuera de pantalla. */}
+          <div className="scroll-y" style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
             {lista.length === 0 && (
               <div style={{ padding: 36, color: L.light, fontSize: 13.5, textAlign: "center" }}>
                 {busqueda ? "Sin resultados para la búsqueda"
@@ -2173,11 +2184,11 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                   color: abierta ? L.muted : L.text, textAlign: "left", backdropFilter: "blur(6px)", transition: "color .15s" }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = L.hover; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = L.soft; }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <ChevronRight size={13} style={{ transform: abierta ? "rotate(90deg)" : "none", transition: "transform .18s" }} />
-                  {sec.titulo}
+                <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                  <ChevronRight size={13} style={{ flexShrink: 0, transform: abierta ? "rotate(90deg)" : "none", transition: "transform .18s" }} />
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sec.titulo}</span>
                 </span>
-                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", minWidth: 20, height: 17, padding: "0 6px",
+                <span style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", minWidth: 20, height: 17, padding: "0 6px",
                   borderRadius: 7, fontVariantNumeric: "tabular-nums", fontSize: 10.5,
                   background: abierta ? "transparent" : C.red, color: abierta ? L.light : "#fff" }}>
                   {sec.items.length}
