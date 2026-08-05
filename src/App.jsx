@@ -1998,9 +1998,32 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
   // los tabs/filtros); antes empujaban los chats activos hacia abajo.
   .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
 
-  // La lista se muestra cortada en tramos (Hoy / Ayer / Esta semana / …) con un
-  // encabezado pegajoso: el orden no cambia, solo deja de ser un bloque plano.
+  // La lista se muestra cortada en tramos desplegables (Hoy / Ayer / Esta
+  // semana / …): el orden no cambia, pero lo viejo arranca plegado y deja de
+  // tapar lo de esta semana.
   const secciones = agruparPorTiempo(lista);
+
+  // Qué tramos abrió o cerró el vendedor A MANO. Lo que no tocó no se guarda
+  // acá: queda con el default de abajo, así un tramo nuevo ("Hoy" cuando entra
+  // el primer mensaje del día) aparece abierto sin que nadie haga nada.
+  const [tramosTocados, setTramosTocados] = useState({});
+  const toggleSeccion = (titulo) =>
+    setTramosTocados((t) => ({ ...t, [titulo]: !seccionAbierta(titulo) }));
+
+  // Buscar es lo contrario de esconder: si hay búsqueda o un chip/período
+  // activo, el vendedor está buscando algo puntual y se abre todo.
+  const filtrando = !!busqueda || filtro !== "todos" || periodo !== "todos";
+  const seccionAbierta = (titulo) => {
+    if (titulo in tramosTocados) return tramosTocados[titulo];
+    if (filtrando) return true;
+    // Por defecto: lo reciente abierto, lo viejo plegado (es justo lo que
+    // molestaba). Si NO hay nada reciente, se abre el primer tramo que haya
+    // para no dejar la lista pareciendo vacía.
+    const recientes = ["Hoy", "Ayer", "Esta semana"];
+    if (recientes.includes(titulo)) return true;
+    const hayReciente = secciones.some((s) => recientes.includes(s.titulo));
+    return !hayReciente && secciones[0]?.titulo === titulo;
+  };
 
   return (
     <div style={{ width: "100%", height: "100%", background: L.white, borderRight: `1px solid ${L.border}`, display: "flex", flexDirection: "column" }}>
@@ -2134,18 +2157,33 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                     : "Sin conversaciones"}
               </div>
             )}
-            {secciones.map((sec) => (
+            {secciones.map((sec) => {
+            const abierta = seccionAbierta(sec.titulo);
+            return (
             <div key={sec.titulo}>
-              {/* Encabezado pegajoso: mientras scrolleás siempre se ve en qué
-                  tramo de tiempo estás parado. */}
-              <div style={{ position: "sticky", top: 0, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
-                padding: "6px 14px", background: L.soft, borderBottom: `1px solid ${L.border}`,
-                fontFamily: FONT_DISPLAY, fontSize: 10.5, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase", color: L.muted,
-                backdropFilter: "blur(6px)" }}>
-                <span>{sec.titulo}</span>
-                <span style={{ fontVariantNumeric: "tabular-nums", color: L.light }}>{sec.items.length}</span>
-              </div>
-              {sec.items.map((c) => {
+              {/* Encabezado desplegable y pegajoso: se hace click para abrir o
+                  cerrar el tramo, y mientras scrolleás siempre se ve en cuál
+                  estás parado. Lo viejo arranca cerrado. */}
+              <button onClick={() => toggleSeccion(sec.titulo)} aria-expanded={abierta}
+                title={abierta ? `Ocultar ${sec.titulo}` : `Ver ${sec.items.length} de ${sec.titulo}`}
+                style={{ position: "sticky", top: 0, zIndex: 2, width: "100%", boxSizing: "border-box",
+                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, cursor: "pointer",
+                  padding: "8px 14px", background: L.soft, border: "none", borderBottom: `1px solid ${L.border}`,
+                  fontFamily: FONT_DISPLAY, fontSize: 10.5, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase",
+                  color: abierta ? L.muted : L.text, textAlign: "left", backdropFilter: "blur(6px)", transition: "color .15s" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = L.hover; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = L.soft; }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <ChevronRight size={13} style={{ transform: abierta ? "rotate(90deg)" : "none", transition: "transform .18s" }} />
+                  {sec.titulo}
+                </span>
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", minWidth: 20, height: 17, padding: "0 6px",
+                  borderRadius: 7, fontVariantNumeric: "tabular-nums", fontSize: 10.5,
+                  background: abierta ? "transparent" : C.red, color: abierta ? L.light : "#fff" }}>
+                  {sec.items.length}
+                </span>
+              </button>
+              {abierta && sec.items.map((c) => {
               const est  = ESTADOS[c.estado] || ESTADOS.nuevo;
               const sel  = activo?.id === c.id;
               const llamar = c.requiere_llamada;
@@ -2240,7 +2278,8 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
               );
               })}
             </div>
-            ))}
+            );
+            })}
           </div>
         </>
       )}
