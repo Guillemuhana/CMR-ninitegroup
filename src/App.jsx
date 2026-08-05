@@ -1540,14 +1540,15 @@ function diasAtras(fecha) {
 // Pestañas de tiempo. Son un eje DISTINTO de los chips de arriba: los chips
 // dicen QUÉ chats (sin responder, favoritos…) y estas dicen DE CUÁNDO. Por eso
 // van en su propia fila y no mezcladas en la misma tira.
-// En celular las cinco pestañas tienen que entrar en ~360px sin scroll lateral,
-// así que ahí se usa la etiqueta corta.
+// `label` es lo que se ve (tiene que entrar en el ancho del panel, que en
+// escritorio son ~380px y en celular ~360px) y `titulo` lo que explica la
+// pestaña al pasar el mouse.
 const PERIODOS = [
-  { key: "todos",  label: "Todos",      corto: "Todos", test: () => true },
-  { key: "hoy",    label: "Hoy",        corto: "Hoy",   test: (d) => d <= 0 },
-  { key: "semana", label: "7 días",     corto: "7d",    test: (d) => d <= 7 },
-  { key: "mes",    label: "30 días",    corto: "30d",   test: (d) => d <= 30 },
-  { key: "viejos", label: "Más viejos", corto: "Viejos", test: (d) => d > 30 },
+  { key: "todos",  label: "Todos",  titulo: "Todas las conversaciones",       test: () => true },
+  { key: "hoy",    label: "Hoy",    titulo: "Solo lo de hoy",                 test: (d) => d <= 0 },
+  { key: "semana", label: "7 días", titulo: "Últimos 7 días",                 test: (d) => d <= 7 },
+  { key: "mes",    label: "30 días", titulo: "Últimos 30 días",               test: (d) => d <= 30 },
+  { key: "viejos", label: "Viejos", titulo: "Más viejos que 30 días",         test: (d) => d > 30 },
 ];
 
 // Encabezado del tramo al que pertenece un chat. Los tramos son más finos que
@@ -2123,25 +2124,32 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
           {/* ── Fila 3: pestañas de tiempo ── */}
           {/* Estilo subrayado (no píldora) a propósito: se tiene que ver que es
               otro eje distinto de los chips de arriba y que se combinan. */}
-          {/* En celular las 5 se reparten el ancho (flex:1) y usan etiqueta
-              corta, así entran sin scroll lateral; en escritorio van a su ancho
-              natural y, si el panel es angosto, la tira scrollea. */}
-          <div className="strip" role="tablist" aria-label="Período"
-            style={{ display: "flex", alignItems: "stretch", gap: 2, padding: isMobile ? 0 : "0 12px", borderBottom: `1px solid ${L.border}`, overflowX: isMobile ? "hidden" : "auto", flexShrink: 0, background: L.soft }}>
-            {PERIODOS.map(({ key, label, corto }) => {
+          {/* Nada de scroll lateral acá: la tira oculta la barra (.strip), así
+              que una pestaña que se sale del ancho es una pestaña que el
+              vendedor no sabe que existe. Las cinco se reparten el ancho en
+              partes iguales y entran siempre, tanto en el panel de escritorio
+              como en celular. */}
+          <style>{`
+            .tab-tiempo:focus { outline: none; }
+            .tab-tiempo:focus-visible { outline: 2px solid ${C.ai}; outline-offset: -3px; border-radius: 4px; }
+          `}</style>
+          <div role="tablist" aria-label="Período"
+            style={{ display: "flex", alignItems: "stretch", borderBottom: `1px solid ${L.border}`, flexShrink: 0, background: L.soft }}>
+            {PERIODOS.map(({ key, label, titulo }) => {
               const activa = periodo === key;
               const n = conteoPeriodo(key);
               return (
-                <button key={key} onClick={() => setPeriodo(key)} role="tab" aria-selected={activa} title={label}
-                  style={{ flex: isMobile ? "1 1 0" : "0 0 auto", minWidth: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                    padding: isMobile ? "9px 2px 8px" : "9px 11px 8px", cursor: "pointer",
+                <button key={key} className="tab-tiempo" onClick={() => setPeriodo(key)} role="tab" aria-selected={activa} title={titulo}
+                  style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
+                    padding: "7px 2px 6px", cursor: "pointer",
                     background: "transparent", border: "none",
                     borderBottom: `2.5px solid ${activa ? C.red : "transparent"}`,
-                    fontFamily: FONT_DISPLAY, fontSize: isMobile ? 11.5 : 12.5, fontWeight: activa ? 800 : 600, letterSpacing: 0.2,
-                    color: activa ? C.red : (n > 0 ? L.text : L.light),
+                    fontFamily: FONT_DISPLAY, letterSpacing: 0.1,
                     whiteSpace: "nowrap", overflow: "hidden", transition: "color .15s, border-color .15s" }}>
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{isMobile ? corto : label}</span>
-                  <span style={{ fontSize: 10.5, fontWeight: 800, color: activa ? C.red : L.light, fontVariantNumeric: "tabular-nums", opacity: n > 0 ? 1 : 0.5 }}>{n}</span>
+                  <span style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", fontSize: 11.5, fontWeight: activa ? 800 : 600,
+                    color: activa ? C.red : (n > 0 ? L.text : L.light) }}>{label}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, fontVariantNumeric: "tabular-nums",
+                    color: activa ? C.red : L.light, opacity: n > 0 ? 1 : 0.45 }}>{n}</span>
                 </button>
               );
             })}
