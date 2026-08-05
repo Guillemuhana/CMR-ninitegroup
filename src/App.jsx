@@ -1886,12 +1886,11 @@ function CanalSelector({ canal, setCanal }) {
 // ============================================================
 function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContacto, onToggleLlamada, onMarcarLlamada, onAsignarVendedor, onLogout, userEmail, userName, vista, setVista, alertas, onDescartarAlerta, onDescartarTodasAlertas, isMobile, rol, perfil }) {
   const [filtro, setFiltro]       = useState("todos");
-  // Pestaña de tiempo. Se recuerda entre sesiones: el que trabaja siempre con
-  // "7 días" no tiene que volver a elegirlo cada vez que abre el CRM.
-  const [periodo, setPeriodo]     = useState(() => {
-    try { return localStorage.getItem("ninit_periodo") || "todos"; } catch { return "todos"; }
-  });
-  useEffect(() => { try { localStorage.setItem("ninit_periodo", periodo); } catch {} }, [periodo]);
+  // Pestaña de tiempo. Arranca SIEMPRE en "Hoy", incluso si en la sesión
+  // anterior se dejó en otra: al abrir el CRM lo primero que importa es lo que
+  // entró hoy, no las 369 conversaciones históricas. Por eso no se guarda la
+  // elección: cambiarla es para mirar algo puntual, no para dejarla fija.
+  const [periodo, setPeriodo]     = useState("hoy");
   const [busqueda, setBusqueda]   = useState("");
   const [canal, setCanal]         = useState("todos");
   const [filtrosIA, setFiltrosIA] = useState(FILTROS_INICIAL);
@@ -2124,35 +2123,39 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
           {/* ── Fila 3: pestañas de tiempo ── */}
           {/* Estilo subrayado (no píldora) a propósito: se tiene que ver que es
               otro eje distinto de los chips de arriba y que se combinan. */}
-          {/* Nada de scroll lateral acá: la tira oculta la barra (.strip), así
-              que una pestaña que se sale del ancho es una pestaña que el
-              vendedor no sabe que existe. Las cinco se reparten el ancho en
-              partes iguales y entran siempre, tanto en el panel de escritorio
-              como en celular. */}
+          {/* Control segmentado: la opción elegida es una pastilla blanca que
+              flota sobre el riel gris. Se lee de un vistazo cuál está activa
+              sin depender de un subrayado fino, y las cinco se reparten el
+              ancho en partes iguales, así ninguna queda fuera del panel (que en
+              tablet son 304px). */}
           <style>{`
             .tab-tiempo:focus { outline: none; }
-            .tab-tiempo:focus-visible { outline: 2px solid ${C.ai}; outline-offset: -3px; border-radius: 4px; }
+            .tab-tiempo:focus-visible { outline: 2px solid ${C.ai}; outline-offset: 1px; }
+            .tab-tiempo:not(.on):hover { background: rgba(255,255,255,.6); }
           `}</style>
-          <div role="tablist" aria-label="Período"
-            style={{ display: "flex", alignItems: "stretch", borderBottom: `1px solid ${L.border}`, flexShrink: 0, background: L.soft }}>
-            {PERIODOS.map(({ key, label, titulo }) => {
-              const activa = periodo === key;
-              const n = conteoPeriodo(key);
-              return (
-                <button key={key} className="tab-tiempo" onClick={() => setPeriodo(key)} role="tab" aria-selected={activa} title={titulo}
-                  style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
-                    padding: "7px 2px 6px", cursor: "pointer",
-                    background: "transparent", border: "none",
-                    borderBottom: `2.5px solid ${activa ? C.red : "transparent"}`,
-                    fontFamily: FONT_DISPLAY, letterSpacing: 0.1,
-                    whiteSpace: "nowrap", overflow: "hidden", transition: "color .15s, border-color .15s" }}>
-                  <span style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", fontSize: 11.5, fontWeight: activa ? 800 : 600,
-                    color: activa ? C.red : (n > 0 ? L.text : L.light) }}>{label}</span>
-                  <span style={{ fontSize: 11, fontWeight: 800, fontVariantNumeric: "tabular-nums",
-                    color: activa ? C.red : L.light, opacity: n > 0 ? 1 : 0.45 }}>{n}</span>
-                </button>
-              );
-            })}
+          <div style={{ padding: "0 12px 10px", flexShrink: 0, borderBottom: `1px solid ${L.border}` }}>
+            <div role="tablist" aria-label="Período"
+              style={{ display: "flex", gap: 2, padding: 3, borderRadius: 13, background: L.soft, border: `1px solid ${L.border}` }}>
+              {PERIODOS.map(({ key, label, titulo }) => {
+                const activa = periodo === key;
+                const n = conteoPeriodo(key);
+                return (
+                  <button key={key} className={`tab-tiempo${activa ? " on" : ""}`} onClick={() => setPeriodo(key)}
+                    role="tab" aria-selected={activa} title={titulo}
+                    style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
+                      padding: "6px 2px 5px", cursor: "pointer", borderRadius: 10, border: "none",
+                      background: activa ? L.white : "transparent",
+                      boxShadow: activa ? "0 1px 3px rgba(15,23,42,.14), 0 0 0 1px rgba(15,23,42,.05)" : "none",
+                      fontFamily: FONT_DISPLAY, letterSpacing: 0.1, whiteSpace: "nowrap", overflow: "hidden",
+                      transition: "background .18s, box-shadow .18s, color .18s" }}>
+                    <span style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", fontSize: 11.5, fontWeight: activa ? 800 : 600,
+                      color: activa ? C.red : L.muted }}>{label}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, fontVariantNumeric: "tabular-nums", lineHeight: 1.1,
+                      color: activa ? C.red : L.light, opacity: n > 0 ? 1 : 0.45 }}>{n}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {modalFiltros && (
@@ -2174,15 +2177,39 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                     : filtro !== "todos" ? `Sin conversaciones en “${SIDEBAR_TABS.find((t) => t.key === filtro)?.label}”${periodo !== "todos" ? ` dentro de “${PERIODOS.find((p) => p.key === periodo)?.label}”` : ""}`
                     : periodo !== "todos" ? `Sin conversaciones en “${PERIODOS.find((p) => p.key === periodo)?.label}”`
                     : "Sin conversaciones"}
+
+                {/* Como ahora se entra parado en "Hoy", un día tranquilo se ve
+                    igual que un CRM vacío. El atajo aclara que hay más atrás y
+                    evita salir a buscar la pestaña. */}
+                {!busqueda && periodo !== "todos" && base.length > 0 && (
+                  <div style={{ display: "flex", gap: 7, justifyContent: "center", flexWrap: "wrap", marginTop: 14 }}>
+                    {periodo !== "semana" && (
+                      <button onClick={() => setPeriodo("semana")}
+                        style={{ padding: "7px 13px", borderRadius: 999, cursor: "pointer", border: `1.5px solid ${L.border}`,
+                          background: L.white, color: L.text, fontFamily: FONT_DISPLAY, fontSize: 12, fontWeight: 700 }}>
+                        Ver los últimos 7 días
+                      </button>
+                    )}
+                    <button onClick={() => setPeriodo("todos")}
+                      style={{ padding: "7px 13px", borderRadius: 999, cursor: "pointer", border: `1.5px solid ${C.red}`,
+                        background: C.red, color: "#fff", fontFamily: FONT_DISPLAY, fontSize: 12, fontWeight: 700 }}>
+                      Ver todas ({base.length})
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             {secciones.map((sec) => {
-            const abierta = seccionAbierta(sec.titulo);
+            // Con un solo tramo no hay nada que separar y el encabezado repetiría
+            // lo que ya dice la pestaña de arriba ("Hoy 3" / "HOY 3").
+            const conTramos = secciones.length > 1;
+            const abierta = !conTramos || seccionAbierta(sec.titulo);
             return (
             <div key={sec.titulo}>
               {/* Encabezado desplegable y pegajoso: se hace click para abrir o
                   cerrar el tramo, y mientras scrolleás siempre se ve en cuál
                   estás parado. Lo viejo arranca cerrado. */}
+              {conTramos && (
               <button onClick={() => toggleSeccion(sec.titulo)} aria-expanded={abierta}
                 title={abierta ? `Ocultar ${sec.titulo}` : `Ver ${sec.items.length} de ${sec.titulo}`}
                 style={{ position: "sticky", top: 0, zIndex: 2, width: "100%", boxSizing: "border-box",
@@ -2202,6 +2229,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                   {sec.items.length}
                 </span>
               </button>
+              )}
               {abierta && sec.items.map((c) => {
               const est  = ESTADOS[c.estado] || ESTADOS.nuevo;
               const sel  = activo?.id === c.id;
