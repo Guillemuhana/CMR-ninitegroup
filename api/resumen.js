@@ -9,6 +9,8 @@
 // Requiere en Vercel: GROQ_API_KEY (Settings → Environment Variables).
 //   Conseguí la key en https://console.groq.com/keys
 
+import { construirTranscript } from "./_transcript.js";
+
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // Cadena de modelos: si el principal se queda sin cuota diaria (rate limit / TPD),
@@ -143,22 +145,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "No hay mensajes para resumir." });
   }
 
-  // Armar la transcripción legible para el modelo.
-  const transcript = mensajes
-    .map((m) => {
-      const quien =
-        m.direccion === "out"
-          ? m.origen === "bot"
-            ? "Bot/IA"
-            : `Vendedor${m.agente ? ` (${m.agente})` : ""}`
-          : "Cliente";
-      const fecha = m.created_at ? new Date(m.created_at).toLocaleString("es-AR") : "";
-      const cuerpo = (m.contenido || "").trim();
-      if (!cuerpo) return null;
-      return `[${fecha}] ${quien}: ${cuerpo}`;
-    })
-    .filter(Boolean)
-    .join("\n");
+  // Transcripción legible y acotada al presupuesto de tokens (ver
+  // api/_transcript.js): acá pasaba lo mismo que en "Avanzar" — una
+  // conversación larga se pasaba del límite de Groq y el resumen fallaba.
+  const { transcript } = construirTranscript(mensajes);
 
   if (!transcript) {
     return res.status(400).json({ error: "La conversación no tiene contenido para resumir." });

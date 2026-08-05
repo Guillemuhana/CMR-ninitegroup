@@ -7,6 +7,8 @@
 // Usa Groq en JSON mode (gratis, API compatible con OpenAI).
 // Requiere en Vercel: GROQ_API_KEY.
 
+import { construirTranscript } from "./_transcript.js";
+
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // Cadena de modelos: si el principal se queda sin cuota, reintenta con uno liviano.
@@ -39,6 +41,8 @@ STYLE for customer-facing messages ("mensaje_whatsapp", "mensaje_email"):
 - Concrete and personalized to THIS customer. Sign as the seller provided.
 - NEVER invent prices, specs, dates or facts not present in the conversation. No brackets or placeholders.
 - WhatsApp: short and conversational. Email: a bit more formal, with greeting and sign-off.
+
+In very long conversations the middle may be elided with a marker like "[… se omiten N mensajes …]". Work with what you can see and NEVER reference a message that is not in the transcript.
 
 For "objecion_respuesta": a ready-to-send English snippet that professionally handles the detected objection with value (empty string if there is no objection).
 
@@ -122,18 +126,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "No hay mensajes para analizar." });
   }
 
-  // Transcripción legible (con roles claros).
-  const transcript = mensajes
-    .map((m) => {
-      const quien = m.direccion === "out"
-        ? (m.origen === "bot" ? "Bot/IA" : `Vendedor${m.agente ? ` (${m.agente})` : ""}`)
-        : "Cliente";
-      const fecha = m.created_at ? new Date(m.created_at).toLocaleString("es-AR") : "";
-      const cuerpo = (m.contenido || "").trim();
-      return cuerpo ? `[${fecha}] ${quien}: ${cuerpo}` : null;
-    })
-    .filter(Boolean)
-    .join("\n");
+  // Transcripción legible (con roles claros) y acotada al presupuesto de
+  // tokens de Groq: ver api/_transcript.js.
+  const { transcript, omitidos } = construirTranscript(mensajes);
 
   if (!transcript) return res.status(400).json({ error: "La conversación no tiene contenido para analizar." });
 
@@ -150,40 +145,60 @@ export default async function handler(req, res) {
     `Channel: ${contacto?.canal || "whatsapp"}`,
   ].filter(Boolean).join("\n");
 
-  const messages = [
+  const armarMensajes = (txt) => ([
     { role: "system", content: SYSTEM },
-    { role: "user", content: `${contexto}\n\nConversation (chronological):\n${transcript}` },
-  ];
+    { role: "user", content: `${contexto}\n\nConversation (chronological):\n${txt}` },
+  ]);
+
+  // Si aun así entra justo (conversaciones enormes), se reintenta con la mitad
+  // de conversación antes de darse por vencido: es preferible un análisis con
+  // menos historial que un error en la cara del vendedor.
+  const intentos = [transcript];
+  const corto = construirTranscript(mensajes, { presupuesto: 4000 }).transcript;
+  if (corto && corto.length < transcript.length) intentos.push(corto);
 
   let ultimoError = "Error al analizar la conversación.";
   for (const model of MODELOS) {
-    try {
-      const r = await fetch(GROQ_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model,
-          temperature: 0.5,
-          max_tokens: 1900,
-          response_format: { type: "json_object" },
-          messages,
-        }),
-      });
+    // Si se acaban los intentos por tamaño, todavía vale la pena probar el
+    // modelo liviano, que tiene su propio límite.
+    let siguienteModelo = true;
+    for (const txt of intentos) {
+      try {
+        const r = await fetch(GROQ_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model,
+            temperature: 0.5,
+            max_tokens: 1900,
+            response_format: { type: "json_object" },
+            messages: armarMensajes(txt),
+          }),
+        });
 
-      const data = await r.json().catch(() => ({}));
-      if (r.ok) {
-        let parsed = {};
-        try { parsed = JSON.parse(data?.choices?.[0]?.message?.content || "{}"); }
-        catch { parsed = {}; }
-        return res.status(200).json(normalizar(parsed));
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) {
+          let parsed = {};
+          try { parsed = JSON.parse(data?.choices?.[0]?.message?.content || "{}"); }
+          catch { parsed = {}; }
+          return res.status(200).json({ ...normalizar(parsed), mensajes_omitidos: omitidos });
+        }
+
+        ultimoError = data?.error?.message || `Groq devolvió ${r.status}`;
+        // "Request too large … tokens per minute (TPM)" es un caso aparte del
+        // rate limit clásico: no se arregla esperando, se arregla mandando
+        // menos texto. Antes ninguna de las dos ramas lo reconocía y el botón
+        // moría en el primer intento.
+        const demasiadoGrande = r.status === 413 || /request too large|too many tokens|context length|tokens per minute|\bTPM\b/i.test(ultimoError);
+        const esRateLimit = r.status === 429 || /rate limit|quota|tokens per day|\bTPD\b/i.test(ultimoError);
+        if (demasiadoGrande) continue;          // reintentar con menos conversación
+        if (esRateLimit) { siguienteModelo = true; break; }
+        siguienteModelo = false; break;         // error real (key, modelo caído): no insistir
+      } catch (e) {
+        ultimoError = e?.message || "Error al analizar la conversación.";
       }
-
-      ultimoError = data?.error?.message || `Groq devolvió ${r.status}`;
-      const esRateLimit = r.status === 429 || /rate limit|quota|tokens per day|TPD/i.test(ultimoError);
-      if (!esRateLimit) break;
-    } catch (e) {
-      ultimoError = e?.message || "Error al analizar la conversación.";
     }
+    if (!siguienteModelo) break;
   }
   return res.status(500).json({ error: ultimoError });
 }
