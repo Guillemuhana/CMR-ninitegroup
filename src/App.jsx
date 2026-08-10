@@ -3767,25 +3767,59 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
     reader.readAsDataURL(file);
   });
 
-  // Adjuntar imagen: comprime → sube a Storage → envía la URL por el canal.
+  // Videos: formatos que el chat renderiza y que WhatsApp/Messenger aceptan.
+  // El tope de 16 MB es el de WhatsApp para media por URL — arriba de eso el
+  // cliente no recibe nada, así que conviene frenarlo acá y avisar.
+  const VIDEOS_OK = ["video/mp4", "video/quicktime", "video/webm"];
+  const MAX_VIDEO_MB = 16;
+
+  // Sube un video directo del navegador a Storage con una URL firmada: un
+  // video no entra en el body de /api/upload (límite de Vercel ~4.5 MB).
+  const subirVideo = async (file) => {
+    const res = await fetch("/api/upload", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ modo: "firmar", contentType: file.type, size: file.size }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.uploadUrl) throw new Error(json.error || "No se pudo preparar la subida");
+    const put = await fetch(json.uploadUrl, {
+      method: "PUT", headers: { "Content-Type": file.type }, body: file,
+    });
+    if (!put.ok) throw new Error("Falló la subida del video");
+    return json.url;
+  };
+
+  // Adjuntar imagen o video: sube a Storage → envía la URL por el canal.
   const onPickImage = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!file.type.startsWith("image/")) { setErr("Solo se pueden adjuntar imágenes."); return; }
+    const esVideo = file.type.startsWith("video/");
+    if (!esVideo && !file.type.startsWith("image/")) { setErr("Solo se pueden adjuntar imágenes o videos."); return; }
+    if (esVideo && !VIDEOS_OK.includes(file.type)) { setErr("Formato de video no soportado. Usá MP4, MOV o WebM."); return; }
+    if (esVideo && file.size > MAX_VIDEO_MB * 1024 * 1024) {
+      setErr(`El video pesa ${(file.size / 1024 / 1024).toFixed(1)} MB y el máximo es ${MAX_VIDEO_MB} MB. Recortalo o mandá el link.`);
+      return;
+    }
     if (enviando || subiendo) return;
     setSubiendo(true); setErr("");
     try {
-      const { dataBase64, contentType } = await comprimirImagen(file);
-      const res = await fetch("/api/upload", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dataBase64, contentType }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.url) throw new Error(json.error || "No se pudo subir la imagen");
-      await enviarMensaje(json.url);
+      let url;
+      if (esVideo) {
+        url = await subirVideo(file);
+      } else {
+        const { dataBase64, contentType } = await comprimirImagen(file);
+        const res = await fetch("/api/upload", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dataBase64, contentType }),
+        });
+        const json = await res.json();
+        if (!res.ok || !json.url) throw new Error(json.error || "No se pudo subir la imagen");
+        url = json.url;
+      }
+      await enviarMensaje(url);
     } catch (e2) {
-      setErr("No se pudo enviar la imagen: " + (e2.message || e2));
+      setErr(`No se pudo enviar ${esVideo ? "el video" : "la imagen"}: ` + (e2.message || e2));
     } finally {
       setSubiendo(false);
     }
@@ -4144,8 +4178,8 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
               <button className="tools-item" disabled={subiendo || enviando} onClick={() => { cerrarTools(); fileInputRef.current?.click(); }}>
                 <span className="tools-ico" style={{ background: "#16A34A1A", color: "#16A34A" }}><ImageIcon size={17} /></span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: L.text }}>Imagen</span>
-                  <span style={{ display: "block", fontSize: 11.5, color: L.muted, marginTop: 1 }}>{subiendo ? "Subiendo…" : "Subir desde el dispositivo"}</span>
+                  <span style={{ display: "block", fontSize: 14, fontWeight: 700, color: L.text }}>Imagen o video</span>
+                  <span style={{ display: "block", fontSize: 11.5, color: L.muted, marginTop: 1 }}>{subiendo ? "Subiendo…" : "Subir desde el dispositivo (video hasta 16 MB)"}</span>
                 </span>
               </button>
             </div>
@@ -4253,8 +4287,8 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
             </div>
           )}
 
-          {/* Adjuntar imagen: lo dispara la opción "Imagen" del menú */}
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={onPickImage} style={{ display: "none" }} />
+          {/* Adjuntar media: lo dispara la opción "Imagen o video" del menú */}
+          <input ref={fileInputRef} type="file" accept="image/*,video/mp4,video/quicktime,video/webm" onChange={onPickImage} style={{ display: "none" }} />
         </div>
         <textarea value={texto} onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviar(); } }}
