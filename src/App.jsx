@@ -3781,11 +3781,11 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
       body: JSON.stringify({ modo: "firmar", contentType: file.type, size: file.size }),
     });
     const json = await res.json();
-    if (!res.ok || !json.uploadUrl) throw new Error(json.error || "No se pudo preparar la subida");
-    const put = await fetch(json.uploadUrl, {
-      method: "PUT", headers: { "Content-Type": file.type }, body: file,
-    });
-    if (!put.ok) throw new Error("Falló la subida del video");
+    if (!res.ok || !json.token) throw new Error(json.error || "No se pudo preparar la subida");
+    const { error } = await supabase.storage
+      .from(json.bucket)
+      .uploadToSignedUrl(json.path, json.token, file, { contentType: file.type });
+    if (error) throw new Error(error.message || "Falló la subida del video");
     return json.url;
   };
 

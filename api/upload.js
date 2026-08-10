@@ -50,8 +50,13 @@ export default async function handler(req, res) {
         const detail = await sign.text();
         return res.status(500).json({ error: "No se pudo firmar la subida", detail });
       }
-      const { url } = await sign.json();   // ej: "/object/upload/sign/chat-media/2026-08-10/uuid.mp4?token=..."
-      return res.status(200).json({ uploadUrl: `${SUPABASE_URL}/storage/v1${url}`, url: urlPublica(path) });
+      // Respuesta: { url: "/object/upload/sign/chat-media/2026-08-10/uuid.mp4?token=..." }
+      // El front sube con supabase.storage.uploadToSignedUrl(path, token, file),
+      // que arma el body como espera Storage; por eso devolvemos path y token.
+      const { url } = await sign.json();
+      const token = new URL(url, SUPABASE_URL).searchParams.get("token");
+      if (!token) return res.status(500).json({ error: "La firma llegó sin token" });
+      return res.status(200).json({ bucket: BUCKET, path, token, url: urlPublica(path) });
     } catch (e) {
       return res.status(500).json({ error: e.message || "Error al firmar la subida" });
     }
