@@ -23,6 +23,28 @@ const MAX_VIDEO = 16 * 1024 * 1024;
 
 const nuevaRuta = (ext) => `${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${ext}`;
 const urlPublica = (path) => `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+const authHeaders = () => ({ Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY });
+
+// El bucket se creó aceptando solo imágenes: un video daba "mime type not
+// supported" recién al subirlo, con el vendedor esperando. Acá se amplía la
+// lista permitida (y el tope de tamaño) la primera vez que hace falta.
+// Es idempotente: si el tipo ya está permitido, no toca nada.
+async function permitirTipoEnBucket(contentType) {
+  const H = { ...authHeaders(), "Content-Type": "application/json" };
+  const info = await (await fetch(`${SUPABASE_URL}/storage/v1/bucket/${BUCKET}`, { headers: H })).json();
+  const mimes = info?.allowed_mime_types;
+  const limiteOk = !info?.file_size_limit || info.file_size_limit >= MAX_VIDEO;
+  // allowed_mime_types en null = el bucket acepta cualquier tipo.
+  if ((!mimes || mimes.includes(contentType)) && limiteOk) return;
+  const body = {
+    id: BUCKET,
+    public: info?.public ?? true,
+    file_size_limit: Math.max(info?.file_size_limit || 0, MAX_VIDEO),
+    allowed_mime_types: mimes ? [...new Set([...mimes, ...Object.keys(EXT_VID)])] : null,
+  };
+  const put = await fetch(`${SUPABASE_URL}/storage/v1/bucket/${BUCKET}`, { method: "PUT", headers: H, body: JSON.stringify(body) });
+  if (!put.ok) throw new Error(`No se pudo habilitar ${contentType} en el bucket: ${await put.text()}`);
+}
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -40,10 +62,11 @@ export default async function handler(req, res) {
     if (!ext) return res.status(400).json({ error: "Tipo de archivo no soportado" });
     if (Number(size) > MAX_VIDEO) return res.status(413).json({ error: "El video supera los 16 MB" });
     try {
+      await permitirTipoEnBucket(contentType);
       const path = nuevaRuta(ext);
       const sign = await fetch(`${SUPABASE_URL}/storage/v1/object/upload/sign/${BUCKET}/${path}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, "Content-Type": "application/json" },
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
       if (!sign.ok) {
@@ -74,7 +97,7 @@ export default async function handler(req, res) {
     const path = nuevaRuta(ext);
     const up = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY, "Content-Type": contentType, "x-upsert": "true" },
+      headers: { ...authHeaders(), "Content-Type": contentType, "x-upsert": "true" },
       body: buffer,
     });
     if (!up.ok) {
