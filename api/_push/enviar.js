@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
-import { detectarSolicitudFinanciamiento } from "./_fin/detectar.js";
+import { detectarSolicitudFinanciamiento } from "../_fin/detectar.js";
 
 // Envía notificaciones PUSH a los vendedores cuando entra un mensaje del
 // cliente. Lo dispara Supabase (trigger pg_net → este endpoint) en cada INSERT

@@ -16,9 +16,18 @@ self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-// Fallback de navegación al index cacheado (SPA offline)
+// Fallback de navegación al index cacheado (SPA offline).
+//
+// /cotizacion/ queda afuera: son páginas sueltas que se le mandan a clientes,
+// no rutas del CRM. Sin esta excepción, en cualquier dispositivo que tenga el
+// CRM instalado el service worker respondía la navegación con el index cacheado
+// y la primera visita al link de la cotización terminaba abriendo el CRM.
 try {
-  registerRoute(new NavigationRoute(createHandlerBoundToURL("/index.html")));
+  registerRoute(
+    new NavigationRoute(createHandlerBoundToURL("/index.html"), {
+      denylist: [/^\/cotizacion\//],
+    })
+  );
 } catch { /* sin index precacheado en dev */ }
 
 // ── PUSH: llega un mensaje nuevo del cliente ──────────────────────────
