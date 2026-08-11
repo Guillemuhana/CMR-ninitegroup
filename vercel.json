@@ -2,9 +2,17 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }],
+  "rewrites": [
+    { "source": "/api/push-subscribe", "destination": "/api/push?accion=subscribe" },
+    { "source": "/api/push-send", "destination": "/api/push?accion=send" },
+    { "source": "/((?!api/|cotizacion/).*)", "destination": "/index.html" }
+  ],
   "functions": {
-    "api/reporte-diario.js": { "maxDuration": 60 }
+    "api/reporte-diario.js": { "maxDuration": 60 },
+    "api/cotizacion-firmar.js": {
+      "maxDuration": 60,
+      "includeFiles": "public/cotizacion/img/**"
+    }
   },
   "crons": [
     { "path": "/api/reporte-diario", "schedule": "0 1 * * *" },

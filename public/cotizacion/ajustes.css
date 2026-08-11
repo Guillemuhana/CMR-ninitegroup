@@ -1,0 +1,50 @@
+/* Ajustes sobre quote.css.
+ *
+ * quote.css es el archivo del plugin de WordPress, copiado sin tocar una línea:
+ * es lo que garantiza que el documento se vea igual que antes. Todo lo que haya
+ * que corregir va acá, después, para que siempre se sepa qué se cambió.
+ */
+
+/* ---------- Foto principal y plano ----------
+ * El original usaba object-fit:cover, que recorta la imagen para llenar el
+ * recuadro: al trailer le cortaba los costados y se veía "a la mitad".
+ *
+ * Ahora las dos imágenes se muestran ENTERAS (contain) y con la misma altura,
+ * así quedan alineadas y ninguna pierde nada. El fondo suave rellena lo que
+ * sobra cuando la proporción de la foto no coincide con la del recuadro.
+ */
+.nq-hero img {
+	height: 300px;
+	max-height: none;
+	object-fit: contain;
+	background: #f5f7fa;
+	border: 1px solid var(--nqc-line);
+}
+
+/* En pantallas chicas la grilla pasa a una sola columna: ahí conviene que cada
+ * foto tome su propio alto, para no dejar franjas vacías arriba y abajo. */
+@media (max-width: 720px) {
+	.nq-hero img {
+		height: auto;
+		border: none;
+	}
+}
+
+/* ---------- Línea de descuento ----------
+ * Aparece solo cuando la cotización tiene un descuento cerrado con el cliente.
+ * Va en verde para que se lea como un beneficio y no como un cargo más. */
+.nq-price tbody tr.nq-discount td {
+	color: #0f7b4f;
+}
+.nq-price tbody tr.nq-discount td .nq-sub {
+	color: #4c9b78;
+}
+
+@media print {
+	.nq-hero img {
+		height: auto;
+		max-height: 260px;
+		object-fit: contain;
+		border: none;
+	}
+}

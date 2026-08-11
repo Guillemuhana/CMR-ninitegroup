@@ -8,3 +8,7 @@ dist
 
 # SQL con contraseñas reales de vendedores (no subir)
 supabase_crear_vendedor.sql
+
+# Borradores de cotizaciones generados por scripts/probar-pdf-cotizacion.mjs:
+# llevan datos y precios de clientes reales.
+_prueba-cotizacion-*.pdf
