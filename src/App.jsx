@@ -92,10 +92,9 @@ function cronoStr(ms) {
   return `${Math.floor(h / 24)}d ${h % 24}h`;
 }
 // Cronómetro de respuesta: tiempo desde el último mensaje del cliente hasta que
-// un VENDEDOR abre el chat. Corre mientras nadie del equipo lo haya atendido.
-// Ojo: si lo abre Nico (CEO) NO se marca `atendido_at`, así que el reloj sigue
-// corriendo (es para controlar el tiempo de respuesta de los vendedores).
-// null = ya lo atendió un vendedor (o no hay consulta pendiente del cliente).
+// alguien del equipo abre el chat (vendedor o administración). Al abrirlo se marca
+// `atendido_at` y el reloj se detiene.
+// null = ya lo leyó alguien (o no hay consulta pendiente del cliente).
 function calcTiempoRespuesta(c) {
   if (!c.ultimo_in_at) return null;
   const atendido = c.atendido_at && new Date(c.atendido_at) >= new Date(c.ultimo_in_at);
@@ -3568,12 +3567,11 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
   const cargar = useCallback(async () => {
     const { data } = await supabase.from("mensajes").select("*").eq("contacto_id", contacto.id).order("created_at", { ascending: true });
     setMensajes(data || []);
-    // Al abrir el chat queda "revisado": el vendedor vio la consulta aunque no responda.
-    // `atendido_at` frena el cronómetro de respuesta, pero SOLO si lo abre un vendedor:
-    // si lo abre Nico (CEO) el reloj sigue corriendo (control de tiempos del equipo).
+    // Al abrir el chat queda "revisado": alguien vio la consulta aunque no responda.
+    // `atendido_at` frena el cronómetro de respuesta: lo marca cualquier rol
+    // (vendedor o administración), porque el mensaje ya fue leído.
     const ahora = new Date().toISOString();
-    const patch = { no_leidos: 0, revisado_at: ahora };
-    if (rol !== "ceo") patch.atendido_at = ahora;
+    const patch = { no_leidos: 0, revisado_at: ahora, atendido_at: ahora };
     onUpdateContacto?.({ ...contacto, ...patch }); // optimista: oculta el cronómetro ya
     await supabase.from("contactos").update(patch).eq("id", contacto.id);
   }, [contacto.id, rol]);

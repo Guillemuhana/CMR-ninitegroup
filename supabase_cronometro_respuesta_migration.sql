@@ -1,7 +1,6 @@
 -- Cronómetro de tiempo de respuesta por chat.
--- `atendido_at` = cuándo un VENDEDOR abrió el chat. Frena el cronómetro.
--- Si lo abre Nico (CEO) NO se toca, así el reloj sigue corriendo (es un control
--- de los tiempos de respuesta del equipo de ventas).
+-- `atendido_at` = cuándo alguien del equipo (vendedor o administración) abrió el
+-- chat y leyó el mensaje. Frena el cronómetro.
 ALTER TABLE public.contactos
   ADD COLUMN IF NOT EXISTS atendido_at timestamptz;
 
