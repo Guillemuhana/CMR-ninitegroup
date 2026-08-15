@@ -53,6 +53,14 @@ const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export default function Promociones({ userName, isMobile }) {
   const [tab, setTab]             = useState("nueva");
+  // Modo simple: elegir plantilla, completar los datos, enviar. Es el 95 % de
+  // los casos y es lo que se ve al entrar.
+  //
+  // La idea que lo hace simple: el texto de la plantilla, con las variables ya
+  // completadas, sirve TAL CUAL como mensaje libre para los que escribieron
+  // hace menos de 24 h. Así no hay que redactar dos veces lo mismo — se
+  // completa una sola cosa y los dos grupos reciben el mismo contenido.
+  const [modoSimple, setModoSimple] = useState(true);
   const [contactos, setContactos] = useState([]);
   const [bajas, setBajas]         = useState(() => new Set());
   const [cargando, setCargando]   = useState(true);
@@ -146,7 +154,9 @@ export default function Promociones({ userName, isMobile }) {
   useEffect(() => { cargar(); cargarHistorial(); cargarPlantillas(); }, [cargar, cargarHistorial, cargarPlantillas]);
 
   // ── Audiencia calculada ───────────────────────────────────
-  const hayPlantilla = usarPlantilla && plNombre.trim() !== "";
+  // En modo simple la plantilla es el eje de la pantalla, así que no hay un
+  // tilde que activarla: elegir una ya es activarla.
+  const hayPlantilla = (modoSimple || usarPlantilla) && plNombre.trim() !== "";
 
   const audiencia = useMemo(() => {
     const ahora = Date.now();
@@ -194,10 +204,21 @@ export default function Promociones({ userName, isMobile }) {
   const faltanValores = !!plSel && plValores.slice(0, plSel.variables).some((v) => !(v || "").trim());
   const plantillaInvalida = !!plSel && !plSel.soportada;
 
+  // El texto que se manda a los de menos de 24 h. En modo simple sale de la
+  // plantilla ya renderizada; en avanzado, de lo que se escribió a mano.
+  const mensajeEfectivo = modoSimple
+    ? (plSel ? renderPlantilla(plSel.texto, plValores) : "")
+    : mensaje;
+
+  // En modo simple el nombre de la campaña no se pide: es sólo una etiqueta
+  // para el historial, y pedirlo es una pregunta más entre Nicolás y el envío.
+  const nombreEfectivo = nombre.trim() ||
+    (plSel ? `${plSel.nombre} — ${new Date().toLocaleDateString("es-AR")}` : "");
+
   const listoParaEnviar =
-    nombre.trim() !== "" &&
+    nombreEfectivo !== "" &&
     destinatarios.length > 0 &&
-    (nTexto === 0 || mensaje.trim() !== "") &&
+    (nTexto === 0 || mensajeEfectivo.trim() !== "") &&
     (nPlantilla === 0 || (hayPlantilla && !faltanValores && !plantillaInvalida));
 
   // Elegir una plantilla trae su idioma y arma tantos campos como variables
@@ -293,8 +314,8 @@ export default function Promociones({ userName, isMobile }) {
     pausadoRef.current = false; cancelarRef.current = false; setPausado(false);
 
     const { data: camp, error: e1 } = await supabase.from("campanas").insert({
-      nombre: nombre.trim(),
-      mensaje: mensaje.trim() || null,
+      nombre: nombreEfectivo,
+      mensaje: mensajeEfectivo.trim() || null,
       plantilla_nombre: plantillaObj?.nombre || null,
       plantilla_idioma: plantillaObj?.idioma || null,
       plantilla_params: plantillaObj?.params?.length ? plantillaObj.params : null,
@@ -319,7 +340,7 @@ export default function Promociones({ userName, isMobile }) {
     }
 
     setEnvio({ campanaId: camp.id, total: destinatarios.length, hechos: 0, ok: 0, fallidos: 0, actual: "", terminado: false });
-    await recorrer(camp.id, destinatarios, { mensaje, plantilla: plantillaObj });
+    await recorrer(camp.id, destinatarios, { mensaje: mensajeEfectivo, plantilla: plantillaObj });
   };
 
   // Retomar una campaña que quedó a medias: se vuelve a leer de la DB quiénes
@@ -371,20 +392,31 @@ export default function Promociones({ userName, isMobile }) {
     const falso = { id: null, telefono: numero, canal: "whatsapp", nombre: "Prueba" };
     const res = await enviarPorCanal({
       contacto: falso,
-      cuerpo: hayPlantilla && !mensaje.trim() ? textoPlantilla(plantillaObj, falso) : personalizar(mensaje, falso, ""),
+      // La prueba va como texto libre: llega igual aunque el número de prueba
+      // esté fuera de la ventana de 24 h, y muestra el contenido real.
+      cuerpo: personalizar(mensajeEfectivo, falso, ""),
       agente: userName,
-      plantilla: hayPlantilla && !mensaje.trim() ? plantillaObj : null,
     });
     setPruebaMsg(res.ok ? "✅ Enviado. Revisá el teléfono." : "❌ " + res.error);
   };
 
   const cerrarEnvio = () => { setEnvio(null); setConfirmar(false); cargar(); };
 
+  // Pasar a avanzado no debe perder lo que ya se armó: el texto derivado de la
+  // plantilla se vuelca al cuadro de escritura y la plantilla queda tildada, así
+  // se sigue editando desde donde estaba en vez de empezar de cero.
+  const irAAvanzado = () => {
+    if (plSel && !mensaje.trim()) setMensaje(renderPlantilla(plSel.texto, plValores));
+    if (plNombre) setUsarPlantilla(true);
+    setModoSimple(false);
+  };
+
   // ── Estilos compartidos ───────────────────────────────────
   const card = { background: L.white, border: `1px solid ${L.border}`, borderRadius: 14, padding: 16 };
   const label = { fontSize: 11.5, fontWeight: 700, color: L.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6, display: "block" };
   const input = { width: "100%", padding: "9px 11px", border: `1px solid ${L.border}`, borderRadius: 9, fontFamily: FONT_BODY, fontSize: 14, color: L.text, background: L.white, boxSizing: "border-box" };
   const chip = (activo) => ({ padding: "6px 12px", borderRadius: 20, border: `1px solid ${activo ? C.red : L.border}`, background: activo ? C.red : L.white, color: activo ? "#fff" : L.text, fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: FONT_BODY });
+  const enlaceSt = { border: "none", background: "none", padding: 0, color: C.red, fontWeight: 700, cursor: "pointer", fontFamily: FONT_BODY, fontSize: "inherit", textDecoration: "underline" };
 
   return (
     <div style={{ flex: 1, overflowY: "auto", background: L.soft, fontFamily: FONT_BODY }}>
@@ -423,11 +455,151 @@ export default function Promociones({ userName, isMobile }) {
           <Historial historial={historial} card={card} onRetomar={retomar} />
         ) : cargando ? (
           <div style={{ ...card, textAlign: "center", color: L.muted, fontSize: 14 }}>Cargando contactos…</div>
+        ) : modoSimple ? (
+          /* ══════════════════════════════════════════════════════
+             MODO SIMPLE — 3 pasos y listo
+             ══════════════════════════════════════════════════════ */
+          <div style={{ maxWidth: 620, margin: "0 auto", display: "flex", flexDirection: "column", gap: 14 }}>
+
+            {/* PASO 1 — Elegir la promo */}
+            <div style={card}>
+              <Paso n={1} titulo="Elegí la promoción" />
+              {plCargando ? (
+                <div style={{ fontSize: 13.5, color: L.muted }}>Cargando tus plantillas…</div>
+              ) : !plDisponible ? (
+                <div style={{ padding: 11, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 9, fontSize: 12.5, color: "#92400E", lineHeight: 1.5 }}>
+                  No se pudo leer la lista de plantillas. {plMotivo}{" "}
+                  <button onClick={irAAvanzado} style={enlaceSt}>Usar el modo avanzado</button>
+                </div>
+              ) : plLista.filter((p) => p.soportada).length === 0 ? (
+                <div style={{ padding: 11, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 9, fontSize: 12.5, color: "#92400E", lineHeight: 1.5 }}>
+                  No tenés ninguna plantilla aprobada que se pueda mandar desde acá. Creala en
+                  Meta Business Manager y volvé cuando figure <strong>Aprobada</strong>.
+                </div>
+              ) : (
+                <div style={{ display: "grid", gap: 8 }}>
+                  {plLista.filter((p) => p.soportada).map((p) => {
+                    const sel = plSel?.nombre === p.nombre && plSel?.idioma === p.idioma;
+                    return (
+                      <button key={`${p.nombre}|${p.idioma}`}
+                        onClick={() => elegirPlantilla(`${p.nombre}|${p.idioma}`)}
+                        style={{ textAlign: "left", padding: 12, borderRadius: 11, cursor: "pointer", fontFamily: FONT_BODY,
+                          border: `2px solid ${sel ? C.red : L.border}`, background: sel ? C.goldSoft : L.white }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          {sel ? <Check size={15} color={C.red} /> : <FileText size={15} color={L.muted} />}
+                          <span style={{ fontSize: 14, fontWeight: 700, color: L.text }}>{p.nombre}</span>
+                          <span style={{ fontSize: 10.5, color: L.muted }}>{p.idioma}</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: L.muted, lineHeight: 1.45,
+                          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                          {p.texto}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* PASO 2 — Completar los datos */}
+            {plSel && plSel.soportada && (
+              <div style={card}>
+                <Paso n={2} titulo={plSel.variables > 0 ? "Completá los datos" : "Revisá el mensaje"} />
+                {plSel.variables > 0 && (
+                  <div style={{ display: "grid", gap: 9, marginBottom: 14 }}>
+                    {Array.from({ length: plSel.variables }, (_, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: L.muted, minWidth: 30 }}>{`{{${i + 1}}}`}</span>
+                        <input value={plValores[i] || ""}
+                          onChange={(e) => setPlValores((v) => { const n = [...v]; n[i] = e.target.value; return n; })}
+                          style={{ ...input, flex: 1 }} placeholder={plSel.ejemplos[i] || "valor"} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <label style={label}>Así le llega al cliente</label>
+                <div style={{ padding: 12, background: "#DCF8C6", borderRadius: 10, fontSize: 13, whiteSpace: "pre-wrap", lineHeight: 1.5, color: "#111" }}>
+                  {renderPlantilla(plSel.texto, plValores)}
+                </div>
+                {/* Sin esto, Nicolás no puede saber que a una parte de la base
+                    le llega el mensaje con la firma del CRM adelante. */}
+                {nTexto > 0 && (
+                  <div style={{ fontSize: 11.5, color: L.muted, marginTop: 8, lineHeight: 1.5 }}>
+                    A los {nTexto} que escribieron hace menos de 24 h les llega este mismo texto,
+                    con <code>*{userName} · NINIT Group:*</code> arriba.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* PASO 3 — Enviar */}
+            {plSel && plSel.soportada && (
+              <div style={card}>
+                <Paso n={3} titulo="Enviar" />
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontFamily: FONT_DISPLAY, fontSize: 40, fontWeight: 800, color: C.red, lineHeight: 1 }}>
+                    {destinatarios.length}
+                  </span>
+                  <span style={{ fontSize: 14, color: L.muted, fontWeight: 600 }}>
+                    {destinatarios.length === 1 ? "cliente" : "clientes"} · unos {duracionMin} min
+                  </span>
+                </div>
+
+                <div style={{ fontSize: 12.5, color: L.muted, lineHeight: 1.6, marginBottom: 12 }}>
+                  {nPlantilla > 0 && <>{nPlantilla} por plantilla</>}
+                  {nPlantilla > 0 && nTexto > 0 && " · "}
+                  {nTexto > 0 && <>{nTexto} como mensaje normal</>}
+                  {omitidos.length > 0 && <> · {omitidos.length} no se pueden contactar</>}
+                  {" — "}
+                  <button onClick={irAAvanzado} style={enlaceSt}>cambiar a quiénes</button>
+                </div>
+
+                {/* Probar primero está al lado del botón de enviar y no
+                    escondido abajo: es el paso que evita mandarle un error a
+                    cientos de personas. */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+                  <input value={tel} onChange={(e) => setTel(e.target.value)} style={{ ...input, flex: 1, minWidth: 150 }}
+                    placeholder="Probar en mi número (con código de país)" />
+                  <button onClick={enviarPrueba} disabled={!tel.trim() || !mensajeEfectivo.trim()}
+                    style={{ ...chip(false), display: "flex", alignItems: "center", gap: 6,
+                      opacity: tel.trim() && mensajeEfectivo.trim() ? 1 : 0.5,
+                      cursor: tel.trim() && mensajeEfectivo.trim() ? "pointer" : "not-allowed" }}>
+                    <Beaker size={13} /> Probar
+                  </button>
+                </div>
+                {pruebaMsg && <div style={{ fontSize: 12.5, color: L.text, marginBottom: 10 }}>{pruebaMsg}</div>}
+
+                <button onClick={() => setConfirmar(true)} disabled={!listoParaEnviar}
+                  style={{ width: "100%", padding: "15px", border: "none", borderRadius: 12,
+                    background: listoParaEnviar ? C.gradBtn : L.border, color: listoParaEnviar ? "#fff" : L.muted,
+                    fontFamily: FONT_BODY, fontSize: 16, fontWeight: 800, cursor: listoParaEnviar ? "pointer" : "not-allowed",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 9 }}>
+                  <Send size={18} /> Enviar a {destinatarios.length} clientes
+                </button>
+                {!listoParaEnviar && (
+                  <div style={{ fontSize: 11.5, color: L.muted, marginTop: 7, textAlign: "center" }}>
+                    {destinatarios.length === 0 ? "No hay clientes para enviar." : "Completá los datos de arriba."}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button onClick={irAAvanzado}
+              style={{ ...enlaceSt, alignSelf: "center", fontSize: 12.5, padding: 8 }}>
+              Opciones avanzadas (filtros, mensaje propio, ritmo de envío)
+            </button>
+          </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 380px", gap: 16, alignItems: "start" }}>
 
             {/* ══ Columna izquierda: el mensaje ══ */}
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              <button onClick={() => setModoSimple(true)}
+                style={{ ...card, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", textAlign: "left",
+                  fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: 700, color: C.red, padding: "11px 16px" }}>
+                <ChevronRight size={15} style={{ transform: "rotate(180deg)" }} /> Volver al modo simple
+              </button>
 
               <div style={card}>
                 <label style={label}>Nombre de la campaña</label>
@@ -699,13 +871,13 @@ export default function Promociones({ userName, isMobile }) {
             </div>
           </div>
           <div style={{ background: L.soft, borderRadius: 10, padding: 12, fontSize: 12.5, color: L.text, lineHeight: 1.7 }}>
-            <div><strong>Campaña:</strong> {nombre}</div>
+            <div><strong>Campaña:</strong> {nombreEfectivo}</div>
             <div><strong>Texto libre:</strong> {nTexto} · <strong>Plantilla:</strong> {nPlantilla}</div>
             <div><strong>Duración estimada:</strong> ~{duracionMin} min</div>
           </div>
-          {mensaje.trim() && (
+          {mensajeEfectivo.trim() && (
             <div style={{ marginTop: 12, padding: 12, background: "#DCF8C6", borderRadius: 10, fontSize: 13, whiteSpace: "pre-wrap", lineHeight: 1.5, color: "#111" }}>
-              {personalizar(mensaje, { nombre: destinatarios[0]?.nombre || "Juan" }, "Juan")}
+              {personalizar(mensajeEfectivo, { nombre: destinatarios[0]?.nombre || "Juan" }, "Juan")}
             </div>
           )}
           <div style={{ display: "flex", gap: 9, marginTop: 16 }}>
@@ -782,6 +954,18 @@ function SaludNumero({ salud }) {
       {!restringido && String(salud.calidad).toUpperCase() === "YELLOW" && (
         <div style={{ marginTop: 4 }}>Mandá al grupo más chico primero y usá un ritmo lento.</div>
       )}
+    </div>
+  );
+}
+
+// Numerito de paso del modo simple. Que estén numerados es lo que convierte
+// una pantalla llena de campos en algo que se recorre de arriba a abajo.
+function Paso({ n, titulo }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 12 }}>
+      <span style={{ width: 24, height: 24, borderRadius: "50%", background: C.red, color: "#fff", display: "flex",
+        alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>{n}</span>
+      <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 800, color: L.text }}>{titulo}</span>
     </div>
   );
 }
