@@ -13,12 +13,14 @@
 //   /api/push-subscribe -> /api/push?accion=subscribe
 //   /api/push-send      -> /api/push?accion=send
 //   /api/meta-evento    -> /api/push?accion=meta
+//   /api/meta-plantillas-> /api/push?accion=plantillas
 // así que ni la app, ni el service worker, ni el trigger de Supabase que
 // dispara los avisos tuvieron que cambiar.
 
 import suscribir from "./_push/suscribir.js";
 import enviar from "./_push/enviar.js";
 import metaEvento from "./_meta/enviar.js";
+import metaPlantillas from "./_meta/plantillas.js";
 
 export default async function handler(req, res) {
   const accion = String(req.query?.accion || "");
@@ -26,6 +28,7 @@ export default async function handler(req, res) {
   if (accion === "subscribe") return suscribir(req, res);
   if (accion === "send") return enviar(req, res);
   if (accion === "meta") return metaEvento(req, res);
+  if (accion === "plantillas") return metaPlantillas(req, res);
 
   return res.status(404).json({ error: "Acción de push desconocida." });
 }

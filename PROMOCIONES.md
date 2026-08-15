@@ -45,14 +45,43 @@ y por qué.
    Ejemplo: `Hola! Este mes tenemos {{1}} de descuento en trailers. Válido hasta {{2}}.`
 5. Enviala a aprobación. Suele tardar de minutos a unas horas.
 6. Cuando figure **Aprobada**, en el CRM tildá *"Usar plantilla para los de más
-   de 24 h"* y cargá:
-   - **Nombre**: `promo_black_friday` (exacto)
-   - **Idioma**: el código del idioma de la plantilla (`es`, `en_US`…)
-   - **Variables**: los valores de `{{1}}`, `{{2}}`… separados por `|`
-     → `15% | 30 de septiembre`
+   de 24 h"* y **elegila del desplegable**. El CRM lee tus plantillas reales de
+   Meta: aparecen solo las **aprobadas** de categoría Marketing o Utility, trae
+   el idioma solo, arma exactamente tantos campos como variables tenga la
+   plantilla (precargados con los ejemplos que usaste para pedir la aprobación)
+   y te muestra la vista previa tal como la va a leer el cliente.
 
-> Si la cantidad de variables no coincide con la plantilla aprobada, Meta
-> rechaza el envío con un `132000`. El CRM te lo muestra traducido.
+### Por qué se elige de una lista y no se escribe el nombre
+
+Un typo en el nombre, una plantilla todavía en revisión, o mandar 3 variables
+cuando la plantilla pide 2: cualquiera de esas cosas hace que Meta rechace
+**todos** los envíos, cientos seguidos. Esa ráfaga de rechazos es justamente el
+patrón que le baja la calidad al número y termina en una limitación o una
+suspensión. Eligiendo de la lista, eso no puede pasar.
+
+Algunas plantillas aparecen con ⚠️ y no se pueden elegir: las que usan variables
+con nombre (`{{customer_name}}`), las que tienen variables en el encabezado, las
+que piden adjuntar una imagen o un PDF, y las que tienen un botón con URL
+variable. El envío del CRM no manda esos parámetros, así que ofrecerlas sería
+prometer un envío que Meta va a rechazar.
+
+### Semáforo del número
+
+Arriba de la sección aparece la **calidad del número** que reporta Meta (verde /
+amarillo / rojo) y el tope de conversaciones por día. Es el dato que decide si
+conviene mandar la campaña hoy: con la calidad en rojo, sumar cientos de
+mensajes promocionales es la forma más rápida de que te limiten el número. Si
+Meta marca el número como `FLAGGED` o `RESTRICTED`, el panel te lo dice en rojo.
+
+### Si el desplegable no carga
+
+Necesita `META_WHATSAPP_BUSINESS_ACCOUNT_ID` y `META_WA_MANAGEMENT_TOKEN` en
+Vercel. Ese token es **distinto** al de la Conversions API: necesita el permiso
+`whatsapp_business_management` y sale de un **Usuario del Sistema**
+(Business Settings → Usuarios del sistema → Generar token).
+
+Sin eso, la sección igual funciona: cae a escribir el nombre a mano y te avisa
+en pantalla que perdiste la red de seguridad.
 
 ---
 

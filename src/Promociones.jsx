@@ -63,7 +63,14 @@ export default function Promociones({ userName, isMobile }) {
   const [usarPlantilla, setUsarPlantilla] = useState(false);
   const [plNombre, setPlNombre]   = useState("");
   const [plIdioma, setPlIdioma]   = useState("es");
-  const [plParams, setPlParams]   = useState("");
+  const [plValores, setPlValores] = useState([]);   // un valor por variable {{n}}
+
+  // Plantillas aprobadas leídas de Meta + salud del número
+  const [plLista, setPlLista]         = useState([]);
+  const [plDisponible, setPlDisponible] = useState(false);
+  const [plMotivo, setPlMotivo]       = useState("");
+  const [plCargando, setPlCargando]   = useState(true);
+  const [salud, setSalud]             = useState(null);
 
   // ── Audiencia ─────────────────────────────────────────────
   const [canal, setCanal]         = useState("todos");
@@ -110,7 +117,33 @@ export default function Promociones({ userName, isMobile }) {
     setHistorial(data || []);
   }, []);
 
-  useEffect(() => { cargar(); cargarHistorial(); }, [cargar, cargarHistorial]);
+  // Las plantillas aprobadas se leen de Meta, no se tipean. Un typo o una
+  // plantilla todavía en revisión son cientos de envíos rechazados seguidos,
+  // que es justo lo que hace que Meta limite o suspenda el número.
+  //
+  // Si Meta no se puede consultar (falta el token de management, por ejemplo),
+  // `disponible` viene en false y la UI cae a escribir el nombre a mano: se
+  // pierde la red de seguridad, pero la sección sigue funcionando.
+  const cargarPlantillas = useCallback(async () => {
+    setPlCargando(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/meta-plantillas", {
+        headers: { Authorization: `Bearer ${session?.access_token || ""}` },
+      });
+      const d = await res.json();
+      setPlLista(d.plantillas || []);
+      setPlDisponible(!!d.disponible);
+      setPlMotivo(d.motivo || "");
+      setSalud(d.salud || null);
+    } catch {
+      setPlDisponible(false);
+      setPlMotivo("No se pudo consultar Meta desde el navegador.");
+    }
+    setPlCargando(false);
+  }, []);
+
+  useEffect(() => { cargar(); cargarHistorial(); cargarPlantillas(); }, [cargar, cargarHistorial, cargarPlantillas]);
 
   // ── Audiencia calculada ───────────────────────────────────
   const hayPlantilla = usarPlantilla && plNombre.trim() !== "";
@@ -147,16 +180,35 @@ export default function Promociones({ userName, isMobile }) {
   // pestaña abierta: mejor saberlo antes de apretar el botón que después.
   const duracionMin = Math.ceil((destinatarios.length * pausaMs) / 60000);
 
-  const paramsArray = plParams.split("|").map((s) => s.trim()).filter(Boolean);
+  // La plantilla elegida de la lista de Meta (null si se está escribiendo el
+  // nombre a mano porque Meta no se pudo consultar).
+  const plSel = plLista.find((p) => p.nombre === plNombre && p.idioma === plIdioma) || null;
+
   const plantillaObj = hayPlantilla
-    ? { nombre: plNombre.trim(), idioma: plIdioma.trim() || "es", params: paramsArray }
+    ? { nombre: plNombre.trim(), idioma: plIdioma.trim() || "es", params: plValores.map((v) => (v || "").trim()) }
     : null;
+
+  // Con la lista de Meta disponible se puede validar ANTES de mandar. Sin ella
+  // sólo queda confiar en lo que se tipeó, y el error aparece recién cuando Meta
+  // rechaza el primer envío.
+  const faltanValores = !!plSel && plValores.slice(0, plSel.variables).some((v) => !(v || "").trim());
+  const plantillaInvalida = !!plSel && !plSel.soportada;
 
   const listoParaEnviar =
     nombre.trim() !== "" &&
     destinatarios.length > 0 &&
     (nTexto === 0 || mensaje.trim() !== "") &&
-    (nPlantilla === 0 || hayPlantilla);
+    (nPlantilla === 0 || (hayPlantilla && !faltanValores && !plantillaInvalida));
+
+  // Elegir una plantilla trae su idioma y arma tantos campos como variables
+  // tenga, precargados con los ejemplos que se usaron para pedir la aprobación.
+  const elegirPlantilla = (clave) => {
+    const p = plLista.find((x) => `${x.nombre}|${x.idioma}` === clave);
+    if (!p) { setPlNombre(""); setPlValores([]); return; }
+    setPlNombre(p.nombre);
+    setPlIdioma(p.idioma);
+    setPlValores(Array.from({ length: p.variables }, (_, i) => p.ejemplos[i] || ""));
+  };
 
   // ── Envío ─────────────────────────────────────────────────
   // Recorre la lista de a uno. Cada destinatario se resuelve entero (mandar →
@@ -303,7 +355,7 @@ export default function Promociones({ userName, isMobile }) {
     if (camp.plantilla_nombre) {
       setUsarPlantilla(true); setPlNombre(camp.plantilla_nombre);
       setPlIdioma(camp.plantilla_idioma || "es");
-      setPlParams((camp.plantilla_params || []).join(" | "));
+      setPlValores(camp.plantilla_params || []);
     }
     setTab("nueva");
     pausadoRef.current = false; cancelarRef.current = false; setPausado(false);
@@ -363,6 +415,10 @@ export default function Promociones({ userName, isMobile }) {
           </div>
         )}
 
+        {/* Va arriba de todo a propósito: es lo que decide si conviene mandar
+            la campaña hoy, y tiene que leerse antes de escribir nada. */}
+        {salud && <div style={{ marginBottom: 14 }}><SaludNumero salud={salud} /></div>}
+
         {tab === "historial" ? (
           <Historial historial={historial} card={card} onRetomar={retomar} />
         ) : cargando ? (
@@ -414,27 +470,100 @@ export default function Promociones({ userName, isMobile }) {
                 </div>
                 {usarPlantilla && (
                   <div style={{ marginTop: 13, display: "grid", gap: 11 }}>
-                    <div>
-                      <label style={label}>Nombre exacto de la plantilla</label>
-                      <input value={plNombre} onChange={(e) => setPlNombre(e.target.value)} style={input}
-                        placeholder="promo_black_friday" />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 11 }}>
-                      <div>
-                        <label style={label}>Idioma</label>
-                        <input value={plIdioma} onChange={(e) => setPlIdioma(e.target.value)} style={input} placeholder="es" />
-                      </div>
-                      <div>
-                        <label style={label}>Variables, separadas por |</label>
-                        <input value={plParams} onChange={(e) => setPlParams(e.target.value)} style={input}
-                          placeholder="15% | 30 de septiembre" />
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 11.5, color: L.muted, lineHeight: 1.5 }}>
-                      Las variables van en el orden de la plantilla ({"{{1}}"}, {"{{2}}"}…) y son las
-                      mismas para todos. Si la cantidad no coincide con la plantilla aprobada, Meta
-                      rechaza el envío.
-                    </div>
+                    {plCargando ? (
+                      <div style={{ fontSize: 13, color: L.muted }}>Leyendo tus plantillas de Meta…</div>
+                    ) : plDisponible ? (
+                      <>
+                        <div>
+                          <label style={label}>Plantilla aprobada ({plLista.length} disponibles)</label>
+                          <select value={plSel ? `${plSel.nombre}|${plSel.idioma}` : ""}
+                            onChange={(e) => elegirPlantilla(e.target.value)} style={input}>
+                            <option value="">— Elegí una —</option>
+                            {plLista.map((p) => (
+                              <option key={`${p.nombre}|${p.idioma}`} value={`${p.nombre}|${p.idioma}`}>
+                                {p.nombre} ({p.idioma}){p.soportada ? "" : " ⚠️"}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {plLista.length === 0 && (
+                          <div style={{ padding: 10, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 9, fontSize: 12, color: "#92400E", lineHeight: 1.5 }}>
+                            No tenés ninguna plantilla aprobada de Marketing o Utility. Creala en
+                            Meta Business Manager → WhatsApp Manager → Plantillas de mensajes, y
+                            volvé cuando figure <strong>Aprobada</strong>.
+                          </div>
+                        )}
+
+                        {plantillaInvalida && (
+                          <div style={{ padding: 10, background: "#FEF2F2", border: "1px solid #FCA5A5", borderRadius: 9, fontSize: 12, color: "#B91C1C", lineHeight: 1.5 }}>
+                            <strong>Esta plantilla no se puede mandar desde el CRM:</strong> {plSel.motivos.join("; ")}.
+                            Elegí otra o simplificala en Meta.
+                          </div>
+                        )}
+
+                        {plSel && plSel.soportada && (
+                          <>
+                            {plSel.variables > 0 ? (
+                              <div style={{ display: "grid", gap: 8 }}>
+                                <label style={{ ...label, marginBottom: 0 }}>
+                                  Variables ({plSel.variables} — las pide esta plantilla)
+                                </label>
+                                {Array.from({ length: plSel.variables }, (_, i) => (
+                                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ fontSize: 12, fontWeight: 700, color: L.muted, minWidth: 34 }}>{`{{${i + 1}}}`}</span>
+                                    <input value={plValores[i] || ""}
+                                      onChange={(e) => setPlValores((v) => { const n = [...v]; n[i] = e.target.value; return n; })}
+                                      style={{ ...input, flex: 1 }} placeholder={plSel.ejemplos[i] || "valor"} />
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: 12, color: L.muted }}>Esta plantilla no tiene variables.</div>
+                            )}
+
+                            {/* Vista previa con los valores ya reemplazados: es lo
+                                que va a leer el cliente, no una aproximación. */}
+                            <div>
+                              <label style={label}>Así lo recibe el cliente</label>
+                              <div style={{ padding: 12, background: "#DCF8C6", borderRadius: 10, fontSize: 13, whiteSpace: "pre-wrap", lineHeight: 1.5, color: "#111" }}>
+                                {plSel.encabezado && <div style={{ fontWeight: 700, marginBottom: 6 }}>{plSel.encabezado}</div>}
+                                {renderPlantilla(plSel.texto, plValores)}
+                                {plSel.pie && <div style={{ marginTop: 6, fontSize: 11, color: "#667781" }}>{plSel.pie}</div>}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      // Sin acceso a Meta: se vuelve al modo manual, pero
+                      // diciendo por qué. Escribir el nombre a ciegas es
+                      // exactamente lo que este selector vino a evitar.
+                      <>
+                        <div style={{ padding: 10, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 9, fontSize: 12, color: "#92400E", lineHeight: 1.5 }}>
+                          <strong>No se pudo leer la lista de plantillas de Meta.</strong> {plMotivo} Podés
+                          escribir el nombre a mano, pero si no coincide exactamente con una plantilla
+                          aprobada, Meta rechaza todos los envíos.
+                        </div>
+                        <div>
+                          <label style={label}>Nombre exacto de la plantilla</label>
+                          <input value={plNombre} onChange={(e) => setPlNombre(e.target.value)} style={input}
+                            placeholder="promo_black_friday" />
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 11 }}>
+                          <div>
+                            <label style={label}>Idioma</label>
+                            <input value={plIdioma} onChange={(e) => setPlIdioma(e.target.value)} style={input} placeholder="es" />
+                          </div>
+                          <div>
+                            <label style={label}>Variables, separadas por |</label>
+                            <input value={plValores.join(" | ")}
+                              onChange={(e) => setPlValores(e.target.value.split("|").map((s) => s.trim()))}
+                              style={input} placeholder="15% | 30 de septiembre" />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -540,7 +669,9 @@ export default function Promociones({ userName, isMobile }) {
                     {!nombre.trim() ? "Falta el nombre de la campaña."
                       : destinatarios.length === 0 ? "Ningún contacto entra con estos filtros."
                       : nTexto > 0 && !mensaje.trim() ? "Falta escribir el mensaje."
-                      : "Falta el nombre de la plantilla."}
+                      : plantillaInvalida ? "Esa plantilla no se puede mandar desde el CRM."
+                      : faltanValores ? "Faltan valores de las variables de la plantilla."
+                      : "Falta elegir la plantilla."}
                   </div>
                 )}
               </div>
@@ -610,6 +741,49 @@ function textoPlantilla(pl, contacto) {
   if (!pl) return "";
   const params = pl.params?.length ? ` (${pl.params.join(", ")})` : "";
   return `📣 Plantilla "${pl.nombre}"${params} enviada a ${contacto?.nombre || contacto?.telefono || "el cliente"}.`;
+}
+
+// Reemplaza {{1}}, {{2}}… por los valores cargados, para la vista previa.
+// Lo que no se completó se deja visible como {{n}} en vez de vaciarlo: así se
+// nota que falta, en lugar de mostrar un mensaje con un hueco.
+function renderPlantilla(texto, valores) {
+  return String(texto || "").replace(/\{\{\s*(\d+)\s*\}\}/g, (m, n) => {
+    const v = (valores[Number(n) - 1] || "").trim();
+    return v || m;
+  });
+}
+
+// Semáforo de salud del número de WhatsApp. Es el dato que decide si conviene
+// mandar la campaña hoy: con la calidad en rojo, sumar cientos de mensajes
+// promocionales es la forma más rápida de que Meta limite o suspenda el número.
+const CALIDAD = {
+  GREEN:  { label: "Calidad alta",  color: "#15803D", bg: "#DCFCE7" },
+  YELLOW: { label: "Calidad media", color: "#92400E", bg: "#FEF3C7" },
+  RED:    { label: "Calidad BAJA",  color: "#B91C1C", bg: "#FEE2E2" },
+};
+
+function SaludNumero({ salud }) {
+  if (!salud) return null;
+  const q = CALIDAD[String(salud.calidad).toUpperCase()];
+  const restringido = ["FLAGGED", "RESTRICTED"].includes(String(salud.estado).toUpperCase());
+  const tope = String(salud.tope || "").replace("TIER_", "").replace("_", " ");
+  if (!q && !restringido) return null;
+
+  const c = restringido ? CALIDAD.RED : q;
+  return (
+    <div style={{ padding: 11, background: c.bg, border: `1px solid ${c.color}33`, borderRadius: 10, fontSize: 12.5, color: c.color, lineHeight: 1.5 }}>
+      <strong>Tu número: {c.label}</strong>
+      {salud.numero ? ` · ${salud.numero}` : ""}
+      {tope ? ` · tope ${tope} conversaciones/día` : ""}
+      {restringido && <div style={{ marginTop: 4 }}><strong>Meta marcó el número como {salud.estado.toLowerCase()}.</strong> No mandes una campaña masiva hasta resolverlo.</div>}
+      {!restringido && String(salud.calidad).toUpperCase() === "RED" && (
+        <div style={{ marginTop: 4 }}>Con la calidad en rojo, un envío masivo puede terminar en una limitación. Esperá a que se recupere.</div>
+      )}
+      {!restringido && String(salud.calidad).toUpperCase() === "YELLOW" && (
+        <div style={{ marginTop: 4 }}>Mandá al grupo más chico primero y usá un ritmo lento.</div>
+      )}
+    </div>
+  );
 }
 
 function Fila({ icon, label, n, color }) {

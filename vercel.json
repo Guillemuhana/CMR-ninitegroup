@@ -6,6 +6,7 @@
     { "source": "/api/push-subscribe", "destination": "/api/push?accion=subscribe" },
     { "source": "/api/push-send", "destination": "/api/push?accion=send" },
     { "source": "/api/meta-evento", "destination": "/api/push?accion=meta" },
+    { "source": "/api/meta-plantillas", "destination": "/api/push?accion=plantillas" },
     { "source": "/((?!api/|cotizacion/).*)", "destination": "/index.html" }
   ],
   "functions": {
