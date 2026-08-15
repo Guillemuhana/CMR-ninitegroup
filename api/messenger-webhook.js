@@ -27,6 +27,38 @@ async function obtenerPerfil(psid) {
   }
 }
 
+// ── Atribución de Meta ──────────────────────────────────────────────────────
+// Cuando la conversación nace de un anuncio, Meta manda un bloque `referral`
+// con el id del anuncio y el parámetro `ref`. Hasta ahora se descartaba, así
+// que el CRM no podía devolverle a Meta qué pasó con ese lead.
+// Llega en tres lugares distintos según cómo se abrió el hilo:
+//   event.referral           → hilo ya existente, el cliente clickeó un anuncio
+//   event.postback.referral  → hilo nuevo abierto con el botón "Empezar"
+//   event.message.referral   → referral adjunto al primer mensaje
+// Se guarda tal cual (Meta espera estos ids SIN hashear). Ver META-CAPI.md.
+function datosAtribucion(event) {
+  const r = event?.referral || event?.postback?.referral || event?.message?.referral;
+  if (!r) return null;
+  const patch = { meta_messaging_channel: "messenger", meta_atribuido_at: new Date().toISOString() };
+  if (r.ad_id) patch.meta_ad_id = String(r.ad_id);
+  if (r.ref) patch.meta_referral_ref = String(r.ref);
+  if (r.source) patch.meta_referral_source = String(r.source);
+  return patch;
+}
+
+// Guarda la atribución sin pisar la que ya estuviera cargada: gana la primera,
+// que es la que originó el lead. El filtro `meta_atribuido_at is null` hace
+// ese chequeo en la misma consulta (sin race entre dos webhooks seguidos).
+// Es best-effort a propósito: si todavía no se corrió supabase_meta_capi.sql
+// las columnas no existen, esto falla y el mensaje entra igual.
+async function guardarAtribucion(supabase, contactoId, atribucion) {
+  if (!atribucion || !contactoId) return;
+  const { error } = await supabase
+    .from("contactos").update(atribucion)
+    .eq("id", contactoId).is("meta_atribuido_at", null);
+  if (error) console.error("Supabase update atribucion error", error.code || error.message);
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -62,7 +94,23 @@ export default async function handler(req, res) {
   try {
     for (const entry of body.entry || []) {
       for (const event of entry.messaging || []) {
-        if (!event.sender?.id || !event.message || event.message.is_echo) continue;
+        if (!event.sender?.id) continue;
+        const atribucion = datosAtribucion(event);
+
+        // Evento SIN mensaje (un referral suelto o un postback): antes se
+        // ignoraba entero. Se sigue ignorando para el chat, pero si trae la
+        // atribución del anuncio y el contacto ya existe, se guarda.
+        if (!event.message || event.message.is_echo) {
+          if (atribucion) {
+            const { data: c } = await supabase
+              .from("contactos")
+              .select("id")
+              .or(`messenger_id.eq.${event.sender.id},telefono.eq.${event.sender.id}`)
+              .single();
+            if (c?.id) await guardarAtribucion(supabase, c.id, atribucion);
+          }
+          continue;
+        }
 
         const senderId = event.sender.id;
         // Texto + URLs de imágenes/archivos que mande el cliente (para verlas inline en el CRM)
@@ -93,6 +141,9 @@ export default async function handler(req, res) {
             console.error("Supabase insert contacto error", JSON.stringify(insertError));
             continue;
           }
+          // La atribución va en un UPDATE aparte (no en el INSERT) para que un
+          // esquema sin las columnas meta_* no impida crear el contacto.
+          await guardarAtribucion(supabase, contactoId, atribucion);
         } else if (!existingContact.nombre) {
           // Contacto viejo que quedó sin nombre (PSID solo): completarlo ahora.
           const perfil = await obtenerPerfil(senderId);
@@ -105,6 +156,9 @@ export default async function handler(req, res) {
         }
 
         if (!contactoId) continue;
+
+        // Contacto que ya existía y ahora llega clickeando un anuncio.
+        if (existingContact?.id && atribucion) await guardarAtribucion(supabase, contactoId, atribucion);
 
         const { error: msgError } = await supabase.from("mensajes").insert({
           contacto_id: contactoId,
