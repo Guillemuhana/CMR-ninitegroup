@@ -16,6 +16,20 @@ export const supabase = createClient(
 );
 
 export const N8N_SEND_WEBHOOK        = import.meta.env.VITE_N8N_SEND_WEBHOOK;
+
+// Lista de plantillas de WhatsApp aprobadas + salud del número.
+//
+// Va por n8n y no por una función de Vercel a propósito: el token de Meta con
+// permiso `whatsapp_business_management` ya vive en n8n (es el mismo que usa
+// "NINIT CRM - Send"), así que pedirlo desde ahí evita tener que cargar el token
+// y el WABA id como variables de entorno en Vercel.
+//
+// El webhook es público. Devuelve sólo nombres y cuerpos de plantillas de
+// marketing —lo mismo que el cliente recibe— y nunca el token ni datos de
+// clientes, así que la exposición es baja.
+export const N8N_PLANTILLAS_WEBHOOK  =
+  import.meta.env.VITE_N8N_PLANTILLAS_WEBHOOK ||
+  "https://ntg-group.app.n8n.cloud/webhook/ninit-crm-plantillas";
 export const N8N_EMAIL_REPLY_WEBHOOK = import.meta.env.VITE_N8N_EMAIL_REPLY_WEBHOOK;
 
 // ─── Canal de email: DESACTIVADO (decisión de negocio, 15/07/2026) ──────────
@@ -157,6 +171,7 @@ export const FONT_BODY = FONT.body;
 // componentes sigan importando todo desde "./lib".
 export {
   VENTANA_MS, dentroDeVentana, planDeEnvio, firmaWhatsApp, personalizar,
+  parsearPlantilla, plantillasUsables, CATEGORIAS_PLANTILLA,
 } from "./promos";
 
 // Devuelve { ok, error }. `error` es texto listo para mostrarle a una persona.

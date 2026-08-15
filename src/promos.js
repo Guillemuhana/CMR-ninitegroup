@@ -55,6 +55,91 @@ export function personalizar(texto, contacto, fallbackNombre = "") {
   return String(texto || "").replace(/\{nombre\}/gi, nombre);
 }
 
+// ============================================================
+// PLANTILLAS DE WHATSAPP
+// ============================================================
+// El CRM lee las plantillas reales de Meta (a través del workflow de n8n
+// "NINIT CRM - Plantillas") y sólo deja elegir las que puede mandar de verdad.
+//
+// Por qué importa: si se manda una plantilla que no existe, que está en
+// revisión, o con una cantidad de variables distinta a la aprobada, Meta rechaza
+// TODOS los envíos. Cientos de rechazos seguidos es el patrón que le baja la
+// calidad al número y termina en una limitación o suspensión.
+
+// Sólo estas categorías se pueden usar en una promoción. Las de AUTHENTICATION
+// llevan un código de un solo uso y un botón de copiado: no tienen nada que
+// hacer acá.
+export const CATEGORIAS_PLANTILLA = ["MARKETING", "UTILITY"];
+
+// Pasa una plantilla como la devuelve la Graph API al formato que usa la UI.
+//
+// Devuelve `soportada: false` cuando la plantilla necesita algo que el envío del
+// CRM no manda hoy (variables en el encabezado, imagen adjunta, botones con URL
+// variable). Mostrarla como elegible sería prometer un envío que Meta rechaza.
+export function parsearPlantilla(tpl) {
+  const componentes = Array.isArray(tpl?.components) ? tpl.components : [];
+  const de = (tipo) => componentes.find((c) => String(c?.type).toUpperCase() === tipo);
+
+  const body = de("BODY");
+  const header = de("HEADER");
+  const footer = de("FOOTER");
+  const botones = de("BUTTONS");
+
+  const texto = String(body?.text || "");
+  const variables = variablesDe(texto);
+
+  const motivos = [];
+  // Meta acepta variables con nombre ({{nombre}}) además de las numeradas. El
+  // envío del CRM manda parámetros posicionales, así que no las puede completar.
+  if (/\{\{\s*[a-z_][a-z0-9_]*\s*\}\}/i.test(texto))
+    motivos.push("usa variables con nombre y el CRM manda variables numeradas");
+  if (header && variablesDe(String(header.text || "")).length > 0)
+    motivos.push("tiene variables en el encabezado");
+  if (header && String(header.format || "TEXT").toUpperCase() !== "TEXT")
+    motivos.push(`el encabezado es ${String(header.format).toLowerCase()} y hay que adjuntar el archivo`);
+  if (botones?.buttons?.some((b) => variablesDe(String(b?.url || "")).length > 0))
+    motivos.push("tiene un botón con URL variable");
+
+  return {
+    nombre: tpl?.name || "",
+    idioma: tpl?.language || "",
+    categoria: String(tpl?.category || "").toUpperCase(),
+    estado: String(tpl?.status || "").toUpperCase(),
+    texto,
+    encabezado: header && String(header.format || "TEXT").toUpperCase() === "TEXT" ? String(header.text || "") : "",
+    pie: footer ? String(footer.text || "") : "",
+    variables: variables.length,
+    // Los ejemplos que se cargaron al pedir la aprobación. Sirven para
+    // prellenar los campos y que se vea de una qué va en cada variable.
+    ejemplos: ejemplosDe(body),
+    soportada: motivos.length === 0,
+    motivos,
+  };
+}
+
+// Números de las variables {{1}}, {{2}}… presentes en un texto, sin repetir.
+// Se devuelve la CANTIDAD de distintas, no el número más alto: una plantilla con
+// {{1}} y {{3}} está mal armada y mandarle 3 valores la haría rechazar.
+function variablesDe(texto) {
+  const nums = new Set();
+  for (const m of String(texto).matchAll(/\{\{\s*(\d+)\s*\}\}/g)) nums.add(Number(m[1]));
+  return [...nums].sort((a, b) => a - b);
+}
+
+function ejemplosDe(body) {
+  const ej = body?.example?.body_text;
+  if (Array.isArray(ej) && Array.isArray(ej[0])) return ej[0].map((v) => String(v));
+  return [];
+}
+
+// Deja sólo las que se pueden ofrecer: aprobadas y de una categoría usable.
+export function plantillasUsables(lista) {
+  return (Array.isArray(lista) ? lista : [])
+    .map(parsearPlantilla)
+    .filter((p) => p.estado === "APPROVED" && CATEGORIAS_PLANTILLA.includes(p.categoria))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
 // Los errores de Meta llegan en inglés y con códigos. Los que aparecen de
 // verdad en un envío masivo se traducen a algo accionable; el resto se muestra
 // tal cual para no esconder información al diagnosticar.

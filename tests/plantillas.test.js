@@ -1,4 +1,4 @@
-// Tests del parseo de plantillas de WhatsApp (api/_meta/plantillas.js).
+// Tests del parseo de plantillas de WhatsApp (src/promos.js).
 //   npm test
 //
 // NINGÚN test llama a Meta: se le pasan respuestas de la Graph API armadas a
@@ -9,7 +9,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { parsearPlantilla } from "../api/_meta/plantillas.js";
+import { parsearPlantilla, plantillasUsables } from "../src/promos.js";
 
 const tpl = (over = {}) => ({
   name: "promo_seguimiento_precio",
@@ -78,10 +78,12 @@ test("marca como no soportada la que tiene variables en el encabezado", () => {
 });
 
 test("marca como no soportada la que pide adjuntar una imagen", () => {
+  // Este es el caso real de la plantilla `bienvenidos` de NINIT: encabezado
+  // IMAGE + botón de Flow. Ofrecerla sería prometer un envío que Meta rechaza.
   const p = parsearPlantilla(tpl({
     components: [
       { type: "HEADER", format: "IMAGE" },
-      { type: "BODY", text: "Cuerpo." },
+      { type: "BODY", text: "Formulario de contacto" },
     ],
   }));
   assert.equal(p.soportada, false);
@@ -140,4 +142,32 @@ test("no explota con una plantilla vacía o basura", () => {
     assert.equal(p.variables, 0);
     assert.equal(typeof p.nombre, "string");
   }
+});
+
+// ── Filtrado de la lista completa ───────────────────────────
+test("plantillasUsables deja fuera las que no están aprobadas", () => {
+  // Es el caso de promo_seguimiento_precio recién creada: mientras Meta la
+  // revisa NO se puede mandar, y ofrecerla sería un envío masivo rechazado.
+  const lista = plantillasUsables([
+    tpl({ name: "aprobada" }),
+    tpl({ name: "en_revision", status: "PENDING" }),
+    tpl({ name: "rechazada", status: "REJECTED" }),
+  ]);
+  assert.deepEqual(lista.map((p) => p.nombre), ["aprobada"]);
+});
+
+test("plantillasUsables deja fuera las de autenticación", () => {
+  const lista = plantillasUsables([
+    tpl({ name: "promo", category: "MARKETING" }),
+    tpl({ name: "aviso", category: "UTILITY" }),
+    tpl({ name: "codigo", category: "AUTHENTICATION" }),
+  ]);
+  assert.deepEqual(lista.map((p) => p.nombre), ["aviso", "promo"]);
+});
+
+test("plantillasUsables ordena alfabéticamente y no explota con basura", () => {
+  assert.deepEqual(plantillasUsables(null), []);
+  assert.deepEqual(plantillasUsables(undefined), []);
+  const lista = plantillasUsables([tpl({ name: "zeta" }), tpl({ name: "alfa" })]);
+  assert.deepEqual(lista.map((p) => p.nombre), ["alfa", "zeta"]);
 });

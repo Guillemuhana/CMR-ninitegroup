@@ -6,8 +6,8 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import { SiMessenger } from "react-icons/si";
 import {
-  supabase, enviarPorCanal, personalizar, planDeEnvio,
-  C, FONT_DISPLAY, FONT_BODY, ESTADOS, fmtFechaLarga,
+  supabase, enviarPorCanal, personalizar, planDeEnvio, plantillasUsables,
+  N8N_PLANTILLAS_WEBHOOK, C, FONT_DISPLAY, FONT_BODY, ESTADOS, fmtFechaLarga,
 } from "./lib";
 import { L } from "./theme";
 
@@ -127,18 +127,18 @@ export default function Promociones({ userName, isMobile }) {
   const cargarPlantillas = useCallback(async () => {
     setPlCargando(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch("/api/meta-plantillas", {
-        headers: { Authorization: `Bearer ${session?.access_token || ""}` },
-      });
+      const res = await fetch(N8N_PLANTILLAS_WEBHOOK);
       const d = await res.json();
-      setPlLista(d.plantillas || []);
+      // El workflow devuelve las plantillas crudas de Meta; el filtrado y el
+      // parseo se hacen acá (ver plantillasUsables en src/promos.js) para que
+      // las reglas de qué se puede mandar vivan en un solo lugar y con tests.
+      setPlLista(plantillasUsables(d.plantillas));
       setPlDisponible(!!d.disponible);
       setPlMotivo(d.motivo || "");
       setSalud(d.salud || null);
     } catch {
       setPlDisponible(false);
-      setPlMotivo("No se pudo consultar Meta desde el navegador.");
+      setPlMotivo("No se pudo consultar la lista de plantillas.");
     }
     setPlCargando(false);
   }, []);
