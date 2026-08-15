@@ -7,14 +7,14 @@ import {
   AlertCircle, Clock, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
   BookOpen, Activity, Mic, MicOff, Volume2, VolumeX, Menu, Users, Eye, EyeOff,
   Image as ImageIcon, Languages, Reply, SlidersHorizontal, Star,
-  PanelRight, PanelRightClose, CreditCard,
+  PanelRight, PanelRightClose, CreditCard, Megaphone,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiGmail, SiGoogleads, SiMessenger } from "react-icons/si";
 import { Receipt } from "@phosphor-icons/react";
 import PedidosPanel, { NuevoPedidoModal, imprimirPedido } from "./Pedidos";
 import {
-  supabase, N8N_SEND_WEBHOOK, N8N_EMAIL_REPLY_WEBHOOK, MESSENGER_SEND_ENDPOINT, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
+  supabase, enviarPorCanal, LOGO_URL, C, FONT_DISPLAY, FONT_BODY,
   VENDEDORES, ESTADOS, ESTADOS_FIN, SOCIO_FIN, LINK_FIN, calcularAlertas, getRol, cargarPerfil,
   ELEVENLABS_KEY, ELEVENLABS_VOICE_ID, EMAIL_HABILITADO,
 } from "./lib";
@@ -26,8 +26,10 @@ import DiarioVendedor from "./DiarioVendedor";
 import CEODashboard from "./CEODashboard";
 import Agenda from "./Agenda";
 import Directorio from "./Directorio";
+import Promociones from "./Promociones";
 import FiltrosModal, { FILTROS_INICIAL, contarActivos, aplicaFiltrosIA } from "./FiltrosModal";
 import { cargarConsultaronFin } from "./finConsultas";
+import { notificarCambioEstado } from "./metaEventos";
 
 // ============================================================
 // PALETA LIGHT — deriva de src/theme.js (fuente única de tokens)
@@ -722,8 +724,17 @@ const EJECUTAR_ACCION = {
 
   actualizar_contacto: async ({ id, ...cambios }) => {
     if (!id) return "⚠️ Falta el id del contacto.";
+    // Si el asistente cambia la etapa, hay que saber de dónde venía para poder
+    // avisarle a Meta (y para no emitir nada si en realidad no cambió).
+    let antes = null;
+    if (cambios.estado) {
+      const { data } = await supabase.from("contactos").select("id,estado").eq("id", id).limit(1);
+      antes = data?.[0] || null;
+    }
     const { error } = await supabase.from("contactos").update(cambios).eq("id", id);
-    return error ? `Error: ${error.message}` : `✅ Contacto actualizado.`;
+    if (error) return `Error: ${error.message}`;
+    if (antes) notificarCambioEstado(antes, cambios);
+    return `✅ Contacto actualizado.`;
   },
 
   eliminar_contacto: async ({ id }) => {
@@ -1684,6 +1695,9 @@ const NAV_ITEMS = [
   { key: "pedidos",    label: "Pedidos",         icon: ShoppingBag,   roles: ["ceo", "vendedor"] },
   { key: "agenda",     label: "Calendario",      icon: Calendar,      roles: ["ceo", "vendedor"] },
   { key: "diario",     label: "Mi Día",          icon: BookOpen,      roles: ["vendedor"] },
+  // Solo CEO: un envío masivo compromete al número de WhatsApp de la empresa
+  // entero, no a una conversación. No es una decisión de un vendedor.
+  { key: "promos",     label: "Promociones",     icon: Megaphone,     roles: ["ceo"] },
   { key: "reportes",   label: "Reportes",        icon: BarChart2,     roles: ["ceo"] },
   { key: "control",    label: "Control",         icon: Activity,      roles: ["ceo"] },
   { key: "admin",      label: "Equipo Comercial", icon: Shield,       roles: ["ceo"] },
@@ -3147,6 +3161,7 @@ function PanelDerecho({ contacto, perfil, onUpdateContacto, onEditar, onColapsar
 
   const upd = async (campos) => {
     await supabase.from("contactos").update(campos).eq("id", contacto.id);
+    notificarCambioEstado(contacto, campos);   // embudo → evento a Meta
     onUpdateContacto({ ...contacto, ...campos });
   };
 
@@ -3608,54 +3623,11 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
       return false;
     }
 
-    // 2) Enviar por el canal correspondiente (email, Messenger o WhatsApp)
-    const esEmail = esCanalEmail;
-    const esMessenger = contacto.canal === "messenger";
-    if (esEmail) {
-      // Respuesta por email
-      if (N8N_EMAIL_REPLY_WEBHOOK) {
-        try {
-          const res = await fetch(N8N_EMAIL_REPLY_WEBHOOK, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: contacto.email, nombre: contacto.nombre, mensaje: cuerpo, agente: userName }),
-          });
-          if (!res.ok) setErr("Mensaje guardado en CRM, pero falló el envío del email.");
-        } catch {
-          setErr("Mensaje guardado en CRM, pero no se pudo enviar el email.");
-        }
-      }
-    } else if (esMessenger) {
-      const messengerId = contacto.messenger_id || contacto.telefono;
-      if (!MESSENGER_SEND_ENDPOINT) {
-        setErr("Mensaje guardado en CRM, pero falta configurar el endpoint de Messenger.");
-      } else if (!messengerId) {
-        setErr("Mensaje guardado en CRM, pero falta el identificador de Messenger del contacto.");
-      } else {
-        try {
-          const res = await fetch(MESSENGER_SEND_ENDPOINT, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contacto_id: contacto.id, messenger_id: messengerId, mensaje: cuerpo, agente: userName, nombre: contacto.nombre || "" }),
-          });
-          if (!res.ok) setErr("Mensaje guardado en CRM, pero falló el envío por Messenger.");
-        } catch {
-          setErr("Mensaje guardado en CRM, pero no se pudo conectar con Messenger.");
-        }
-      }
-    } else {
-      // Respuesta por WhatsApp
-      if (N8N_SEND_WEBHOOK) {
-        try {
-          const msgWA = `*${userName} · NINIT Group:*\n${cuerpo}`;
-          const res = await fetch(N8N_SEND_WEBHOOK, {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ telefono: contacto.telefono, mensaje: msgWA, agente: userName }),
-          });
-          if (!res.ok) setErr("Mensaje guardado en CRM, pero falló el envío por WhatsApp.");
-        } catch {
-          setErr("Mensaje guardado en CRM, pero no se pudo conectar con WhatsApp.");
-        }
-      }
-    }
+    // 2) Enviar por el canal correspondiente (email, Messenger o WhatsApp).
+    // El ruteo vive en `enviarPorCanal` (src/lib.js), compartido con el envío
+    // masivo de Promociones, así un canal nuevo se agrega en un solo lugar.
+    const { ok, error: errEnvio } = await enviarPorCanal({ contacto, cuerpo, agente: userName });
+    if (!ok) setErr(`Mensaje guardado en CRM, pero no se envió: ${errEnvio}`);
     return true;
   };
 
@@ -3825,6 +3797,7 @@ function ChatPanel({ contacto, perfil, onUpdateContacto, onDeleteContacto, userN
 
   const upd = async (campos) => {
     await supabase.from("contactos").update(campos).eq("id", contacto.id);
+    notificarCambioEstado(contacto, campos);   // etapa aplicada desde el chat/IA
     onUpdateContacto({ ...contacto, ...campos });
   };
 
@@ -5146,7 +5119,9 @@ export default function App() {
   const patchContacto = async (c, campos) => {
     updateContacto({ ...c, ...campos });                 // optimista
     const { error } = await supabase.from("contactos").update(campos).eq("id", c.id);
-    if (error) console.warn("patchContacto:", error.message);
+    if (error) { console.warn("patchContacto:", error.message); return; }
+    // Si cambió la etapa, avisarle a Meta (best-effort, no bloquea nada).
+    notificarCambioEstado(c, campos);
   };
 
   // Asignar un cliente a un vendedor (solo CEO, desde el menú contextual).
@@ -5238,7 +5213,8 @@ export default function App() {
   const mobileInPanel = isMobile && (
     activo !== null ||
     vista === "prioridad" || vista === "pedidos" || vista === "reportes" || vista === "admin" ||
-    vista === "control" || vista === "diario" || vista === "agenda" || vista === "directorio"
+    vista === "control" || vista === "diario" || vista === "agenda" || vista === "directorio" ||
+    vista === "promos"
   );
 
   return (
@@ -5296,6 +5272,11 @@ export default function App() {
           <>
             {isMobile && <MobileBack title="Admin" onBack={() => setVista("chat")} />}
             <AdminPanel userName={userName} isMobile={isMobile} />
+          </>
+        ) : vista === "promos" && rol === "ceo" ? (
+          <>
+            {isMobile && <MobileBack title="Promociones" onBack={() => setVista("chat")} />}
+            <Promociones userName={userName} isMobile={isMobile} />
           </>
         ) : vista === "reportes" && rol === "ceo" ? (
           <>

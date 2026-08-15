@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { COLOR, GRAD, FONT } from "./theme";
+import { firmaWhatsApp, traducirErrorMeta } from "./promos";
 
 export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -137,6 +138,117 @@ export const C = {
 
 export const FONT_DISPLAY = FONT.display;
 export const FONT_BODY = FONT.body;
+
+// ============================================================
+// ENVÍO POR CANAL — única salida de mensajes del CRM
+// ============================================================
+// Lo usan el chat (src/App.jsx) y las promociones masivas
+// (src/Promociones.jsx). Antes esta lógica vivía suelta dentro del componente
+// del chat; se extrajo acá para que un cambio de ruteo (un canal nuevo, un
+// endpoint que se muda) no haya que hacerlo en dos lugares y quede uno viejo.
+//
+// NO guarda nada en Supabase: solo entrega el mensaje al canal. Guardar en
+// `mensajes` es responsabilidad de quien llama, porque el chat y las campañas
+// necesitan guardar cosas distintas.
+
+// Las reglas puras (ventana de 24 h, plan de envío, personalización, traducción
+// de errores de Meta) viven en ./promos.js para que `npm test` pueda importarlas
+// sin arrastrar el cliente de Supabase. Se re-exportan acá para que los
+// componentes sigan importando todo desde "./lib".
+export {
+  VENTANA_MS, dentroDeVentana, planDeEnvio, firmaWhatsApp, personalizar,
+} from "./promos";
+
+// Devuelve { ok, error }. `error` es texto listo para mostrarle a una persona.
+//
+// `plantilla` (opcional, solo WhatsApp): { nombre, idioma, params: [] }. Si
+// viene, se manda el template aprobado en vez del texto libre — es la única
+// forma de alcanzar a un contacto fuera de la ventana de 24 h.
+export async function enviarPorCanal({ contacto, cuerpo, agente, plantilla = null }) {
+  const canal = contacto?.canal || "whatsapp";
+  const esEmail = canal === "email" || canal === "google_ads";
+
+  if (esEmail && !EMAIL_HABILITADO)
+    return { ok: false, canal, error: "El canal de email está desactivado." };
+
+  if (esEmail) {
+    if (!N8N_EMAIL_REPLY_WEBHOOK)
+      return { ok: false, canal, error: "Falta configurar el webhook de email." };
+    try {
+      const res = await fetch(N8N_EMAIL_REPLY_WEBHOOK, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: contacto.email, nombre: contacto.nombre, mensaje: cuerpo, agente }),
+      });
+      if (!res.ok) return { ok: false, canal, error: "Falló el envío del email." };
+      return { ok: true, canal, error: null };
+    } catch {
+      return { ok: false, canal, error: "No se pudo conectar con el servicio de email." };
+    }
+  }
+
+  if (canal === "messenger") {
+    const messengerId = contacto.messenger_id || contacto.telefono;
+    if (!MESSENGER_SEND_ENDPOINT)
+      return { ok: false, canal, error: "Falta configurar el endpoint de Messenger." };
+    if (!messengerId)
+      return { ok: false, canal, error: "Falta el identificador de Messenger del contacto." };
+    try {
+      const res = await fetch(MESSENGER_SEND_ENDPOINT, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contacto_id: contacto.id, messenger_id: messengerId,
+          mensaje: cuerpo, agente, nombre: contacto.nombre || "",
+        }),
+      });
+      if (!res.ok) {
+        const detalle = await leerError(res);
+        return { ok: false, canal, error: detalle || "Falló el envío por Messenger." };
+      }
+      return { ok: true, canal, error: null };
+    } catch {
+      return { ok: false, canal, error: "No se pudo conectar con Messenger." };
+    }
+  }
+
+  // WhatsApp
+  if (!N8N_SEND_WEBHOOK)
+    return { ok: false, canal, error: "Falta configurar el webhook de WhatsApp." };
+  if (!contacto.telefono)
+    return { ok: false, canal, error: "El contacto no tiene teléfono." };
+  try {
+    // `mensaje` va SIEMPRE, incluso cuando se manda una plantilla: n8n arma el
+    // pedido a Meta con `plantilla` pero registra `mensaje` en el historial.
+    // Va firmado para que ese registro sea el mismo eco que el chat ya sabe
+    // ocultar (ECHO_PREFIX_RE) y no aparezca duplicado en la conversación.
+    const body = { telefono: contacto.telefono, mensaje: firmaWhatsApp(agente, cuerpo), agente };
+    if (plantilla) body.plantilla = plantilla;
+    const res = await fetch(N8N_SEND_WEBHOOK, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const detalle = await leerError(res);
+      return { ok: false, canal, error: detalle || "Falló el envío por WhatsApp." };
+    }
+    // El workflow de n8n responde { ok, error }. Antes respondía { ok: true }
+    // siempre, incluso cuando Meta rechazaba el mensaje — por eso acá se mira el
+    // cuerpo y no solo el status HTTP. Si un n8n viejo no manda `ok`, se asume
+    // que salió bien (comportamiento anterior) en vez de romper el chat.
+    const data = await res.json().catch(() => null);
+    if (data && data.ok === false)
+      return { ok: false, canal, error: traducirErrorMeta(data.error) };
+    return { ok: true, canal, error: null };
+  } catch {
+    return { ok: false, canal, error: "No se pudo conectar con WhatsApp." };
+  }
+}
+
+async function leerError(res) {
+  try {
+    const t = await res.text();
+    return t ? t.slice(0, 300) : "";
+  } catch { return ""; }
+}
 
 // ---------- Utilidades de fecha ----------
 export function rangoFechas(periodo) {

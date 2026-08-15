@@ -15,6 +15,9 @@ This repository is a React + Vite CRM frontend backed by Supabase and Vercel ser
 - `src/lib.js` — central Supabase client, env constants, shared helpers, and app-wide configuration.
 - `src/App.jsx` — core UI, routing, Supabase auth, and main CRM page logic.
 - `src/assistant.js` — prompt loading and assistant utilities.
+- `src/promos.js` — pure send rules (Meta's 24 h window, per-contact send plan,
+  error translation). Kept out of `lib.js` on purpose so `npm test` can import
+  it without booting the Supabase client; `lib.js` re-exports it.
 - `public/nini_master_prompt.md` — prompt template loaded by the app.
 - `api/` — serverless API endpoints that require Supabase service-role or auth access.
 - `EMPEZAR-AQUI.md` and `README.md` — onboarding and setup documentation.
@@ -25,7 +28,11 @@ This repository is a React + Vite CRM frontend backed by Supabase and Vercel ser
 - `npm run build`
 - `npm run preview`
 
-There are no dedicated test scripts in this repository.
+- `npm test` — runner nativo de Node (`node --test`), sin dependencias extra.
+
+Test coverage is partial: today the Meta Conversions API integration
+(`tests/meta-capi.test.js`) and the mass-send rules (`tests/promos.test.js`) are
+covered. There is no linter and no type-checker configured in this repository.
 
 ## Environment and runtime conventions
 - Frontend public envs must use `VITE_` prefix and are read from `import.meta.env`.
@@ -37,6 +44,8 @@ There are no dedicated test scripts in this repository.
   - `VITE_ELEVENLABS_VOICE_ID`
 - Serverless API endpoints use standard Node env vars such as `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
 - Do not move `SUPABASE_SERVICE_ROLE_KEY` to the client-side code.
+- `.env.example` lists every variable with fictitious values. Meta Conversions API vars (`META_*`) are documented in `META-CAPI.md`.
+- Vercel Hobby caps the project at **12 serverless functions** and `api/` is exactly at 12. Files and folders starting with `_` inside `api/` do not count: that is the mechanism for shared code (`_meta/`, `_push/`, `_reporte/`, `_fin/`, `_cotizacion/`). New endpoints hang off an existing dispatcher plus a rewrite in `vercel.json`.
 
 ## Key conventions and patterns
 - The app uses ES modules (`type: module` in `package.json`).
@@ -45,6 +54,12 @@ There are no dedicated test scripts in this repository.
 - `api/*.js` endpoints are intended for server-side operations such as creating vendors, handling Messenger webhooks, push notifications, uploads, etc.
 - Most data access is performed through Supabase queries in the frontend and serverless endpoints.
 - The CRM uses Supabase Realtime channels and auth session persistence.
+- **All outbound messages go through `enviarPorCanal()` in `src/lib.js`** — chat
+  and mass promotions alike. Do not re-implement channel routing in a component.
+- Outbound WhatsApp goes through Meta's official Cloud API, so the **24 h
+  customer-service window applies**: free-form text only reaches contacts who
+  wrote within the last 24 h; anyone older needs an approved template. See
+  `PROMOCIONES.md` before touching anything that sends messages.
 
 ## What the AI agent should do
 - Prefer small, targeted changes over large rewrites.
