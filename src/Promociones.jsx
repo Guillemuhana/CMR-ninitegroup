@@ -51,6 +51,10 @@ const RANGOS = [
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Dónde se recuerda el número propio de prueba (por navegador, no por usuario:
+// es el teléfono que tiene a mano quien está sentado en esa máquina).
+const TEL_PRUEBA_KEY = "ninit_promo_tel_prueba";
+
 export default function Promociones({ userName, isMobile }) {
   const [tab, setTab]             = useState("nueva");
   // Modo simple: elegir plantilla, completar los datos, enviar. Es el 95 % de
@@ -95,8 +99,17 @@ export default function Promociones({ userName, isMobile }) {
   const [pausado, setPausado]     = useState(false);
 
   // ── Prueba ────────────────────────────────────────────────
-  const [tel, setTel]             = useState("");
-  const [pruebaMsg, setPruebaMsg] = useState("");
+  // El número queda guardado en el navegador: la prueba sirve si se hace SIEMPRE,
+  // y volver a tipear el número con código de país cada vez es justo la fricción
+  // que hace que se saltee.
+  const [tel, setTel] = useState(() => {
+    try { return localStorage.getItem(TEL_PRUEBA_KEY) || ""; } catch { return ""; }
+  });
+  const [pruebaMsg, setPruebaMsg] = useState(null);  // { ok, texto }
+  const [probando, setProbando]   = useState("");    // "plantilla" | "texto" | ""
+  // Firma del contenido que se probó bien. Se compara con la actual para poder
+  // avisar en la confirmación: una prueba de hace tres ediciones no prueba nada.
+  const [probadoSig, setProbadoSig] = useState("");
 
   const [err, setErr]             = useState("");
   const [historial, setHistorial] = useState([]);
@@ -220,6 +233,15 @@ export default function Promociones({ userName, isMobile }) {
     destinatarios.length > 0 &&
     (nTexto === 0 || mensajeEfectivo.trim() !== "") &&
     (nPlantilla === 0 || (hayPlantilla && !faltanValores && !plantillaInvalida));
+
+  // Qué se puede probar hoy. Cada versión de la prueba necesita que esté listo
+  // lo suyo: no tiene sentido ofrecer "probar la plantilla" sin plantilla
+  // elegida, ni "probar el texto" con el cuadro de mensaje vacío.
+  const puedeProbarPlantilla = hayPlantilla && !faltanValores && !plantillaInvalida;
+  const puedeProbarTexto     = mensajeEfectivo.trim() !== "";
+
+  const contenidoSig = JSON.stringify([mensajeEfectivo, plantillaObj]);
+  const yaProbado    = probadoSig !== "" && probadoSig === contenidoSig;
 
   // Elegir una plantilla trae su idioma y arma tantos campos como variables
   // tenga, precargados con los ejemplos que se usaron para pedir la aprobación.
@@ -385,19 +407,50 @@ export default function Promociones({ userName, isMobile }) {
     await recorrer(camp.id, lista, { mensaje: camp.mensaje || "", plantilla: plGuardada });
   };
 
-  const enviarPrueba = async () => {
-    setPruebaMsg("");
+  // Mandarse la promo a uno mismo antes de soltarla a la base.
+  //
+  // Se puede probar de las dos formas porque son dos mensajes distintos y sólo
+  // una prueba de cada una dice la verdad:
+  //
+  //  · "plantilla" es lo que recibe la mayoría (los de más de 24 h) y lo único
+  //    que Meta puede rechazar por estar mal armado. Llega siempre, aunque el
+  //    número de prueba no le haya escrito nunca al negocio — es justamente
+  //    para lo que sirven las plantillas.
+  //  · "texto" es lo que reciben los de menos de 24 h, con la firma del agente
+  //    adelante. Ojo: sólo llega si desde ESE teléfono le escribiste al número
+  //    del negocio en las últimas 24 h; si no, Meta lo rechaza (131047) y el
+  //    error que se ve es de la prueba, no de la campaña.
+  const enviarPrueba = async (modo) => {
+    setPruebaMsg(null);
     const numero = tel.replace(/[^0-9]/g, "");
-    if (!numero) { setPruebaMsg("Escribí un número con código de país."); return; }
+    // Un número sin código de país sale "bien" y no llega nunca: Meta lo acepta
+    // y lo entrega a otro lado. Pedirlo completo acá evita esa prueba fantasma.
+    if (numero.length < 10) {
+      setPruebaMsg({ ok: false, texto: "Escribí el número completo con código de país, sin el + (ej: 17865551234)." });
+      return;
+    }
+    try { localStorage.setItem(TEL_PRUEBA_KEY, tel.trim()); } catch { /* modo privado */ }
+
     const falso = { id: null, telefono: numero, canal: "whatsapp", nombre: "Prueba" };
+    setProbando(modo);
     const res = await enviarPorCanal({
       contacto: falso,
-      // La prueba va como texto libre: llega igual aunque el número de prueba
-      // esté fuera de la ventana de 24 h, y muestra el contenido real.
-      cuerpo: personalizar(mensajeEfectivo, falso, ""),
+      // Con plantilla el contenido real lo arma Meta; `cuerpo` es sólo la línea
+      // que queda en el historial, igual que en el envío masivo.
+      cuerpo: modo === "plantilla"
+        ? textoPlantilla(plantillaObj, falso)
+        : personalizar(mensajeEfectivo, falso, ""),
       agente: userName,
+      plantilla: modo === "plantilla" ? plantillaObj : null,
     });
-    setPruebaMsg(res.ok ? "✅ Enviado. Revisá el teléfono." : "❌ " + res.error);
+    setProbando("");
+    if (res.ok) setProbadoSig(contenidoSig);
+
+    setPruebaMsg(res.ok
+      ? { ok: true, texto: modo === "plantilla"
+          ? "Plantilla enviada. Revisá el teléfono: así la reciben los clientes de más de 24 h."
+          : "Enviado. Así lo reciben los que escribieron hace menos de 24 h." }
+      : { ok: false, texto: res.error });
   };
 
   const cerrarEnvio = () => { setEnvio(null); setConfirmar(false); cargar(); };
@@ -557,17 +610,13 @@ export default function Promociones({ userName, isMobile }) {
                 {/* Probar primero está al lado del botón de enviar y no
                     escondido abajo: es el paso que evita mandarle un error a
                     cientos de personas. */}
-                <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-                  <input value={tel} onChange={(e) => setTel(e.target.value)} style={{ ...input, flex: 1, minWidth: 150 }}
-                    placeholder="Probar en mi número (con código de país)" />
-                  <button onClick={enviarPrueba} disabled={!tel.trim() || !mensajeEfectivo.trim()}
-                    style={{ ...chip(false), display: "flex", alignItems: "center", gap: 6,
-                      opacity: tel.trim() && mensajeEfectivo.trim() ? 1 : 0.5,
-                      cursor: tel.trim() && mensajeEfectivo.trim() ? "pointer" : "not-allowed" }}>
-                    <Beaker size={13} /> Probar
-                  </button>
+                <div style={{ marginBottom: 12 }}>
+                  <PruebaEnvio
+                    tel={tel} setTel={setTel} onProbar={enviarPrueba} probando={probando} msg={pruebaMsg}
+                    puedePlantilla={puedeProbarPlantilla} puedeTexto={puedeProbarTexto}
+                    nPlantilla={nPlantilla} nTexto={nTexto}
+                    input={input} chip={chip} />
                 </div>
-                {pruebaMsg && <div style={{ fontSize: 12.5, color: L.text, marginBottom: 10 }}>{pruebaMsg}</div>}
 
                 <button onClick={() => setConfirmar(true)} disabled={!listoParaEnviar}
                   style={{ width: "100%", padding: "15px", border: "none", borderRadius: 12,
@@ -745,15 +794,11 @@ export default function Promociones({ userName, isMobile }) {
                 <label style={{ ...label, display: "flex", alignItems: "center", gap: 6 }}>
                   <Beaker size={13} /> Probar antes de mandar a todos
                 </label>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <input value={tel} onChange={(e) => setTel(e.target.value)} style={{ ...input, flex: 1, minWidth: 160 }}
-                    placeholder="Tu número, con código de país" />
-                  <button onClick={enviarPrueba} disabled={!tel.trim()}
-                    style={{ ...chip(false), display: "flex", alignItems: "center", gap: 6, opacity: tel.trim() ? 1 : 0.5, cursor: tel.trim() ? "pointer" : "not-allowed" }}>
-                    <Send size={13} /> Enviar prueba
-                  </button>
-                </div>
-                {pruebaMsg && <div style={{ fontSize: 12.5, color: L.text, marginTop: 8 }}>{pruebaMsg}</div>}
+                <PruebaEnvio
+                  tel={tel} setTel={setTel} onProbar={enviarPrueba} probando={probando} msg={pruebaMsg}
+                  puedePlantilla={puedeProbarPlantilla} puedeTexto={puedeProbarTexto}
+                  nPlantilla={nPlantilla} nTexto={nTexto}
+                  input={input} chip={chip} />
               </div>
             </div>
 
@@ -875,6 +920,14 @@ export default function Promociones({ userName, isMobile }) {
             <div><strong>Texto libre:</strong> {nTexto} · <strong>Plantilla:</strong> {nPlantilla}</div>
             <div><strong>Duración estimada:</strong> ~{duracionMin} min</div>
           </div>
+          {/* No bloquea el envío —a veces se prueba desde otra máquina—, pero
+              tiene que estar dicho: es la última pantalla antes de que salga. */}
+          {!yaProbado && (
+            <div style={{ marginTop: 12, padding: 11, background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 9, fontSize: 12.5, color: "#92400E", lineHeight: 1.5 }}>
+              <strong>Todavía no probaste este mensaje en tu teléfono.</strong> Cancelá, mandate
+              una prueba y fijate cómo llega antes de soltarlo a {destinatarios.length} clientes.
+            </div>
+          )}
           {mensajeEfectivo.trim() && (
             <div style={{ marginTop: 12, padding: 12, background: "#DCF8C6", borderRadius: 10, fontSize: 13, whiteSpace: "pre-wrap", lineHeight: 1.5, color: "#111" }}>
               {personalizar(mensajeEfectivo, { nombre: destinatarios[0]?.nombre || "Juan" }, "Juan")}
@@ -967,6 +1020,56 @@ function Paso({ n, titulo }) {
         alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>{n}</span>
       <span style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 800, color: L.text }}>{titulo}</span>
     </div>
+  );
+}
+
+// Prueba al teléfono propio, la misma en el modo simple y en el avanzado.
+//
+// Son dos botones y no uno porque la campaña manda dos mensajes distintos: la
+// plantilla a los de más de 24 h y el texto libre a los de menos. Un solo botón
+// obligaría a elegir cuál de los dos se prueba, y el que quedara afuera es el
+// que después sale mal a cientos de personas.
+function PruebaEnvio({ tel, setTel, onProbar, probando, msg, puedePlantilla, puedeTexto, nPlantilla, nTexto, input, chip }) {
+  const ocupado = probando !== "";
+  const btn = (activo) => ({
+    ...chip(false),
+    display: "flex", alignItems: "center", gap: 6,
+    opacity: activo && !ocupado ? 1 : 0.5,
+    cursor: activo && !ocupado ? "pointer" : "not-allowed",
+  });
+
+  return (
+    <>
+      <input value={tel} onChange={(e) => setTel(e.target.value)}
+        style={{ ...input, marginBottom: 8 }}
+        placeholder="Tu WhatsApp con código de país (ej: 17865551234)" />
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button onClick={() => onProbar("plantilla")} disabled={!puedePlantilla || ocupado} style={btn(puedePlantilla)}>
+          <Beaker size={13} />
+          {probando === "plantilla" ? "Enviando…" : `Probar plantilla${nPlantilla > 0 ? ` (${nPlantilla})` : ""}`}
+        </button>
+        <button onClick={() => onProbar("texto")} disabled={!puedeTexto || ocupado} style={btn(puedeTexto)}>
+          <Send size={13} />
+          {probando === "texto" ? "Enviando…" : `Probar mensaje normal${nTexto > 0 ? ` (${nTexto})` : ""}`}
+        </button>
+      </div>
+
+      <div style={{ fontSize: 11.5, color: L.muted, marginTop: 7, lineHeight: 1.5 }}>
+        La <strong>plantilla</strong> es la que recibe la mayoría y llega siempre. El{" "}
+        <strong>mensaje normal</strong> sólo te llega si desde ese teléfono le escribiste al
+        número del negocio en las últimas 24 h.
+      </div>
+
+      {msg && (
+        <div style={{ marginTop: 9, padding: 10, borderRadius: 9, fontSize: 12.5, lineHeight: 1.5,
+          background: msg.ok ? "#DCFCE7" : "#FEF2F2",
+          border: `1px solid ${msg.ok ? "#86EFAC" : "#FCA5A5"}`,
+          color: msg.ok ? "#15803D" : "#B91C1C" }}>
+          {msg.texto}
+        </div>
+      )}
+    </>
   );
 }
 

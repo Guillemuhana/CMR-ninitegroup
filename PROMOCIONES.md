@@ -94,8 +94,19 @@ en pantalla que perdiste la red de seguridad.
    de forma que igual se entienda.
 4. Elegí la audiencia: canal, hace cuánto escribieron, y qué estados excluir.
    El contador de la derecha se actualiza solo.
-5. **Mandate una prueba a tu propio número** antes de disparar. Está el campo
-   para eso.
+5. **Mandate una prueba a tu propio número** antes de disparar. Escribí tu
+   WhatsApp con código de país (queda guardado para la próxima) y probá las dos
+   versiones:
+   - **Probar plantilla** — es lo que recibe la mayoría (los de más de 24 h).
+     Llega siempre, aunque desde ese teléfono nunca le hayas escrito al negocio.
+   - **Probar mensaje normal** — lo que reciben los de menos de 24 h, con la
+     firma del agente adelante. Sólo te llega si desde ese teléfono le
+     escribiste al número del negocio en las últimas 24 h; si no, Meta lo
+     rechaza con el 131047 y el error es de la prueba, no de la campaña.
+
+   Si editás el mensaje después de probar, la prueba ya no vale: la pantalla de
+   confirmación avisa cuando el contenido que está por salir no es el que se
+   probó.
 6. Revisá el desglose (texto libre / plantilla / omitidos) y apretá **Enviar**.
 7. Confirmá. Aparece una barra de progreso con **Pausar** y **Frenar**.
 
