@@ -1528,16 +1528,15 @@ const SIDEBAR_TABS = [
   { key: "q:pidecontacto",   label: "Piden contacto", icon: PhoneCall,  color: C.red },
   { key: "q:financiamiento", label: "Financiamiento", icon: CreditCard, color: "#7C3AED" },
   { key: "q:seguimientos",   label: "Seguimientos",   icon: Calendar,   color: "#0E7490" },
-  { key: "q:promos",         label: "Promos",         icon: Megaphone,  color: "#7C3AED" },
   { key: "favoritos",        label: "Favoritos",      icon: Star,       color: "#B45309" },
 ];
 
-// Cuántos días una campaña sigue "viva" para el CRM. Mientras lo esté, sus
-// destinatarios se ven SÓLO en la pestaña Promos y no en el resto de la lista
-// (decisión de Nicolás, 17-ago-2026: que no se mezclen con el chat común).
+// Cuántos días atrás se miran las campañas para marcar un chat como "está
+// contestando la promo". Más viejo que eso no explica el mensaje que entró hoy.
 //
-// Es el número a tocar si la separación dura demasiado o muy poco. Pasado el
-// plazo, esos chats vuelven solos a la lista de siempre sin que nadie haga nada.
+// La lista de chats NO se toca por esto: sigue mostrando todo como siempre, y
+// las respuestas a una campaña se trabajan en Promociones → Respuestas
+// (decisión de Nicolás, 17-ago-2026). Acá sólo se marca la fila con un ícono.
 const DIAS_PROMO_VIGENTE = 30;
 
 // ============================================================
@@ -1946,9 +1945,6 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
   // Se guarda el envío MÁS RECIENTE por contacto: si alguien recibió dos
   // campañas, lo que dice si está contestando es la última, no la vieja.
   const [promoEnviadoA, setPromoEnviadoA] = useState(() => new Map());
-  // Sub-filtro dentro de la pestaña Promos: "si" = contestaron (los que quieren
-  // más info, el trabajo real), "no" = les llegó y no dijeron nada.
-  const [promoSub, setPromoSub] = useState("todos");
   const cargarPromos = useCallback(async () => {
     const desde = new Date(Date.now() - DIAS_PROMO_VIGENTE * 24 * 3600 * 1000).toISOString();
     const { data } = await supabase.from("campana_envios")
@@ -1974,10 +1970,6 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
     if (!enviado || !c.ultimo_in_at) return false;
     return new Date(c.ultimo_in_at) > new Date(enviado);
   };
-
-  // Recibió una campaña que todavía está vigente. Estos chats viven aparte: se
-  // ven en la pestaña Promos y en ningún otro chip mientras dure la campaña.
-  const enPromo = (c) => promoEnviadoA.has(c.id);
   // Long-press (mantener presionado) para abrir el menú en celular, donde no
   // existe el click derecho. Se cancela si el dedo se mueve (>10px = scroll).
   const press = useRef({ timer: null, x: 0, y: 0 });
@@ -2032,10 +2024,6 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
     if (f === "q:noleidos")       return c.no_leidos > 0;
     if (f === "q:sinresponder")   return calcEspera(c) != null;
     if (f === "q:seguimientos")   return !!c.seguimiento_at;
-    // La pestaña Promos muestra a TODOS los que recibieron la campaña, no sólo
-    // a los que contestaron: es el listado del envío, y sirve para ver quién
-    // quedó sin responder tanto como quién respondió.
-    if (f === "q:promos")         return enPromo(c);
     if (f === "t:cliente")        return c.tipo === "cliente";
     if (f === "t:prospecto")      return !c.tipo || c.tipo === "prospecto";
     return c.estado === f;
@@ -2052,17 +2040,8 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
   const base = contactos.filter((c) => {
     const porBusq  = !busqueda || (c.nombre || "").toLowerCase().includes(busqueda.toLowerCase()) || (c.telefono || "").includes(busqueda) || (c.email || "").toLowerCase().includes(busqueda.toLowerCase());
     const porCanal = canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal);
-    // Los de la campaña salen de la lista común y viven en su pestaña. La
-    // búsqueda es la excepción: si alguien tipea un nombre y el chat existe,
-    // tiene que aparecer — un buscador que esconde lo que existe se siente roto.
-    const porPromo = filtro === "q:promos" || !!busqueda || !enPromo(c);
-    return porBusq && porCanal && porPromo && aplicaFiltrosIA(c, filtrosIA, esFin);
+    return porBusq && porCanal && aplicaFiltrosIA(c, filtrosIA, esFin);
   });
-
-  // Cuántos quedaron apartados en la pestaña Promos. Se cuenta sobre la lista
-  // completa (no sobre `base`, que ya los sacó) para poder avisarlo.
-  const nApartadosPromo = filtro === "q:promos" || busqueda ? 0
-    : contactos.filter((c) => enPromo(c) && (canal === "todos" || (canal === "whatsapp" ? (c.canal || "whatsapp") === "whatsapp" : c.canal === canal))).length;
 
   // Cada contador cuenta sobre el OTRO eje ya aplicado: el número del chip
   // "Sin responder" respeta la pestaña de tiempo elegida, y el número de "Hoy"
@@ -2074,30 +2053,12 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
   const conteoTab    = (t) => baseTabs.filter((c) => cumpleFiltro(c, t)).length;
   const conteoPeriodo = (p) => basePeriodo.filter((c) => cumplePeriodo(c, p)).length;
 
-  // Los que recibieron la campaña, para los contadores del sub-filtro. Sale de
-  // `baseTabs` y no de la lista final, así los números no cambian según cuál de
-  // los dos grupos se esté mirando.
-  const promoTodos = filtro === "q:promos" ? baseTabs.filter(enPromo) : [];
-  const promoConResp = promoTodos.filter(respondioPromo).length;
-
   const lista = baseTabs.filter((c) => cumpleFiltro(c, filtro))
-    .filter((c) => filtro !== "q:promos" || promoSub === "todos" ||
-      (promoSub === "si" ? respondioPromo(c) : !respondioPromo(c)))
   // Orden estilo WhatsApp: lo más reciente arriba. Un mensaje nuevo o una
   // respuesta del vendedor toca `updated_at`, así que el chat sube solo.
   // La estrella y "pide contacto" ya no reordenan la lista (para eso están
   // los tabs/filtros); antes empujaban los chats activos hacia abajo.
-  //
-  // En la pestaña Promos hay una excepción: los que contestaron van primero.
-  // El resto son cientos de chats a los que les salió el mensaje y no dijeron
-  // nada, y si se mezclan por fecha tapan a los siete que hay que atender.
-  .sort((a, b) => {
-    if (filtro === "q:promos") {
-      const ra = respondioPromo(a) ? 1 : 0, rb = respondioPromo(b) ? 1 : 0;
-      if (ra !== rb) return rb - ra;
-    }
-    return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
-  });
+  .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
 
   // La lista se muestra cortada en tramos desplegables (Hoy / Ayer / Esta
   // semana / …): el orden no cambia, pero lo viejo arranca plegado y deja de
@@ -2198,19 +2159,8 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
               const n = conteoTab(key);
               const col = color || L.muted;
               return (
-                <button key={key}
-                  onClick={() => {
-                    setFiltro(key);
-                    // Las respuestas a una promo llegan durante días, no sólo el
-                    // día que se mandó. Con la pestaña de tiempo en "Hoy" —que es
-                    // como arranca el CRM— el filtro se vería vacío justo cuando
-                    // hay respuestas de anteayer esperando, así que al entrar acá
-                    // se abre el período completo y se releen los envíos.
-                    if (key === "q:promos") { setPeriodo("todos"); cargarPromos(); }
-                  }}
-                  aria-pressed={activa}
-                  title={key === "q:financiamiento" ? "Consultaron por financiamiento (en el chat o con ficha cargada)"
-                    : key === "q:promos" ? "Contestaron después de recibir una promoción (últimos 60 días)" : label}
+                <button key={key} onClick={() => setFiltro(key)} aria-pressed={activa}
+                  title={key === "q:financiamiento" ? "Consultaron por financiamiento (en el chat o con ficha cargada)" : label}
                   /* Sin borde propio ni relleno de color: el chip apagado es
                      solo texto y el elegido, un fondo suave. Siete píldoras de
                      colores compitiendo entre sí no ayudan a elegir ninguna. */
@@ -2281,45 +2231,6 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
           <style>{`@keyframes ninitPhonePulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(220,38,38,.5)}50%{transform:scale(1.12);box-shadow:0 0 0 5px rgba(220,38,38,0)}}@keyframes ninitSheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
           {/* minHeight:0 — sin esto, en una columna flex la lista crece con su
               contenido en vez de scrollear y empuja el pie fuera de pantalla. */}
-          {/* Los chats de la campaña se apartan, pero no en silencio: sin esta
-              línea, "me falta un cliente en la lista" es un misterio y no un
-              filtro. Clickearla lleva a donde están. */}
-          {/* Dentro de la pestaña, lo primero es cuántos hay que atender: de
-              cientos que recibieron la promo, los que contestaron son el
-              trabajo real y van arriba de todo en la lista. */}
-          {filtro === "q:promos" && promoTodos.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, padding: "8px 12px",
-              borderBottom: `1px solid ${L.border}`, background: "#F5F3FF", overflowX: "auto" }}>
-              <Megaphone size={13} color="#6D28D9" style={{ flexShrink: 0 }} />
-              {[["si", "Contestaron", promoConResp],
-                ["no", "Sin respuesta", promoTodos.length - promoConResp],
-                ["todos", "Todos", promoTodos.length]].map(([k, t, n]) => {
-                const on = promoSub === k;
-                return (
-                  <button key={k} onClick={() => setPromoSub(k)} aria-pressed={on}
-                    style={{ flexShrink: 0, padding: "4px 10px", borderRadius: 20, cursor: "pointer", fontFamily: FONT_BODY,
-                      fontSize: 11.5, fontWeight: on ? 800 : 600, border: "none",
-                      background: on ? "#7C3AED" : "transparent", color: on ? "#fff" : "#6D28D9" }}>
-                    {t} {n}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {nApartadosPromo > 0 && (
-            <button onClick={() => { setFiltro("q:promos"); setPeriodo("todos"); cargarPromos(); }}
-              style={{ display: "flex", alignItems: "center", gap: 7, width: "100%", textAlign: "left", flexShrink: 0,
-                padding: "8px 14px", border: "none", borderBottom: `1px solid ${L.border}`, background: "#F5F3FF",
-                cursor: "pointer", fontFamily: FONT_BODY, fontSize: 12, color: "#6D28D9" }}>
-              <Megaphone size={13} style={{ flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>
-                <strong>{nApartadosPromo}</strong> {nApartadosPromo === 1 ? "chat está" : "chats están"} en la pestaña Promos
-              </span>
-              <ChevronRight size={13} style={{ flexShrink: 0 }} />
-            </button>
-          )}
-
           <div className="scroll-y" style={{ overflowY: "auto", flex: 1, minHeight: 0 }}>
             {lista.length === 0 && (
               <div style={{ padding: 36, color: L.light, fontSize: 13.5, textAlign: "center" }}>
@@ -2409,15 +2320,9 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                   /* La fila elegida se marca con fondo y una barra fina, y nada
                      más: antes se corría 10px, ganaba sombra, borde de 4px y
                      esquinas redondeadas: cuatro señales para decir lo mismo. */
-                  /* El que contestó la promo se resalta en violeta, pero por
-                     debajo de "hay que llamarlo": si las dos cosas son ciertas,
-                     lo urgente es el llamado. */
-                  style={{ padding: "12px 14px", borderBottom: `1px solid ${L.border}`, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start",
-                    background: sel ? L.active : (llamar ? "#FEF6F6" : (respPromo ? "#FAF5FF" : "transparent")),
-                    borderLeft: `2px solid ${sel || llamar ? C.red : (respPromo ? "#7C3AED" : "transparent")}`,
-                    transition: "background .12s", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}
+                  style={{ padding: "12px 14px", borderBottom: `1px solid ${L.border}`, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start", background: sel ? L.active : (llamar ? "#FEF6F6" : "transparent"), borderLeft: `2px solid ${sel || llamar ? C.red : "transparent"}`, transition: "background .12s", WebkitTouchCallout: "none", WebkitUserSelect: "none", userSelect: "none" }}
                   onMouseEnter={(e) => { if (!sel) e.currentTarget.style.background = L.hover; }}
-                  onMouseLeave={(e) => { if (!sel) e.currentTarget.style.background = llamar ? "#FEF2F2" : (respPromo ? "#FAF5FF" : "transparent"); }}>
+                  onMouseLeave={(e) => { if (!sel) e.currentTarget.style.background = llamar ? "#FEF2F2" : "transparent"; }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <Avatar nombre={c.nombre || c.telefono || c.email} foto={c.foto_url} size={46} />
                     {c.canal === "email" ? (
@@ -2436,10 +2341,12 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                             <Phone size={11} />
                           </span>
                         )}
-                        {/* En la lista completa este megáfono es lo único que
-                            distingue "me escribió porque le llegó la promo" de
-                            una consulta espontánea — y eso cambia con qué precio
-                            se le contesta (ver src/nini_promo_prompt.md). */}
+                        {/* La lista no se reordena ni esconde nada por la promo:
+                            este megáfono es la única marca, y distingue "me
+                            escribió porque le llegó la campaña" de una consulta
+                            espontánea — eso cambia con qué precio se le contesta
+                            (ver src/nini_promo_prompt.md). El trabajo fino se
+                            hace en Promociones → Respuestas. */}
                         {respPromo && (
                           <span title="Contestó a una promoción" style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#EDE9FE", color: "#7C3AED" }}>
                             <Megaphone size={10} />
@@ -5424,7 +5331,8 @@ export default function App() {
         ) : vista === "promos" && rol === "ceo" ? (
           <>
             {isMobile && <MobileBack title="Promociones" onBack={() => setVista("chat")} />}
-            <Promociones userName={userName} isMobile={isMobile} />
+            <Promociones userName={userName} isMobile={isMobile}
+              onAbrirChat={(c) => { setActivo(c); setVista("chat"); }} />
           </>
         ) : vista === "reportes" && rol === "ceo" ? (
           <>

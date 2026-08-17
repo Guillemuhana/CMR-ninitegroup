@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   Megaphone, Send, Users, Clock, AlertTriangle, Check, X, Pause, Play,
   RotateCcw, FileText, Ban, ChevronRight, Loader2, History, Beaker,
+  MessageSquare, CornerUpLeft, MailQuestion,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiMessenger } from "react-icons/si";
@@ -55,7 +56,7 @@ const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 // es el teléfono que tiene a mano quien está sentado en esa máquina).
 const TEL_PRUEBA_KEY = "ninit_promo_tel_prueba";
 
-export default function Promociones({ userName, isMobile }) {
+export default function Promociones({ userName, isMobile, onAbrirChat }) {
   const [tab, setTab]             = useState("nueva");
   // Modo simple: elegir plantilla, completar los datos, enviar. Es el 95 % de
   // los casos y es lo que se ve al entrar.
@@ -484,9 +485,9 @@ export default function Promociones({ userName, isMobile }) {
             <h1 style={{ fontFamily: FONT_DISPLAY, fontSize: 21, fontWeight: 800, color: L.text, margin: 0 }}>Promociones</h1>
             <div style={{ fontSize: 12.5, color: L.muted }}>Un mensaje a todos los clientes que nos escribieron</div>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            {[["nueva", "Nueva campaña", Megaphone], ["historial", "Historial", History]].map(([k, t, Icon]) => (
-              <button key={k} onClick={() => { setTab(k); if (k === "historial") cargarHistorial(); }}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {[["nueva", "Nueva campaña", Megaphone], ["respuestas", "Respuestas", MessageSquare], ["historial", "Historial", History]].map(([k, t, Icon]) => (
+              <button key={k} onClick={() => { setTab(k); if (k === "historial" || k === "respuestas") cargarHistorial(); }}
                 style={{ ...chip(tab === k), display: "flex", alignItems: "center", gap: 6 }}>
                 <Icon size={14} /> {t}
               </button>
@@ -504,7 +505,10 @@ export default function Promociones({ userName, isMobile }) {
             la campaña hoy, y tiene que leerse antes de escribir nada. */}
         {salud && <div style={{ marginBottom: 14 }}><SaludNumero salud={salud} /></div>}
 
-        {tab === "historial" ? (
+        {tab === "respuestas" ? (
+          <Respuestas historial={historial} card={card} label={label}
+            onAbrirChat={onAbrirChat} isMobile={isMobile} />
+        ) : tab === "historial" ? (
           <Historial historial={historial} card={card} onRetomar={retomar} />
         ) : cargando ? (
           <div style={{ ...card, textAlign: "center", color: L.muted, fontSize: 14 }}>Cargando contactos…</div>
@@ -1185,6 +1189,199 @@ function ListaDestinatarios({ lista, excluidos, setExcluidos, card, label }) {
       )}
     </div>
   );
+}
+
+// ============================================================
+// RESPUESTAS — quién contestó la campaña, separado por qué falta hacer
+// ============================================================
+// La lista de chats del CRM no se toca: sigue mostrando todo como siempre. El
+// trabajo posterior a una campaña se hace acá, donde el eje no es la
+// conversación sino la promo: de los cientos que la recibieron, quiénes
+// contestaron, a quiénes ya les respondimos y quiénes quedaron en silencio.
+//
+// Los grupos están ordenados por lo que falta hacer, no por fecha: "Para
+// responder" primero porque es lo único que tiene a alguien esperando del otro
+// lado, y es lo que se pierde si esta pantalla se ordena como una bandeja más.
+const GRUPOS = [
+  { key: "pendiente", label: "Para responder", color: "#B45309", bg: "#FEF3C7", icon: CornerUpLeft,
+    ayuda: "Contestaron la promo y todavía nadie les respondió." },
+  { key: "atendido",  label: "Ya respondidos", color: "#15803D", bg: "#DCFCE7", icon: Check,
+    ayuda: "Contestaron y ya les respondimos." },
+  { key: "sin",       label: "Sin respuesta",  color: "#64748B", bg: "#F1F5F9", icon: MailQuestion,
+    ayuda: "Les llegó la promo y no dijeron nada." },
+  { key: "error",     label: "No les llegó",   color: "#B91C1C", bg: "#FEE2E2", icon: Ban,
+    ayuda: "Meta rechazó el envío. El motivo está en el historial." },
+];
+
+function Respuestas({ historial, card, label, onAbrirChat, isMobile }) {
+  const [campId, setCampId]     = useState("");
+  const [filas, setFilas]       = useState([]);
+  const [grupo, setGrupo]       = useState("pendiente");
+  const [cargando, setCargando] = useState(false);
+
+  // Al entrar se abre la campaña más reciente: es la que largamos y la que tiene
+  // gente contestando ahora. Elegir a mano es para mirar una vieja.
+  const campanas = historial.filter((c) => c.estado !== "borrador");
+  const campSel  = campanas.find((c) => c.id === campId) || campanas[0] || null;
+
+  useEffect(() => {
+    if (!campSel) { setFilas([]); return; }
+    let cancelado = false;
+    (async () => {
+      setCargando(true);
+      // El contacto entero viaja en el join porque al clickear la fila hay que
+      // abrir su chat, y el panel de chat espera la fila completa de `contactos`.
+      const { data } = await supabase.from("campana_envios")
+        .select("contacto_id, enviado_at, estado, contactos(*)")
+        .eq("campana_id", campSel.id);
+      if (cancelado) return;
+      setFilas((data || []).map((f) => ({ ...f, contacto: f.contactos })));
+      setCargando(false);
+    })();
+    return () => { cancelado = true; };
+  }, [campSel?.id]);
+
+  // En qué está cada destinatario. Se calcula acá y no se guarda en la DB: el
+  // estado real es "¿el cliente escribió después de la promo, y le contestamos
+  // después de eso?", y eso ya vive en los timestamps del contacto. Un campo
+  // aparte sería una copia que se desincroniza en cuanto alguien responde por
+  // el chat.
+  const clasificar = (f) => {
+    const c = f.contacto;
+    if (f.estado === "error") return "error";
+    if (!c) return "sin";
+    const env = new Date(f.enviado_at || 0).getTime();
+    const inn = c.ultimo_in_at ? new Date(c.ultimo_in_at).getTime() : 0;
+    if (!inn || inn <= env) return "sin";
+    const out = c.ultimo_out_at ? new Date(c.ultimo_out_at).getTime() : 0;
+    return out >= inn ? "atendido" : "pendiente";
+  };
+
+  const porGrupo = { pendiente: [], atendido: [], sin: [], error: [] };
+  for (const f of filas) porGrupo[clasificar(f)].push(f);
+
+  // Dentro de cada grupo, lo último que pasó arriba: en los que contestaron eso
+  // es el mensaje del cliente; en los demás, cuándo les salió la promo.
+  const lista = [...(porGrupo[grupo] || [])].sort((a, b) => {
+    const ta = new Date(a.contacto?.ultimo_in_at || a.enviado_at || 0);
+    const tb = new Date(b.contacto?.ultimo_in_at || b.enviado_at || 0);
+    return tb - ta;
+  });
+
+  if (!campSel)
+    return <div style={{ ...card, textAlign: "center", color: L.muted, fontSize: 14 }}>
+      Todavía no mandaste ninguna campaña. Cuando salga la primera, acá vas a ver quién contesta.
+    </div>;
+
+  const contestaron = porGrupo.pendiente.length + porGrupo.atendido.length;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+      {/* Qué campaña se está mirando */}
+      <div style={card}>
+        <label style={label}>Campaña</label>
+        <select value={campSel.id} onChange={(e) => setCampId(e.target.value)}
+          style={{ width: "100%", padding: "9px 11px", border: `1px solid ${L.border}`, borderRadius: 9,
+            fontFamily: FONT_BODY, fontSize: 14, color: L.text, background: L.white, boxSizing: "border-box" }}>
+          {campanas.map((c) => (
+            <option key={c.id} value={c.id}>{c.nombre} — {fmtFechaLarga(c.created_at)}</option>
+          ))}
+        </select>
+
+        {/* El número que importa no es cuántos recibieron: es cuántos
+            contestaron. Eso es lo que dice si la promo funcionó. */}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 14 }}>
+          <span style={{ fontFamily: FONT_DISPLAY, fontSize: 34, fontWeight: 800, color: C.red, lineHeight: 1 }}>
+            {contestaron}
+          </span>
+          <span style={{ fontSize: 13.5, color: L.muted, fontWeight: 600 }}>
+            {contestaron === 1 ? "contestó" : "contestaron"} de {filas.length} que la recibieron
+            {filas.length > 0 && <> · {Math.round((contestaron / filas.length) * 100)}%</>}
+          </span>
+        </div>
+      </div>
+
+      {/* Los cuatro grupos. Son el filtro y el resumen a la vez: el número de
+          "Para responder" es la cola de trabajo del día. */}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 9 }}>
+        {GRUPOS.map((g) => {
+          const on = grupo === g.key;
+          const n = porGrupo[g.key].length;
+          const Icono = g.icon;
+          return (
+            <button key={g.key} onClick={() => setGrupo(g.key)} title={g.ayuda} aria-pressed={on}
+              style={{ textAlign: "left", padding: "11px 12px", borderRadius: 12, cursor: "pointer", fontFamily: FONT_BODY,
+                border: `2px solid ${on ? g.color : L.border}`, background: on ? g.bg : L.white }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                <Icono size={13} color={g.color} />
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: on ? g.color : L.muted }}>{g.label}</span>
+              </div>
+              <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 800, color: on ? g.color : L.text, lineHeight: 1 }}>{n}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ fontSize: 12, color: L.muted, marginTop: -6 }}>
+        {GRUPOS.find((g) => g.key === grupo)?.ayuda}
+      </div>
+
+      {/* La lista del grupo elegido */}
+      <div style={{ ...card, padding: 0, overflow: "hidden" }}>
+        {cargando ? (
+          <div style={{ padding: 28, textAlign: "center", color: L.muted, fontSize: 13.5 }}>Cargando…</div>
+        ) : lista.length === 0 ? (
+          <div style={{ padding: 28, textAlign: "center", color: L.muted, fontSize: 13.5 }}>
+            {grupo === "pendiente" ? "No hay nadie esperando respuesta. 👌" : "No hay nadie en este grupo."}
+          </div>
+        ) : lista.map((f) => {
+          const c = f.contacto;
+          const respondio = grupo === "pendiente" || grupo === "atendido";
+          return (
+            <button key={f.contacto_id} onClick={() => c && onAbrirChat?.(c)}
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left",
+                padding: "11px 14px", border: "none", borderBottom: `1px solid ${L.border}`, background: "transparent",
+                cursor: c ? "pointer" : "default", fontFamily: FONT_BODY }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = L.soft; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+              {(c?.canal || "whatsapp") === "messenger"
+                ? <SiMessenger size={14} color="#0099FF" style={{ flexShrink: 0 }} />
+                : <FaWhatsapp size={14} color="#25D366" style={{ flexShrink: 0 }} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: L.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {c?.nombre || c?.telefono || "Sin nombre"}
+                </div>
+                {/* Lo que dijo el cliente, no lo que le mandamos: es lo que
+                    decide si hay que contestarle ya o puede esperar. */}
+                <div style={{ fontSize: 12, color: L.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }}>
+                  {respondio ? (c?.ultimo_msg || "—") : (ESTADOS[c?.estado]?.label || "—")}
+                </div>
+              </div>
+              <span style={{ fontSize: 11, color: L.light, flexShrink: 0 }}>
+                {haceCuanto(respondio ? c?.ultimo_in_at : f.enviado_at)}
+              </span>
+              <ChevronRight size={14} color={L.light} style={{ flexShrink: 0 }} />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// "hace 3 h" / "hace 2 d". Corto a propósito: en una lista de cien filas, una
+// fecha completa ocupa lugar y no dice lo único que importa, que es si esto
+// pasó recién o hace días.
+function haceCuanto(ts) {
+  if (!ts) return "";
+  const ms = Date.now() - new Date(ts).getTime();
+  if (Number.isNaN(ms)) return "";
+  const min = Math.round(ms / 60000);
+  if (min < 60) return `hace ${Math.max(min, 1)} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `hace ${h} h`;
+  return `hace ${Math.round(h / 24)} d`;
 }
 
 function Historial({ historial, card, onRetomar }) {
