@@ -1528,6 +1528,7 @@ const SIDEBAR_TABS = [
   { key: "q:pidecontacto",   label: "Piden contacto", icon: PhoneCall,  color: C.red },
   { key: "q:financiamiento", label: "Financiamiento", icon: CreditCard, color: "#7C3AED" },
   { key: "q:seguimientos",   label: "Seguimientos",   icon: Calendar,   color: "#0E7490" },
+  { key: "q:promos",         label: "Promos",         icon: Megaphone,  color: "#7C3AED" },
   { key: "favoritos",        label: "Favoritos",      icon: Star,       color: "#B45309" },
 ];
 
@@ -1927,6 +1928,41 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
       setVendedoresAsign((data || []).filter((v) => v.role === "vendedor" && v.nombre !== perfil?.nombre));
     })();
   }, [perfil?.nombre]);
+
+  // ── Quién recibió una promo, y cuándo ─────────────────────
+  // A quién le salió una campaña vive en `campana_envios` (ver
+  // supabase_promociones.sql). Acá se trae sólo lo que se entregó bien y de los
+  // últimos 60 días: una promo de hace medio año no explica el mensaje que
+  // entró hoy, y traer la tabla entera crece sin techo con cada campaña.
+  //
+  // Se guarda el envío MÁS RECIENTE por contacto: si alguien recibió dos
+  // campañas, lo que dice si está contestando es la última, no la vieja.
+  const [promoEnviadoA, setPromoEnviadoA] = useState(() => new Map());
+  const cargarPromos = useCallback(async () => {
+    const desde = new Date(Date.now() - 60 * 24 * 3600 * 1000).toISOString();
+    const { data } = await supabase.from("campana_envios")
+      .select("contacto_id, enviado_at")
+      .eq("estado", "ok").gte("enviado_at", desde);
+    const m = new Map();
+    for (const e of data || []) {
+      if (!e.contacto_id || !e.enviado_at) continue;
+      const prev = m.get(e.contacto_id);
+      if (!prev || new Date(e.enviado_at) > new Date(prev)) m.set(e.contacto_id, e.enviado_at);
+    }
+    setPromoEnviadoA(m);
+  }, []);
+  useEffect(() => { cargarPromos(); }, [cargarPromos]);
+
+  // Contestó la promo: le llegó la campaña y escribió DESPUÉS de recibirla.
+  //
+  // La comparación es contra `ultimo_in_at` —el último mensaje del cliente— y no
+  // contra un flag: así el chat sale solo del filtro cuando la conversación
+  // siguió por otro lado, y no hay nada que marcar ni limpiar a mano.
+  const respondioPromo = (c) => {
+    const enviado = promoEnviadoA.get(c.id);
+    if (!enviado || !c.ultimo_in_at) return false;
+    return new Date(c.ultimo_in_at) > new Date(enviado);
+  };
   // Long-press (mantener presionado) para abrir el menú en celular, donde no
   // existe el click derecho. Se cancela si el dedo se mueve (>10px = scroll).
   const press = useRef({ timer: null, x: 0, y: 0 });
@@ -1981,6 +2017,7 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
     if (f === "q:noleidos")       return c.no_leidos > 0;
     if (f === "q:sinresponder")   return calcEspera(c) != null;
     if (f === "q:seguimientos")   return !!c.seguimiento_at;
+    if (f === "q:promos")         return respondioPromo(c);
     if (f === "t:cliente")        return c.tipo === "cliente";
     if (f === "t:prospecto")      return !c.tipo || c.tipo === "prospecto";
     return c.estado === f;
@@ -2116,8 +2153,19 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
               const n = conteoTab(key);
               const col = color || L.muted;
               return (
-                <button key={key} onClick={() => setFiltro(key)} aria-pressed={activa}
-                  title={key === "q:financiamiento" ? "Consultaron por financiamiento (en el chat o con ficha cargada)" : label}
+                <button key={key}
+                  onClick={() => {
+                    setFiltro(key);
+                    // Las respuestas a una promo llegan durante días, no sólo el
+                    // día que se mandó. Con la pestaña de tiempo en "Hoy" —que es
+                    // como arranca el CRM— el filtro se vería vacío justo cuando
+                    // hay respuestas de anteayer esperando, así que al entrar acá
+                    // se abre el período completo y se releen los envíos.
+                    if (key === "q:promos") { setPeriodo("todos"); cargarPromos(); }
+                  }}
+                  aria-pressed={activa}
+                  title={key === "q:financiamiento" ? "Consultaron por financiamiento (en el chat o con ficha cargada)"
+                    : key === "q:promos" ? "Contestaron después de recibir una promoción (últimos 60 días)" : label}
                   /* Sin borde propio ni relleno de color: el chip apagado es
                      solo texto y el elegido, un fondo suave. Siete píldoras de
                      colores compitiendo entre sí no ayudan a elegir ninguna. */
@@ -2295,6 +2343,15 @@ function Sidebar({ contactos, activo, onSelect, onToggleDestacado, onPatchContac
                         {(sel || llamar) && (
                           <span title="Hay que llamar a este cliente" style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 20, height: 20, borderRadius: "50%", background: C.red, color: "#fff", animation: "ninitPhonePulse 1.4s ease-in-out infinite" }}>
                             <Phone size={11} />
+                          </span>
+                        )}
+                        {/* En la lista completa este megáfono es lo único que
+                            distingue "me escribió porque le llegó la promo" de
+                            una consulta espontánea — y eso cambia con qué precio
+                            se le contesta (ver src/nini_promo_prompt.md). */}
+                        {respondioPromo(c) && (
+                          <span title="Contestó a una promoción" style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 18, height: 18, borderRadius: "50%", background: "#EDE9FE", color: "#7C3AED" }}>
+                            <Megaphone size={10} />
                           </span>
                         )}
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.nombre || c.telefono || c.email}</span>
