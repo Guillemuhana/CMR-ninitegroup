@@ -9,12 +9,14 @@
 
 import { construirTranscript } from "./_transcript.js";
 
+import { cuerpoGroq, vaOtroModelo } from "./_groq.js";
+
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // Cadena de modelos: si el principal se queda sin cuota, reintenta con uno liviano.
 const MODELOS = (process.env.GROQ_MODEL
-  ? [process.env.GROQ_MODEL, "llama-3.1-8b-instant"]
-  : ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+  ? [process.env.GROQ_MODEL, "openai/gpt-oss-20b"]
+  : ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
 ).filter((m, i, a) => a.indexOf(m) === i);
 
 // Valores permitidos para normalizar la salida del modelo.
@@ -167,13 +169,13 @@ export default async function handler(req, res) {
         const r = await fetch(GROQ_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
+          body: JSON.stringify(cuerpoGroq({
             model,
             temperature: 0.5,
             max_tokens: 1900,
             response_format: { type: "json_object" },
             messages: armarMensajes(txt),
-          }),
+          })),
         });
 
         const data = await r.json().catch(() => ({}));
@@ -190,10 +192,9 @@ export default async function handler(req, res) {
         // menos texto. Antes ninguna de las dos ramas lo reconocía y el botón
         // moría en el primer intento.
         const demasiadoGrande = r.status === 413 || /request too large|too many tokens|context length|tokens per minute|\bTPM\b/i.test(ultimoError);
-        const esRateLimit = r.status === 429 || /rate limit|quota|tokens per day|\bTPD\b/i.test(ultimoError);
         if (demasiadoGrande) continue;          // reintentar con menos conversación
-        if (esRateLimit) { siguienteModelo = true; break; }
-        siguienteModelo = false; break;         // error real (key, modelo caído): no insistir
+        if (vaOtroModelo(r.status, ultimoError)) { siguienteModelo = true; break; }
+        siguienteModelo = false; break;         // error real (key mal, pedido inválido): no insistir
       } catch (e) {
         ultimoError = e?.message || "Error al analizar la conversación.";
       }

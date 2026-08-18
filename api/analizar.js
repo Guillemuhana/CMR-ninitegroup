@@ -13,11 +13,13 @@
 // El cliente persiste el resultado en `contactos` (columnas ia_*) para que los
 // filtros corran instantáneos en memoria. Ver src/FiltrosModal.jsx (analizarContacto).
 
+import { cuerpoGroq, vaOtroModelo } from "./_groq.js";
+
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 const MODELOS = (process.env.GROQ_MODEL
-  ? [process.env.GROQ_MODEL, "llama-3.1-8b-instant"]
-  : ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+  ? [process.env.GROQ_MODEL, "openai/gpt-oss-20b"]
+  : ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
 ).filter((m, i, a) => a.indexOf(m) === i);
 
 // ── Enums válidos (fuente de verdad, compartida conceptualmente con el frontend) ──
@@ -133,13 +135,13 @@ export default async function handler(req, res) {
       const r = await fetch(GROQ_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
+        body: JSON.stringify(cuerpoGroq({
           model,
           temperature: 0.1,
           max_tokens: 500,
           response_format: { type: "json_object" }, // ← JSON Mode
           messages,
-        }),
+        })),
       });
       const data = await r.json().catch(() => ({}));
       if (r.ok) {
@@ -148,8 +150,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ metadata: normalizar(raw), modelo: model });
       }
       ultimoError = data?.error?.message || `Groq devolvió ${r.status}`;
-      const esRateLimit = r.status === 429 || /rate limit|quota|tokens per day|TPD/i.test(ultimoError);
-      if (!esRateLimit) break;
+      if (!vaOtroModelo(r.status, ultimoError)) break;
     } catch (e) {
       ultimoError = e?.message || "Error de conexión con Groq.";
     }

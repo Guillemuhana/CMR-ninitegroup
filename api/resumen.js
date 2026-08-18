@@ -11,13 +11,15 @@
 
 import { construirTranscript } from "./_transcript.js";
 
+import { cuerpoGroq, vaOtroModelo } from "./_groq.js";
+
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // Cadena de modelos: si el principal se queda sin cuota diaria (rate limit / TPD),
 // reintenta automáticamente con uno más liviano para que el resumen no se "agote".
 const MODELOS = (process.env.GROQ_MODEL
-  ? [process.env.GROQ_MODEL, "llama-3.1-8b-instant"]
-  : ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+  ? [process.env.GROQ_MODEL, "openai/gpt-oss-20b"]
+  : ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
 ).filter((m, i, a) => a.indexOf(m) === i);
 
 const DELIM = "|||MENSAJE|||";
@@ -33,16 +35,14 @@ async function pedirAGroq({ messages, temperature, errorBase }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
         },
-        body: JSON.stringify({ model, temperature, max_tokens: 1024, messages }),
+        body: JSON.stringify(cuerpoGroq({ model, temperature, max_tokens: 1024, messages })),
       });
 
       const data = await r.json().catch(() => ({}));
       if (r.ok) return { texto: (data?.choices?.[0]?.message?.content || "").trim() };
 
       ultimoError = data?.error?.message || `Groq devolvió ${r.status}`;
-      // 429 = rate limit / sin cuota → probar el siguiente modelo. Otro error → cortar.
-      const esRateLimit = r.status === 429 || /rate limit|quota|tokens per day|TPD/i.test(ultimoError);
-      if (!esRateLimit) break;
+      if (!vaOtroModelo(r.status, ultimoError)) break;
     } catch (e) {
       ultimoError = e?.message || errorBase;
     }
