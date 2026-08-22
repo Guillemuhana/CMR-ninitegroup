@@ -172,6 +172,9 @@ export const modelos = {
       IMG + "4-stall/int-6.jpg",
       IMG + "4-stall/equipo-1.jpg",
       IMG + "4-stall/equipo-2.jpg",
+      IMG + "4-stall/equipo-ac.jpg", // equipo de A/C y calefacción
+      IMG + "4-stall/equipo-tanque.jpg", // tanque de agua en la sala de máquinas
+      IMG + "4-stall/equipo-electrico.jpg", // tablero eléctrico y bomba de agua
     ],
 
     specs: ["Four (4) private stalls.", ...EQUIPO_ESTANDAR],
