@@ -5,20 +5,45 @@
  * que corregir va acá, después, para que siempre se sepa qué se cambió.
  */
 
-/* ---------- Foto principal y plano ----------
- * El original usaba object-fit:cover, que recorta la imagen para llenar el
- * recuadro: al trailer le cortaba los costados y se veía "a la mitad".
- *
- * Ahora las dos imágenes se muestran ENTERAS (contain) y con la misma altura,
- * así quedan alineadas y ninguna pierde nada. El fondo suave rellena lo que
- * sobra cuando la proporción de la foto no coincide con la del recuadro.
+/* ---------- Fotos de la unidad: grandes y enteras ----------
+ * El original recortaba todo (object-fit:cover) para llenar recuadros fijos:
+ * al trailer le cortaba los costados y los interiores salían como estampillas
+ * cortadas. Como la unidad la elige el cliente, sus fotos son lo que más
+ * importa del documento, así que van a lo ancho y con su proporción real: se
+ * ve la unidad ENTERA, sin recortes ni franjas vacías.
  */
+.nq-hero {
+	grid-template-columns: 1fr; /* exterior arriba, plano abajo, a todo lo ancho */
+	gap: 14px;
+}
 .nq-hero img {
-	height: 300px;
+	height: auto;
 	max-height: none;
 	object-fit: contain;
 	background: #f5f7fa;
 	border: 1px solid var(--nqc-line);
+}
+
+/* Los interiores, de estampillas de 4 columnas recortadas a 2 columnas
+ * grandes y completas.
+ *
+ * Van en columnas de texto (column-count) y no en grilla: las fotos vienen con
+ * proporciones distintas — algunas apaisadas, otras verticales — y en grilla
+ * cada renglón se estira a la más alta, dejando huecos blancos enormes. Así se
+ * acomodan una debajo de la otra, sin huecos. */
+.nq-interior {
+	display: block;
+	column-count: 2;
+	column-gap: 14px;
+}
+.nq-interior img {
+	aspect-ratio: auto;
+	height: auto;
+	object-fit: contain;
+	background: #f5f7fa;
+	border: 1px solid var(--nqc-line);
+	margin-bottom: 14px;
+	break-inside: avoid;
 }
 
 /* Modelos sin plano (ADA+2, 5 y 6 stalls): la foto del exterior sola, a lo
@@ -28,15 +53,13 @@
  * .nq-hero img, y eso le gana al display:none que el navegador aplica solo. */
 [hidden] { display: none !important; }
 .nq-hero.nq-hero-solo { grid-template-columns: 1fr; }
-.nq-hero.nq-hero-solo img { height: 360px; }
 
 /* En pantallas chicas la grilla pasa a una sola columna: ahí conviene que cada
  * foto tome su propio alto, para no dejar franjas vacías arriba y abajo. */
 @media (max-width: 720px) {
-	.nq-hero img {
-		height: auto;
-		border: none;
-	}
+	.nq-hero img { border: none; }
+	/* En el celular, un interior por renglón: si no, se ven diminutos. */
+	.nq-interior { column-count: 1; }
 }
 
 /* ---------- Línea de descuento ----------
@@ -50,12 +73,15 @@
 }
 
 @media print {
+	/* En papel sí conviene achicarlas, para que el acuerdo no se estire. */
 	.nq-hero img {
 		height: auto;
-		max-height: 260px;
+		max-height: 320px;
 		object-fit: contain;
 		border: none;
 	}
+	.nq-interior { column-count: 4; column-gap: 8px; }
+	.nq-interior img { max-height: 200px; object-fit: contain; }
 }
 
 /* ============================================================

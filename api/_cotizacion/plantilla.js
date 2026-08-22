@@ -31,7 +31,7 @@ import {
 
 // Subir esto cuando cambien quote.css o firma.js, para que el navegador del
 // cliente no siga mostrando la versión vieja en caché.
-export const ASSET_VERSION = "9";
+export const ASSET_VERSION = "10";
 
 const esc = (s) =>
   String(s ?? "")
