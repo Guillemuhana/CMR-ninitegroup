@@ -144,10 +144,10 @@ test("el acuerdo sale a nombre de quien lo completó, con lo que eligió", async
 test("la cantidad elegida manda el precio y el anticipo es el 50%", async () => {
   const { mail } = await firmaAbierta({}, { cantidad: "3" });
 
-  // 3 x US$26,700 de lista = US$80,100, con la mitad de anticipo.
-  assert.match(mail.text, /Total US\$80,100\.00/);
-  assert.match(mail.text, /anticipo US\$40,050\.00/);
-  assert.match(mail.text, /saldo US\$40,050\.00/);
+  // 3 x US$23,500 de lista = US$70,500, con la mitad de anticipo.
+  assert.match(mail.text, /Total US\$70,500\.00/);
+  assert.match(mail.text, /anticipo US\$35,250\.00/);
+  assert.match(mail.text, /saldo US\$35,250\.00/);
 });
 
 test("el precio no se toma del navegador por más que lo mande", async () => {
@@ -156,14 +156,14 @@ test("el precio no se toma del navegador por más que lo mande", async () => {
     { cantidad: "1", unit_price: 1, precio: { unit_price: 1 } }
   );
 
-  assert.match(mail.text, /Total US\$26,700\.00/);
+  assert.match(mail.text, /Total US\$23,500\.00/);
 });
 
 test("una cantidad fuera de rango se recorta al máximo permitido", async () => {
   const { mail } = await firmaAbierta({}, { cantidad: "99" });
 
   // El tope son 5 unidades: más que eso lo cotiza el equipo a mano.
-  assert.match(mail.text, /Total US\$133,500\.00/);
+  assert.match(mail.text, /Total US\$117,500\.00/);
 });
 
 test("una opción inventada cae en la primera del catálogo", async () => {
@@ -210,8 +210,8 @@ test("una cotización emitida sigue yendo a sales@ y con SUS datos", async () =>
 test("el cliente elige el modelo y manda el precio de ese modelo", async () => {
   const { mail } = await firmaAbierta({}, { modelo: "4-stall" });
 
-  // 4-Stall = US$31,700 de lista.
-  assert.match(mail.text, /Total US\$31,700\.00/);
+  // 4-Stall = US$28,500 de lista.
+  assert.match(mail.text, /Total US\$28,500\.00/);
   assert.match(mail.text, /4-Station Luxury/);
   assert.match(mail.html, /Model/);
 });
@@ -220,14 +220,14 @@ test("un modelo inventado cae en el que trae la cotización", async () => {
   const { status, mail } = await firmaAbierta({}, { modelo: "9-stall" });
 
   assert.equal(status, 200);
-  assert.match(mail.text, /Total US\$26,700\.00/); // el 3-Stall por defecto
+  assert.match(mail.text, /Total US\$23,500\.00/); // el 3-Stall por defecto
 });
 
 test("el ADA+2 se firma como cualquier otro", async () => {
   const { status, mail } = await firmaAbierta({}, { modelo: "ada-2" });
 
   assert.equal(status, 200);
-  assert.match(mail.text, /Total US\$33,500\.00/);
+  assert.match(mail.text, /Total US\$29,500\.00/);
   assert.equal(mail.attachments.length, 1);
 });
 

@@ -31,7 +31,7 @@ import {
 
 // Subir esto cuando cambien quote.css o firma.js, para que el navegador del
 // cliente no siga mostrando la versión vieja en caché.
-export const ASSET_VERSION = "10";
+export const ASSET_VERSION = "12";
 
 const esc = (s) =>
   String(s ?? "")
@@ -89,6 +89,7 @@ export function render({ modelo, cliente: emitida }) {
     precio: esAPedido(m) ? null : Number(m.quote.unit_price) || 0,
     entrega: m.quote.delivery_time || "",
     notaConfig: m.config_note || "",
+    thumb: m.thumb || m.hero || "",
     hero: m.hero || "",
     floorplan: m.floorplan || "",
     interior: m.interior || [],
@@ -184,8 +185,8 @@ export function render({ modelo, cliente: emitida }) {
             m.clave === cliente.modelo ? " checked" : ""
           }>
 				<span class="nq-modelo-foto">${
-          m.hero
-            ? `<img src="${esc(m.hero)}" alt="${esc(m.etiqueta)}" loading="lazy" decoding="async">`
+          m.thumb
+            ? `<img src="${esc(m.thumb)}" alt="${esc(m.etiqueta)}" loading="lazy" decoding="async">`
             : `<span class="nq-modelo-sinfoto">${esc(m.etiqueta)}</span>`
         }</span>
 				<span class="nq-modelo-txt">

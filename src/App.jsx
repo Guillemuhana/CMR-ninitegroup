@@ -209,10 +209,10 @@ SÍ decir: "trailers construidos por fabricantes seleccionados", "soporte con ba
 Web: ninitgroup.com · Email: sales@ninitgroup.com · WhatsApp: +1 786 385 9402.
 
 ════ CATÁLOGO Y PRECIOS OFICIALES (venta) ════
-- 2-Stall   → USD 22,800
-- 3-Stall   → USD 26,700  (el más popular, mejor balance)
-- 4-Stall   → USD 31,700  (festivales / alto flujo)
-- ADA + 2   → USD 33,500  (cumplimiento federal ADA)
+- 2-Stall   → USD 19,500
+- 3-Stall   → USD 23,500  (el más popular, mejor balance)
+- 4-Stall   → USD 28,500  (festivales / alto flujo)
+- ADA + 2   → USD 29,500  (cumplimiento federal ADA)
 Estos precios incluyen: producción, logística internacional, entrega al hub logístico de NTG más cercano, ensamblado, inspección y preparación para operar.
 Catálogo: https://ninitgroup.com/wp-content/uploads/2026/04/NINITGROUP_CATALOG.pdf
 

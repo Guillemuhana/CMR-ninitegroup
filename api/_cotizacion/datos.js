@@ -82,8 +82,11 @@ export const modelos = {
     banos: 2,
     config_note: "",
 
-    quote: { ...CONDICIONES, quote_number: "NTG 2-STALL", unit_price: 22800.0 },
+    quote: { ...CONDICIONES, quote_number: "NTG 2-STALL", unit_price: 19500.0 },
 
+    // Miniatura liviana para el selector (la foto grande pesa de más en el
+    // celular). Se generan con: npx sharp-cli -i <foto> -o thumbs/<modelo>.jpg resize 420
+    thumb: IMG + "thumbs/2-stall.jpg",
     hero: IMG + "2-stall/hero.jpg",
     floorplan: IMG + "2-stall/floorplan.jpg",
     interior: [
@@ -109,8 +112,7 @@ export const modelos = {
     quote: {
       ...CONDICIONES,
       quote_number: "NTG 3-STALL",
-      unit_price: 26700.0,
-      down_payment: 13350.0,
+      unit_price: 23500.0,
     },
 
     // Fotos reales y actualizadas de la unidad: son las mismas que el vendedor
@@ -119,6 +121,9 @@ export const modelos = {
     // acá en public/ en vez de linkear a ninitgroup.com porque el PDF firmado
     // las lee del disco (api/_cotizacion/pdf.js) y el WordPress hoy da 500.
     // Al cambiar las fotos del chat, volver a bajarlas a estos archivos.
+    // Miniatura liviana para el selector (la foto grande pesa de más en el
+    // celular). Se generan con: npx sharp-cli -i <foto> -o thumbs/<modelo>.jpg resize 420
+    thumb: IMG + "thumbs/3-stall.jpg",
     hero: IMG + "3-stall/crm-exterior.jpg",
     floorplan: IMG + "3-stall/crm-floorplan.jpg",
     interior: [
@@ -149,15 +154,24 @@ export const modelos = {
     banos: 4,
     config_note: "",
 
-    quote: { ...CONDICIONES, quote_number: "NTG 4-STALL", unit_price: 31700.0 },
+    quote: { ...CONDICIONES, quote_number: "NTG 4-STALL", unit_price: 28500.0 },
 
+    // Miniatura liviana para el selector (la foto grande pesa de más en el
+    // celular). Se generan con: npx sharp-cli -i <foto> -o thumbs/<modelo>.jpg resize 420
+    thumb: IMG + "thumbs/4-stall.jpg",
     hero: IMG + "4-stall/hero.jpg",
     floorplan: IMG + "4-stall/floorplan.jpg",
+    // int-5, int-6 y las dos planchas de equipamiento son fotos que pasó Nico
+    // el 22-ago-2026: son de la unidad real, no del catálogo viejo.
     interior: [
       IMG + "4-stall/int-1.jpg",
       IMG + "4-stall/int-2.jpg",
       IMG + "4-stall/int-3.jpg",
       IMG + "4-stall/int-4.jpg",
+      IMG + "4-stall/int-5.jpg",
+      IMG + "4-stall/int-6.jpg",
+      IMG + "4-stall/equipo-1.jpg",
+      IMG + "4-stall/equipo-2.jpg",
     ],
 
     specs: ["Four (4) private stalls.", ...EQUIPO_ESTANDAR],
@@ -181,6 +195,7 @@ export const modelos = {
 
     // El 5-stall comparte interior con el 6-stall y no tiene foto de exterior
     // propia en el catálogo: se muestran los interiores reales y nada más.
+    thumb: "",
     hero: "",
     floorplan: "",
     interior: [IMG + "6-stall/int-1.jpg", IMG + "6-stall/int-2.jpg"],
@@ -200,6 +215,9 @@ export const modelos = {
 
     quote: { ...CONDICIONES, quote_number: "NTG 6-STALL", a_pedido: true },
 
+    // Miniatura liviana para el selector (la foto grande pesa de más en el
+    // celular). Se generan con: npx sharp-cli -i <foto> -o thumbs/<modelo>.jpg resize 420
+    thumb: IMG + "thumbs/6-stall.jpg",
     hero: IMG + "6-stall/hero.png",
     floorplan: "",
     interior: [IMG + "6-stall/int-1.jpg", IMG + "6-stall/int-2.jpg"],
@@ -217,8 +235,11 @@ export const modelos = {
     banos: 3,
     config_note: "",
 
-    quote: { ...CONDICIONES, quote_number: "NTG ADA-2", unit_price: 33500.0 },
+    quote: { ...CONDICIONES, quote_number: "NTG ADA-2", unit_price: 29500.0 },
 
+    // Miniatura liviana para el selector (la foto grande pesa de más en el
+    // celular). Se generan con: npx sharp-cli -i <foto> -o thumbs/<modelo>.jpg resize 420
+    thumb: IMG + "thumbs/ada-2.jpg",
     hero: IMG + "ada-2/hero.png",
     floorplan: "",
     interior: [IMG + "ada-2/int-1.png"],

@@ -87,10 +87,10 @@ Use more natural language instead. The goal is to sound:
 
 PRODUCTS & PRICING
 Use ONLY these official prices:
-• 2-Stall → USD 22,800
-• 3-Stall → USD 26,700
-• 4-Stall → USD 31,700
-• ADA+2 → USD 33,500
+• 2-Stall → USD 19,500
+• 3-Stall → USD 23,500
+• 4-Stall → USD 28,500
+• ADA+2 → USD 29,500
 
 Prices include:
 • production

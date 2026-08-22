@@ -199,3 +199,61 @@
 .nq-a-pedido .nq-sign-pad-wrap,
 .nq-a-pedido .nq-return,
 .nq-a-pedido .nq-stamp { display: none; }
+
+/* ============================================================
+   CELULAR — la cotización se manda por WhatsApp, así que la
+   mayoría la abre en el teléfono. Todo lo que abajo de 560px
+   quedaba apretado o cortado se rearma acá.
+   ============================================================ */
+@media (max-width: 560px) {
+	/* Las tarjetas de modelo en dos columnas quedaban de 150px: el nombre, la
+	 * descripción y el precio partidos en cinco renglones. Una debajo de otra,
+	 * con la foto al costado, se leen de un vistazo y son fáciles de tocar. */
+	.nq-modelos { grid-template-columns: 1fr; gap: 10px; }
+	.nq-modelo { flex-direction: row; }
+	.nq-modelo-foto {
+		flex: 0 0 120px;
+		height: auto;
+		min-height: 96px;
+		border-bottom: none;
+		border-right: 1px solid var(--nqc-line);
+	}
+	.nq-modelo-txt {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		padding: 10px 13px;
+	}
+	.nq-modelo-txt em { margin: 2px 0 5px; }
+	.nq-pick { padding: 16px 14px 18px; }
+
+	/* La tabla de precios: tres columnas en 390px partían el nombre del modelo
+	 * letra por letra. En el teléfono cada renglón pasa a ser una ficha. */
+	.nq-price thead { display: none; }
+	.nq-price,
+	.nq-price tbody,
+	.nq-price tfoot,
+	.nq-price tr,
+	.nq-price td { display: block; width: 100%; }
+	.nq-price tr {
+		padding: 12px 0;
+		border-bottom: 1px solid var(--nqc-line);
+	}
+	.nq-price tbody tr:last-child { border-bottom: none; }
+	.nq-price td {
+		padding: 2px 0;
+		border-bottom: none;
+		text-align: left;
+	}
+	.nq-price .nq-c,
+	.nq-price .nq-r { text-align: left; }
+	.nq-price .nq-c::before {
+		content: "Qty: ";
+		color: var(--nqc-muted);
+		font-size: 15px;
+	}
+	.nq-price .nq-r { font-weight: 700; margin-top: 4px; }
+	.nq-price tfoot tr { border-bottom: none; border-top: 2px solid var(--nqc-navy); }
+	.nq-price tfoot td { border-top: none; padding-top: 6px; }
+}
