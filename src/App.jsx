@@ -2781,10 +2781,20 @@ const PLANTILLAS = [
 // ============================================================
 // COTIZACIONES (links por modelo)
 // ============================================================
+
+// Cotización ABIERTA: el Purchase Agreement completo con TODOS los modelos y
+// sin el nombre de nadie. El cliente elige el modelo (2, 3, 4, 5, 6 stalls o
+// ADA+2), pone sus datos, elige cantidad, color, terminación y forma de
+// entrega, y firma ahí mismo: el acuerdo firmado llega por mail a
+// ninitgroup@gmail.com (al cliente NO se le manda copia). Los modelos sin
+// precio de lista (5 y 6 stalls) llegan como pedido de cotización, sin firma.
+// Ver api/_cotizacion/clientes.js → cotizacionAbierta.
+const LINK_COTIZACION_ABIERTA = "https://ninit-crm.vercel.app/cotizacion/ntg-quote.html";
+
 const COTIZACIONES = [
   {
-    label: "Cotización completa (todos los modelos)",
-    texto: `Thank you for your interest in NINIT Group! 🚐\n\nHere's our full interactive quote, where you can browse every restroom trailer model and choose the one that best fits your event:\n\nhttps://ninitgroup.com/ninit_quote/\n\nInside you'll find:\n✅ All models (2-Stall, 3-Stall, 4-Stall and ADA+2) with photos\n✅ Full specifications of each unit\n✅ Pre-sale and ready-to-ship pricing\n✅ Shipping and delivery details\n\nTake a look, pick your favorite model, and let me know — I'll confirm availability and walk you through the next steps. Happy to answer any questions! 😊\n\n💳 *Financing available* — you don't need to pay it all upfront. Check your options with Ascentium Capital here:\n${LINK_FIN}`,
+    label: "Cotización para elegir y firmar online",
+    texto: `Here's our full quote — you can pick the model you want and sign it right there 📄\n\n${LINK_COTIZACION_ABIERTA}\n\nInside you'll find:\n✅ Every model to choose from: 2, 3, 4, 5, 6-Stall and ADA+2 accessible\n✅ Photos, floor plans and full specifications\n✅ Price, payment terms and delivery time\n✅ Your configuration — units, exterior color and interior finish, all included at no extra cost\n\nJust choose your model, fill in your details and sign right there on the page. I'll get your signed agreement instantly and follow up with the deposit invoice. Any questions, I'm here! 😊\n\n💳 *Financing available* — you don't need to pay it all upfront:\n${LINK_FIN}`,
   },
 ];
 

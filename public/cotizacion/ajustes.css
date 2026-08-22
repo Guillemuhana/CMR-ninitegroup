@@ -48,3 +48,110 @@
 		border: none;
 	}
 }
+
+/* ============================================================
+   COTIZACIÓN ABIERTA — la que se manda sin nombre y completa
+   el que la recibe. Reusa el formulario del plugin; solo hacen
+   falta estos detalles.
+   ============================================================ */
+
+/* El asterisco de campo obligatorio. */
+.nq-req { color: #b0473f; font-weight: 700; }
+
+/* Separador entre "sus datos" y "su configuración": ocupa toda la fila. */
+.nq-fdivider.nq-full { grid-column: 1 / -1; }
+
+/* "· 3 units" al lado del modelo en el resumen del acuerdo. */
+.nq-psum-qty { color: var(--nqc-muted); font-weight: 600; }
+
+/* Los renglones del acuerdo que se completan solos mientras el cliente
+ * escribe (nombre, empresa, ubicación): en gris hasta que hay algo. */
+.nq-client-card .nq-sign-live { font-style: italic; }
+
+/* ---------- Selector de modelo (solo cotización abierta) ----------
+ * Tarjetas con la foto real de cada unidad: el cliente elige el baño que
+ * quiere y el acuerdo entero se acomoda al modelo elegido.
+ */
+.nq-fdivider.nq-fdivider-top {
+	margin-top: 18px;
+	border-top: none;
+	padding-top: 0;
+}
+.nq-modelos {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12px;
+	margin: 12px 0 4px;
+}
+.nq-modelo {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	border: 1.5px solid var(--nqc-line);
+	border-radius: 12px;
+	overflow: hidden;
+	background: #fff;
+	cursor: pointer;
+	transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.nq-modelo:hover { transform: translateY(-1px); border-color: #b9c6d8; }
+.nq-modelo input { position: absolute; opacity: 0; pointer-events: none; }
+.nq-modelo:has(input:checked),
+.nq-modelo.is-elegida {
+	border-color: var(--nqc-navy);
+	box-shadow: 0 0 0 3px rgba(22, 54, 92, .14);
+}
+.nq-modelo-foto {
+	display: block;
+	height: 96px;
+	background: #f5f7fa;
+	border-bottom: 1px solid var(--nqc-line);
+}
+.nq-modelo-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nq-modelo-sinfoto {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	font-size: 15px;
+	font-weight: 700;
+	color: #98a5b8;
+}
+.nq-modelo-txt { display: block; padding: 10px 12px 12px; }
+.nq-modelo-txt strong { display: block; font-size: 16px; color: var(--nqc-ink); }
+.nq-modelo-txt em {
+	display: block;
+	font-style: normal;
+	font-size: 12.5px;
+	line-height: 1.35;
+	color: var(--nqc-muted);
+	margin: 2px 0 6px;
+	min-height: 34px;
+}
+.nq-modelo-txt b { font-size: 15px; color: var(--nqc-navy); }
+
+@media (max-width: 720px) {
+	.nq-modelos { grid-template-columns: 1fr 1fr; }
+	.nq-modelo-txt em { min-height: 0; }
+}
+
+/* ---------- Modelo que se cotiza a pedido ----------
+ * Sin precio de lista no hay acuerdo que firmar: se esconden la aceptación y
+ * el pad de firma, y en su lugar se explica que el equipo vuelve con el precio.
+ */
+.nq-pedido-aviso {
+	display: none;
+	margin: 0 0 18px;
+	padding: 14px 16px;
+	background: #fff8e9;
+	border-radius: 10px;
+	font-size: 15.5px;
+	line-height: 1.55;
+	color: #7a5b18;
+}
+.nq-a-pedido .nq-pedido-aviso { display: block; }
+.nq-a-pedido .nq-accept-row,
+.nq-a-pedido .nq-sign-grid,
+.nq-a-pedido .nq-sign-pad-wrap,
+.nq-a-pedido .nq-return,
+.nq-a-pedido .nq-stamp { display: none; }

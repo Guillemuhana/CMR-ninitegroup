@@ -9,6 +9,40 @@
 // Para emitir una cotización nueva: agregar una entrada acá y correr
 //   node scripts/generar-cotizacion.mjs <slug>
 
+// Cotización ABIERTA: la misma propuesta pero sin nombre ni datos de nadie.
+// Es la que se manda "a cualquiera" — el que la recibe elige el modelo (2, 3,
+// 4, 5, 6 stalls o ADA+2), completa sus datos, elige cantidad, color,
+// terminación y forma de entrega, firma y envía. El
+// acuerdo firmado llega a ninitgroup@gmail.com (NUNCA se le manda copia al
+// cliente, igual que en las cotizaciones nominadas).
+//
+// El precio no se negocia acá: sale del precio de lista del modelo en
+// datos.js. Del navegador solo se aceptan datos de contacto y opciones, y
+// todas se validan contra las listas de opcionesCliente.
+export const SLUG_ABIERTA = "ntg-quote";
+
+export const cotizacionAbierta = {
+  slug: SLUG_ABIERTA,
+  abierta: true,
+  token: "", // link público: no hace falta que sea inadivinable, no lleva datos de nadie
+  modelo: "3-stall", // el que viene marcado al abrir; el cliente puede cambiarlo
+  // La fecha del acuerdo es el día en que el cliente firma: la pone el
+  // servidor al recibir la firma, y la página la muestra con la del navegador.
+  fecha: null,
+
+  nombre: "",
+  email: "",
+  telefono: "",
+  ubicacion: "",
+  empresa: "",
+
+  config_note: "",
+
+  // Sin precio propio: manda el precio de lista de datos.js. La cantidad y el
+  // anticipo (50%) se calculan con lo que el cliente elige.
+  precio: {},
+};
+
 export const cotizaciones = [
   {
     slug: "jose-gamez",
@@ -45,8 +79,11 @@ export const cotizaciones = [
   // Cotización interna de prueba. No es de ningún cliente: existe para poder
   // firmar y comprobar que el circuito de mail sigue funcionando sin escribirle
   // a nadie de verdad. Al firmarla, el aviso va a sales@ninitgroup.com igual que
-  // una real. Si alguna vez llega un mail a la casilla de abajo, es que se
-  // reintrodujo la copia al cliente, que está desactivada a propósito.
+  // una real. Si alguna vez llega a la casilla de abajo un mail dirigido AL
+  // CLIENTE (asunto NTG-PRUEBA con formato de cotización, no el aviso interno),
+  // es que se reintrodujo la copia al cliente, que está desactivada a propósito.
+  // Ojo: esa misma casilla recibe a propósito los avisos de la cotización
+  // abierta, así que ya no alcanza con ver "llegó algo a ninitgroup@gmail.com".
   {
     slug: "prueba-interna",
     token: "ntg9k4x2",
@@ -69,8 +106,13 @@ export const cotizaciones = [
   },
 ];
 
+/** La abierta + todas las nominadas. */
+export function todasLasCotizaciones() {
+  return [cotizacionAbierta, ...cotizaciones];
+}
+
 export function buscarCotizacion(slug) {
-  return cotizaciones.find((c) => c.slug === slug) || null;
+  return todasLasCotizaciones().find((c) => c.slug === slug) || null;
 }
 
 /** Nombre del archivo publicado, sin extensión. */

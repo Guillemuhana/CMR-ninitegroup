@@ -387,11 +387,15 @@ export function construirPDF({ modelo, cliente, d, firma }) {
   tituloSeccion("Client Configuration");
   const config = [
     ["Client", cliente.nombre],
+    ["Company", cliente.empresa],
     ["Email", cliente.email],
     ["Phone", cliente.telefono],
     ["Delivery Location", cliente.ubicacion],
     ["Unit", modelo.name],
     ["Quantity", String(d.quantity)],
+    // Lo que eligió el cliente en la cotización abierta (color, terminación,
+    // forma de entrega). En las emitidas no hay opciones y no aparece nada.
+    ...(cliente.opciones || []),
   ].filter(([, v]) => v);
 
   for (const [rotulo, valor] of config) {

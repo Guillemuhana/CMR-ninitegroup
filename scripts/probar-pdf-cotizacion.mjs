@@ -1,6 +1,8 @@
 // Prueba local del PDF firmado, sin mandar mails ni levantar el servidor.
 //
 //   node scripts/probar-pdf-cotizacion.mjs jose-gamez
+//   node scripts/probar-pdf-cotizacion.mjs ntg-3stall   (la abierta, con datos
+//        de ejemplo: es lo que llega cuando la firma alguien desde el link)
 //
 // Escribe el PDF en la carpeta temporal del proyecto para poder abrirlo y
 // revisar que las 9 secciones y las fotos salgan bien.
@@ -14,11 +16,32 @@ import { buscarCotizacion, cotizaciones } from "../api/_cotizacion/clientes.js";
 import { construirPDF } from "../api/_cotizacion/pdf.js";
 
 const slug = process.argv[2] || cotizaciones[0].slug;
-const cliente = buscarCotizacion(slug);
-if (!cliente) {
+const emitida = buscarCotizacion(slug);
+if (!emitida) {
   console.error(`No existe la cotización "${slug}".`);
   process.exit(1);
 }
+
+// La cotización abierta no tiene datos de nadie: los pone quien la firma. Acá
+// se inventan para poder ver el PDF que va a llegar al mail.
+const cliente = emitida.abierta
+  ? {
+      ...emitida,
+      fecha: new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }),
+      nombre: "Demo Client",
+      empresa: "Demo Events LLC",
+      email: "demo@example.com",
+      telefono: "+1 (305) 555-0134",
+      ubicacion: "Orlando, FL",
+      config_note: "Onyx Black exterior · Armani Gray (Matte) interior · Delivery to my address",
+      opciones: [
+        ["Exterior Color", "Onyx Black"],
+        ["Interior Finish", "Armani Gray (Matte)"],
+        ["Delivery Method", "Delivery to my address — included, no charge"],
+      ],
+      precio: { quote_number: "NTG-3-STALL-9K2P", quantity: 2, down_payment: "", discount: 0 },
+    }
+  : emitida;
 
 const modelo = modelos[cliente.modelo];
 const d = calcular(modelo, cliente);

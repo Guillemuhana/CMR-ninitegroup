@@ -2,6 +2,8 @@
 //
 //   node scripts/generar-cotizacion.mjs            -> genera todas
 //   node scripts/generar-cotizacion.mjs jose-gamez -> genera solo esa
+//   node scripts/generar-cotizacion.mjs ntg-3stall -> la cotización ABIERTA,
+//        la que se manda sin nombre para que la complete quien la recibe
 //
 // Sale un archivo suelto en public/cotizacion/<slug>.html que Vercel sirve tal
 // cual, sin pasar por React. Los datos del cliente y del modelo viven en
@@ -13,7 +15,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { modelos } from "../api/_cotizacion/datos.js";
-import { cotizaciones, archivoDe } from "../api/_cotizacion/clientes.js";
+import { todasLasCotizaciones, archivoDe } from "../api/_cotizacion/clientes.js";
 import { render, ASSET_VERSION } from "../api/_cotizacion/plantilla.js";
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -37,19 +39,21 @@ function generar(cliente) {
   return { destino, archivo, bytes: Buffer.byteLength(html) };
 }
 
+const todas = todasLasCotizaciones();
 const pedido = process.argv[2];
-const objetivo = pedido ? cotizaciones.filter((c) => c.slug === pedido) : cotizaciones;
+const objetivo = pedido ? todas.filter((c) => c.slug === pedido) : todas;
 
 if (pedido && !objetivo.length) {
   console.error(`No hay ninguna cotización con el slug "${pedido}".`);
-  console.error(`Disponibles: ${cotizaciones.map((c) => c.slug).join(", ")}`);
+  console.error(`Disponibles: ${todas.map((c) => c.slug).join(", ")}`);
   process.exit(1);
 }
 
 console.log(`Assets v${ASSET_VERSION}`);
 for (const cliente of objetivo) {
   const { destino, archivo, bytes } = generar(cliente);
-  console.log(`✓ ${cliente.nombre} → ${(bytes / 1024).toFixed(1)} KB`);
+  const quien = cliente.abierta ? "COTIZACIÓN ABIERTA (sin nombre)" : cliente.nombre;
+  console.log(`✓ ${quien} → ${(bytes / 1024).toFixed(1)} KB`);
   console.log(`  ${destino}`);
   console.log(`  /cotizacion/${archivo}`);
 }

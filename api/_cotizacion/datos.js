@@ -20,22 +20,97 @@ export const empresa = {
 export const logo = IMG + "logo.png";
 export const firmaRep = IMG + "nicolas-signature.png";
 
+/**
+ * Equipamiento que traen TODAS las unidades. Son fotos de los componentes
+ * (bacha, inodoro, chasis, luces…), no de un modelo en particular, así que la
+ * galería es la misma en cualquier cotización.
+ */
+const EQUIPAMIENTO = [
+      { img: IMG + "3-stall/feat-sinks.jpg", title: "Sinks", desc: "Commercial ceramic sink with waterproof wooden cabinet and marble countertop." },
+      { img: IMG + "3-stall/feat-toilet.jpg", title: "Flush Toilet", desc: "Commercial-grade ceramic flush toilet — highly durable and professional." },
+      { img: IMG + "3-stall/feat-urinal.jpg", title: "Pressure Urinal", desc: "Commercial-grade ceramic or professional plastic urinal, highly durable (as per drawing)." },
+      { img: IMG + "3-stall/feat-mirror.jpg", title: "Vanity", desc: "Large reinforced glass mirror with LED lighting for safety and visibility. High-quality waterproof wooden cabinet with marble." },
+      { img: IMG + "3-stall/feat-lighting.jpg", title: "LED Lighting", desc: "LED ceiling lights, sockets, circuit breaker (standard 110V 60Hz USA). High-power 12V extractor fans." },
+      { img: IMG + "3-stall/feat-chassis.jpg", title: "Durable Chassis", desc: "Hot-dip galvanized square tubes with high-strength welding — very solid construction." },
+      { img: IMG + "3-stall/feat-wheels.jpg", title: "Wheel Size", desc: "15-inch heavy-duty professional trailer wheels." },
+      { img: IMG + "3-stall/feat-jacks.jpg", title: "Support Jacks", desc: "Upgraded, 4 pieces per trailer." },
+      { img: IMG + "3-stall/feat-extlighting.jpg", title: "Exterior Lighting", desc: "Full exterior LED safety lights (rear, side, and clearance) per US DOT regulations." },
+      { img: IMG + "3-stall/feat-towbar.jpg", title: "Tow Bar & Jockey Wheel", desc: "Hot-dip galvanized." },
+      { img: IMG + "3-stall/feat-steps.jpg", title: "Foldable Steps", desc: "Durable and high-quality foldable steps." },
+      { img: IMG + "3-stall/feat-handrails.jpg", title: "Handrails", desc: "Aluminum handrails." },
+      { img: IMG + "3-stall/feat-waterinlet.jpg", title: "Fresh Water Inlet", desc: "High-quality stainless steel type. Each trailer has 1 unit." },
+      { img: IMG + "3-stall/feat-wateroutlet.jpg", title: "Waste Water Outlet", desc: "High-quality stainless steel type, 3 inch size." },
+      { img: IMG + "3-stall/feat-gauge.jpg", title: "Water Gauge", desc: "Waste water tank level with full warning." },
+      { img: IMG + "3-stall/feat-pump.jpg", title: "Water Pump & Pressurizer", desc: "Powerful heavy-duty high-flow water pump (1 unit). High-pressure water pressurizer with 50L capacity (1 unit)." },
+      { img: IMG + "3-stall/feat-acheating.jpg", title: "A/C & Heating", desc: "High-flow heavy-duty water pump for reliable continuous operation. High-capacity A/C and heating system for climate control." },
+      { img: IMG + "3-stall/feat-electrical.jpg", title: "Electrical System", desc: "Durable and safe wiring, standard country power socket, circuit breaker, LED ceiling light, 110V power inlet." },
+];
+
+/**
+ * Lo que sí está confirmado de los modelos de los que no tenemos ficha técnica
+ * con medidas. Sale del catálogo oficial del CRM (STANDARD FEATURES del prompt
+ * de NINI BOT): nada de acá es inventado. Cuando llegue la ficha real de un
+ * modelo, se le pone su propio `specs` y listo.
+ */
+const EQUIPO_ESTANDAR = [
+  "High-capacity A/C and heating system.",
+  "LED interior lighting and full exterior DOT safety lighting.",
+  "Commercial-grade ceramic flush toilet in every stall.",
+  "Sinks with waterproof cabinet, countertop and mirror in every stall.",
+  "Fresh water and waste water tanks, with waste level gauge.",
+  "Heavy-duty water pump and pressurizer.",
+  "Electric brake system, foldable steps, stabilizer jacks and handrails.",
+  'Fully "Plug and Play": on wheels, ready to roll and connect immediately.',
+];
+
+/** Precio y condiciones comunes a todos los modelos. */
+const CONDICIONES = {
+  valid_days: 15,
+  delivery_time: "45-60 calendar days",
+  quantity: 1,
+  shipping_cost: 0.0,
+  rep_name: "Nicolas Hercun",
+};
+
 export const modelos = {
+  "2-stall": {
+    name: "NTG 2-Station Luxury Portable Restroom Trailer",
+    short: "2-Station Luxury",
+    etiqueta: "2-Stall",
+    nota: "Compact — weddings and private events",
+    slug: "ntg-2stall",
+    banos: 2,
+    config_note: "",
+
+    quote: { ...CONDICIONES, quote_number: "NTG 2-STALL", unit_price: 22800.0 },
+
+    hero: IMG + "2-stall/hero.jpg",
+    floorplan: IMG + "2-stall/floorplan.jpg",
+    interior: [
+      IMG + "2-stall/int-1.jpg",
+      IMG + "2-stall/int-2.jpg",
+      IMG + "2-stall/int-3.jpg",
+      IMG + "2-stall/int-4.jpg",
+    ],
+
+    specs: ["Two (2) private stalls.", ...EQUIPO_ESTANDAR],
+    features: EQUIPAMIENTO,
+  },
+
   "3-stall": {
     name: "NTG 3-Station Luxury Portable Restroom Trailer",
     short: "3-Station Luxury",
+    etiqueta: "3-Stall",
+    nota: "Most popular — best balance",
     slug: "ntg-3stall",
+    banos: 3,
     config_note: "Maximum Premium Upgrade. Triple axle configuration.",
 
     quote: {
+      ...CONDICIONES,
       quote_number: "NTG 3-STALL",
-      valid_days: 15,
-      delivery_time: "45-60 calendar days",
       unit_price: 26700.0,
-      quantity: 1,
-      shipping_cost: 0.0,
       down_payment: 13350.0,
-      rep_name: "Nicolas Hercun",
     },
 
     // Fotos reales y actualizadas de la unidad: son las mismas que el vendedor
@@ -62,28 +137,110 @@ export const modelos = {
       "Stealth design: 100% concealed plumbing and wiring inside the walls.",
     ],
 
-    features: [
-      { img: IMG + "3-stall/feat-sinks.jpg", title: "Sinks", desc: "Commercial ceramic sink with waterproof wooden cabinet and marble countertop." },
-      { img: IMG + "3-stall/feat-toilet.jpg", title: "Flush Toilet", desc: "Commercial-grade ceramic flush toilet — highly durable and professional." },
-      { img: IMG + "3-stall/feat-urinal.jpg", title: "Pressure Urinal", desc: "Commercial-grade ceramic or professional plastic urinal, highly durable (as per drawing)." },
-      { img: IMG + "3-stall/feat-mirror.jpg", title: "Vanity", desc: "Large reinforced glass mirror with LED lighting for safety and visibility. High-quality waterproof wooden cabinet with marble." },
-      { img: IMG + "3-stall/feat-lighting.jpg", title: "LED Lighting", desc: "LED ceiling lights, sockets, circuit breaker (standard 110V 60Hz USA). High-power 12V extractor fans." },
-      { img: IMG + "3-stall/feat-chassis.jpg", title: "Durable Chassis", desc: "Hot-dip galvanized square tubes with high-strength welding — very solid construction." },
-      { img: IMG + "3-stall/feat-wheels.jpg", title: "Wheel Size", desc: "15-inch heavy-duty professional trailer wheels." },
-      { img: IMG + "3-stall/feat-jacks.jpg", title: "Support Jacks", desc: "Upgraded, 4 pieces per trailer." },
-      { img: IMG + "3-stall/feat-extlighting.jpg", title: "Exterior Lighting", desc: "Full exterior LED safety lights (rear, side, and clearance) per US DOT regulations." },
-      { img: IMG + "3-stall/feat-towbar.jpg", title: "Tow Bar & Jockey Wheel", desc: "Hot-dip galvanized." },
-      { img: IMG + "3-stall/feat-steps.jpg", title: "Foldable Steps", desc: "Durable and high-quality foldable steps." },
-      { img: IMG + "3-stall/feat-handrails.jpg", title: "Handrails", desc: "Aluminum handrails." },
-      { img: IMG + "3-stall/feat-waterinlet.jpg", title: "Fresh Water Inlet", desc: "High-quality stainless steel type. Each trailer has 1 unit." },
-      { img: IMG + "3-stall/feat-wateroutlet.jpg", title: "Waste Water Outlet", desc: "High-quality stainless steel type, 3 inch size." },
-      { img: IMG + "3-stall/feat-gauge.jpg", title: "Water Gauge", desc: "Waste water tank level with full warning." },
-      { img: IMG + "3-stall/feat-pump.jpg", title: "Water Pump & Pressurizer", desc: "Powerful heavy-duty high-flow water pump (1 unit). High-pressure water pressurizer with 50L capacity (1 unit)." },
-      { img: IMG + "3-stall/feat-acheating.jpg", title: "A/C & Heating", desc: "High-flow heavy-duty water pump for reliable continuous operation. High-capacity A/C and heating system for climate control." },
-      { img: IMG + "3-stall/feat-electrical.jpg", title: "Electrical System", desc: "Durable and safe wiring, standard country power socket, circuit breaker, LED ceiling light, 110V power inlet." },
+    features: EQUIPAMIENTO,
+  },
+
+  "4-stall": {
+    name: "NTG 4-Station Luxury Portable Restroom Trailer",
+    short: "4-Station Luxury",
+    etiqueta: "4-Stall",
+    nota: "Festivals and high traffic",
+    slug: "ntg-4stall",
+    banos: 4,
+    config_note: "",
+
+    quote: { ...CONDICIONES, quote_number: "NTG 4-STALL", unit_price: 31700.0 },
+
+    hero: IMG + "4-stall/hero.jpg",
+    floorplan: IMG + "4-stall/floorplan.jpg",
+    interior: [
+      IMG + "4-stall/int-1.jpg",
+      IMG + "4-stall/int-2.jpg",
+      IMG + "4-stall/int-3.jpg",
+      IMG + "4-stall/int-4.jpg",
     ],
+
+    specs: ["Four (4) private stalls.", ...EQUIPO_ESTANDAR],
+    features: EQUIPAMIENTO,
+  },
+
+  // 5-stall y 6-stall: NO tienen precio oficial en el CRM (el catálogo solo
+  // cierra 2, 3, 4 y ADA+2), así que van "a pedido": el cliente los puede
+  // elegir y mandar la solicitud, pero no se firma un acuerdo sin precio. En
+  // cuanto haya precio, se le pone unit_price y quedan firmables como el resto.
+  "5-stall": {
+    name: "NTG 5-Station Luxury Portable Restroom Trailer",
+    short: "5-Station Luxury",
+    etiqueta: "5-Stall",
+    nota: "Large events — price on request",
+    slug: "ntg-5stall",
+    banos: 5,
+    config_note: "",
+
+    quote: { ...CONDICIONES, quote_number: "NTG 5-STALL", a_pedido: true },
+
+    // El 5-stall comparte interior con el 6-stall y no tiene foto de exterior
+    // propia en el catálogo: se muestran los interiores reales y nada más.
+    hero: "",
+    floorplan: "",
+    interior: [IMG + "6-stall/int-1.jpg", IMG + "6-stall/int-2.jpg"],
+
+    specs: ["Five (5) private stalls.", ...EQUIPO_ESTANDAR],
+    features: EQUIPAMIENTO,
+  },
+
+  "6-stall": {
+    name: "NTG 6-Station Luxury Portable Restroom Trailer",
+    short: "6-Station Luxury",
+    etiqueta: "6-Stall",
+    nota: "Maximum capacity — price on request",
+    slug: "ntg-6stall",
+    banos: 6,
+    config_note: "",
+
+    quote: { ...CONDICIONES, quote_number: "NTG 6-STALL", a_pedido: true },
+
+    hero: IMG + "6-stall/hero.png",
+    floorplan: "",
+    interior: [IMG + "6-stall/int-1.jpg", IMG + "6-stall/int-2.jpg"],
+
+    specs: ["Six (6) private stalls.", ...EQUIPO_ESTANDAR],
+    features: EQUIPAMIENTO,
+  },
+
+  "ada-2": {
+    name: "NTG ADA+2 Accessible Portable Restroom Trailer",
+    short: "ADA+2 Accessible",
+    etiqueta: "ADA+2",
+    nota: "Federal ADA compliance",
+    slug: "ntg-ada2",
+    banos: 3,
+    config_note: "",
+
+    quote: { ...CONDICIONES, quote_number: "NTG ADA-2", unit_price: 33500.0 },
+
+    hero: IMG + "ada-2/hero.png",
+    floorplan: "",
+    interior: [IMG + "ada-2/int-1.png"],
+
+    specs: [
+      "One (1) ADA accessible stall with ramp access, plus two (2) standard private stalls.",
+      ...EQUIPO_ESTANDAR,
+    ],
+    features: EQUIPAMIENTO,
   },
 };
+
+/** Orden en que se le ofrecen los modelos al cliente. */
+export const MODELOS_ORDEN = ["2-stall", "3-stall", "4-stall", "5-stall", "6-stall", "ada-2"];
+
+/** Los modelos, en orden y con su clave, para armar el selector. */
+export function modelosElegibles() {
+  return MODELOS_ORDEN.filter((k) => modelos[k]).map((k) => ({ clave: k, ...modelos[k] }));
+}
+
+/** Un modelo sin precio cerrado no se firma: se pide cotización. */
+export const esAPedido = (modelo) => !!modelo?.quote?.a_pedido;
 
 export const terminos = [
   "Pickup Location: Unit also available for pickup at our Doral, Miami facility, if preferred. Delivery is complimentary either way — at no additional cost to the Buyer.",
@@ -97,6 +254,36 @@ export const personalizacion = [
   "Exterior Color: Fully customizable body color. Choose from our premium exterior palette (Pure White, Quartz Grey, Champagne Gold, Deep Burgundy, and more) to match your branding or event style.",
   "Interior Finishes: Customize the interior by selecting your preferred combination of wooden cabinet finishes, marble countertop styles, and waterproof vinyl flooring.",
 ];
+
+/**
+ * Opciones que el cliente elige por su cuenta en la cotización abierta
+ * (la que se manda sin nombre para que la complete quien la recibe).
+ *
+ * El servidor valida contra estas mismas listas: si llega algo que no está acá,
+ * la firma se rechaza. Por eso conviene tocar solo este bloque cuando cambien
+ * los colores o las formas de entrega.
+ */
+export const opcionesCliente = {
+  exterior: [
+    "Pure White",
+    "Quartz Grey",
+    "Champagne Gold",
+    "Deep Burgundy",
+    "Onyx Black",
+  ],
+  entrega: [
+    "Delivery to my address — included, no charge",
+    "Pickup at the NINI T-GROUP facility in Doral, Miami",
+  ],
+  // Máximo de unidades que se pueden pedir desde el formulario. Más que esto
+  // es un pedido mayorista y lo cotiza el equipo a mano.
+  cantidadMaxima: 5,
+};
+
+/** Terminaciones interiores como las ve el cliente en el desplegable. */
+export function opcionesInterior() {
+  return terminaciones.map((t) => `${t.name} (${t.finish})`);
+}
 
 export const terminaciones = [
   { img: IMG + "finishes/01-pure-white.jpg", name: "Pure White", finish: "Matte" },
@@ -168,6 +355,10 @@ export const contrato = {
 export function calcular(modelo, cliente) {
   const q = { ...modelo.quote, ...cliente.precio };
 
+  // Modelo sin precio de lista (5-stall, 6-stall): no hay total que mostrar ni
+  // acuerdo que firmar, se cotiza a pedido.
+  const aPedido = !!q.a_pedido && !(Number(q.unit_price) > 0);
+
   const cantidad = Math.max(1, parseInt(q.quantity, 10) || 1);
   const unitario = Number(q.unit_price) || 0;
   const envio = Number(q.shipping_cost) || 0;
@@ -183,6 +374,7 @@ export function calcular(modelo, cliente) {
       : Math.round(total * 0.5 * 100) / 100;
 
   return {
+    a_pedido: aPedido,
     quote_number: q.quote_number || "",
     quote_date: cliente.fecha,
     delivery_time: q.delivery_time || "45-60 calendar days",
