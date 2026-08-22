@@ -154,10 +154,17 @@
       }
     }
 
-    /** Aplica el modelo elegido a todo el documento. */
-    function aplicarModelo(m) {
+    /**
+     * Aplica el modelo elegido a todo el documento.
+     *
+     * `yaRendereado` es para el primer llamado: el documento ya viene armado
+     * con ese modelo desde el servidor, así que solo hay que fijar el estado
+     * (botón, firma, totales) sin volver a pedir fotos que ya están.
+     */
+    function aplicarModelo(m, yaRendereado) {
       if (!m) return;
       modelo = m;
+      if (yaRendereado) return estadoDelModelo(m);
 
       pintar("modelo-nombre", m.nombre);
       pintar("quote-number", m.numero);
@@ -165,6 +172,10 @@
 
       foto("hero", m.hero, m.etiqueta + " exterior");
       foto("floorplan", m.floorplan, "Floor plan");
+      // Sin plano, la foto del exterior ocupa el ancho completo en vez de
+      // dejar la mitad del renglón vacía.
+      var bloqueFotos = scope.querySelector(".nq-hero");
+      if (bloqueFotos) bloqueFotos.classList.toggle("nq-hero-solo", !m.floorplan);
 
       var galeria = scope.querySelector('[data-nq="interior"]');
       if (galeria) {
@@ -189,9 +200,14 @@
         }
       }
 
+      estadoDelModelo(m);
+    }
+
+    /** Lo que depende del modelo pero no son fotos ni textos del documento. */
+    function estadoDelModelo(m) {
       // Marcar la tarjeta elegida a mano además del :has(input:checked) del
       // CSS, para los navegadores viejos que no soportan :has().
-      var tarjetas = form.querySelectorAll(".nq-modelo");
+      var tarjetas = scope.querySelectorAll(".nq-modelo");
       for (var t = 0; t < tarjetas.length; t++) {
         var radio = tarjetas[t].querySelector("input");
         tarjetas[t].classList.toggle("is-elegida", !!radio && radio.checked);
@@ -240,6 +256,7 @@
       pintar("email", valorDe("email"));
       pintar("tel", valorDe("telefono"));
       pintar("loc", valorDe("ubicacion"));
+      pintar("modelo-etiqueta", (modeloDe(valorDe("modelo")) || {}).etiqueta || "");
       pintar("exterior", valorDe("exterior"));
       pintar("interior-fin", valorDe("interior"));
       pintar("entrega", valorDe("entrega"));
@@ -286,7 +303,12 @@
     if (abierta) {
       form.addEventListener("input", refrescar);
       form.addEventListener("change", refrescar);
-      aplicarModelo(modeloDe(valorDe("modelo") || form.dataset.modelo));
+      // Los radios del selector están arriba, fuera del formulario (asociados
+      // con form="nq-form"): sus eventos no llegan al <form>, hay que
+      // escucharlos donde viven.
+      var selector = scope.querySelector(".nq-pick .nq-modelos");
+      if (selector) selector.addEventListener("change", refrescar);
+      aplicarModelo(modeloDe(valorDe("modelo") || form.dataset.modelo), true);
       refrescar();
     }
 

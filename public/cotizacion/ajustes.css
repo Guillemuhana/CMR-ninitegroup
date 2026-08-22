@@ -21,6 +21,15 @@
 	border: 1px solid var(--nqc-line);
 }
 
+/* Modelos sin plano (ADA+2, 5 y 6 stalls): la foto del exterior sola, a lo
+ * ancho, en vez de media grilla vacía.
+ *
+ * El [hidden] con !important es necesario: quote.css le pone display:block a
+ * .nq-hero img, y eso le gana al display:none que el navegador aplica solo. */
+[hidden] { display: none !important; }
+.nq-hero.nq-hero-solo { grid-template-columns: 1fr; }
+.nq-hero.nq-hero-solo img { height: 360px; }
+
 /* En pantallas chicas la grilla pasa a una sola columna: ahí conviene que cada
  * foto tome su propio alto, para no dejar franjas vacías arriba y abajo. */
 @media (max-width: 720px) {
@@ -67,6 +76,15 @@
 /* Los renglones del acuerdo que se completan solos mientras el cliente
  * escribe (nombre, empresa, ubicación): en gris hasta que hay algo. */
 .nq-client-card .nq-sign-live { font-style: italic; }
+
+/* ---------- Elegí tu unidad: bloque de arriba de todo ----------
+ * Es lo primero que ve el cliente después de los datos del acuerdo, porque
+ * todo el documento (fotos, ficha, precios) depende de lo que elija acá.
+ */
+.nq-pick { background: #f8fafc; border: 1px solid #e3e9f1; border-radius: 14px; padding: 20px 22px 22px; }
+.nq-pick .nq-h2 { margin-top: 0; }
+.nq-pick-intro { margin: 6px 0 0; font-size: 16px; color: var(--nqc-muted); }
+.nq-pick .nq-modelos { margin-top: 16px; }
 
 /* ---------- Selector de modelo (solo cotización abierta) ----------
  * Tarjetas con la foto real de cada unidad: el cliente elige el baño que

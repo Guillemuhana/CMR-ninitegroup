@@ -31,7 +31,7 @@ import {
 
 // Subir esto cuando cambien quote.css o firma.js, para que el navegador del
 // cliente no siga mostrando la versión vieja en caché.
-export const ASSET_VERSION = "8";
+export const ASSET_VERSION = "9";
 
 const esc = (s) =>
   String(s ?? "")
@@ -105,28 +105,9 @@ export function render({ modelo, cliente: emitida }) {
 		<p class="nq-agree-intro">Fill in your details and choose the configuration you want. Every option below is included in the price — none of them costs extra. The totals update as you choose.</p>
 
 		<form class="nq-form" id="nq-form" data-quote="${esc(cliente.slug)}" data-abierta="1" data-modelo="${esc(cliente.modelo)}">
-			<div class="nq-fdivider nq-fdivider-top">Choose your model</div>
-			<div class="nq-modelos" role="radiogroup" aria-label="Choose your model">
-				${catalogo
-          .map(
-            (m) => `<label class="nq-modelo">
-					<input type="radio" name="modelo" value="${esc(m.clave)}"${m.clave === cliente.modelo ? " checked" : ""}>
-					<span class="nq-modelo-foto">${
-            m.hero
-              ? `<img src="${esc(m.hero)}" alt="${esc(m.etiqueta)}" loading="lazy" decoding="async">`
-              : `<span class="nq-modelo-sinfoto">${esc(m.etiqueta)}</span>`
-          }</span>
-					<span class="nq-modelo-txt">
-						<strong>${esc(m.etiqueta)}</strong>
-						<em>${esc(m.nota)}</em>
-						<b>${m.precio ? esc(usd(m.precio)) : "Price on request"}</b>
-					</span>
-				</label>`
-          )
-          .join("")}
-			</div>
-
-			<div class="nq-fdivider nq-full">Your details</div>
+			<div class="nq-fdivider nq-fdivider-top">Your details <span class="nq-optional">— unit: <span data-nq="modelo-etiqueta">${esc(
+        modelo.etiqueta || modelo.short
+      )}</span>, chosen at the top of the page</span></div>
 			<div class="nq-form-grid">
 				<div class="nq-ffield"><label>Full Name <span class="nq-req">*</span></label><input type="text" name="nombre" maxlength="80" autocomplete="name" placeholder="First and last name" required></div>
 				<div class="nq-ffield"><label>Company <span class="nq-optional">(optional)</span></label><input type="text" name="empresa" maxlength="80" autocomplete="organization"></div>
@@ -186,6 +167,40 @@ export function render({ modelo, cliente: emitida }) {
 		<p class="nq-scroll-hint">Scroll down to review the full proposal, accept it, and sign.</p>
 	</section>`;
 
+  // El selector de unidad va arriba de todo: es lo primero que elige el
+  // cliente y manda sobre el resto del documento (fotos, ficha y precios).
+  // Los radios viven fuera del <form> pero se le asocian con form="nq-form",
+  // así el envío los sigue viendo.
+  const selectorModelos = !abierta
+    ? ""
+    : `	<section class="nq-block nq-pick" id="nq-elegir">
+		<h3 class="nq-h2">Choose Your Unit</h3>
+		<p class="nq-pick-intro">Pick the trailer you want: the photos, specifications and pricing below change with it.</p>
+		<div class="nq-modelos" role="radiogroup" aria-label="Choose your unit">
+			${catalogo
+        .map(
+          (m) => `<label class="nq-modelo">
+				<input type="radio" name="modelo" form="nq-form" value="${esc(m.clave)}"${
+            m.clave === cliente.modelo ? " checked" : ""
+          }>
+				<span class="nq-modelo-foto">${
+          m.hero
+            ? `<img src="${esc(m.hero)}" alt="${esc(m.etiqueta)}" loading="lazy" decoding="async">`
+            : `<span class="nq-modelo-sinfoto">${esc(m.etiqueta)}</span>`
+        }</span>
+				<span class="nq-modelo-txt">
+					<strong>${esc(m.etiqueta)}</strong>
+					<em>${esc(m.nota)}</em>
+					<b>${m.precio ? esc(usd(m.precio)) : "Price on request"}</b>
+				</span>
+			</label>`
+        )
+        .join("")}
+		</div>
+	</section>
+
+`;
+
   const cuerpo = `
 <div class="nq-doc">
 <div class="nq-sheet">
@@ -233,11 +248,12 @@ export function render({ modelo, cliente: emitida }) {
 		<div><span>Delivery Time</span><strong>${esc(d.delivery_time)}</strong></div>
 	</section>
 
+	${selectorModelos}
 	<!-- Model title -->
 	<h2 class="nq-model-title"${vivo("modelo-nombre")}>${esc(modelo.name)}</h2>
 
 	<!-- Hero + floorplan -->
-	<section class="nq-hero">
+	<section class="nq-hero${modelo.floorplan ? "" : " nq-hero-solo"}">
 		<img src="${esc(modelo.hero)}" alt="${esc(modelo.short)} exterior" decoding="async"${vivo("hero")}>
 		<img src="${esc(modelo.floorplan)}" alt="Floor plan" loading="lazy" decoding="async"${vivo("floorplan")}>
 	</section>
