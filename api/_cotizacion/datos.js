@@ -208,10 +208,14 @@ export const modelos = {
 
     quote: { ...CONDICIONES, quote_number: "NTG 5-STALL", unit_price: 41500.0 },
 
-    // El 5-stall comparte interior con el 6-stall y no tiene foto de exterior
-    // propia en el catálogo: se muestran los interiores reales y nada más.
-    thumb: "",
-    hero: "",
+    // Foto real de la unidad, que pasó Nico el 23-ago-2026: hasta entonces el
+    // 5-stall era el único modelo sin exterior propio y en el selector salía
+    // como un recuadro gris. Sigue sin plano y comparte los interiores con el
+    // 6-stall, que es la unidad hermana.
+    // Miniatura liviana para el selector (la foto grande pesa de más en el
+    // celular). Se generan con: npx sharp-cli -i <foto> -o thumbs/<modelo>.jpg resize 420
+    thumb: IMG + "thumbs/5-stall.jpg",
+    hero: IMG + "5-stall/hero.jpg",
     floorplan: "",
     interior: [IMG + "6-stall/int-1.jpg", IMG + "6-stall/int-2.jpg"],
 
