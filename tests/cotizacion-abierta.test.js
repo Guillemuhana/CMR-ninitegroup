@@ -29,6 +29,7 @@ delete process.env.COTIZACION_EMAIL_TO;
 delete process.env.COTIZACION_ABIERTA_EMAIL_TO;
 
 const { default: handler } = await import("../api/cotizacion-firmar.js");
+const { modelosElegibles, esAPedido } = await import("../api/_cotizacion/datos.js");
 
 /** PNG mínimo (1x1 transparente), con la misma forma que canvas.toDataURL(). */
 function firmaPNG() {
@@ -75,7 +76,7 @@ const datosCliente = (over = {}) => ({
   telefono: "+1 (305) 555-0134",
   ubicacion: "Orlando, FL",
   cantidad: "1",
-  entrega: "Delivery to my address — included, no charge",
+  entrega: "Pickup at NINI T-GROUP Hub — Long Beach, CA (Free)",
   exterior: "Onyx Black",
   interior: "Armani Gray (Matte)",
   ...over,
@@ -231,23 +232,38 @@ test("el ADA+2 se firma como cualquier otro", async () => {
   assert.equal(mail.attachments.length, 1);
 });
 
-test("un modelo sin precio no se firma: llega como pedido de cotización", async () => {
-  const { status, json, mail } = await firmaAbierta(
-    { modo: "pedido", signature: "", accepted: false },
-    { modelo: "6-stall", cantidad: "2" }
-  );
+test("el 5-Stall y el 6-Stall ya tienen precio: se firman como el resto", async () => {
+  // Antes iban "a pedido" y no se podían firmar. El precio lo cerró Nico el
+  // 23-ago-2026, así que ahora salen con total y anticipo del 50%.
+  const cinco = await firmaAbierta({}, { modelo: "5-stall" });
+  assert.equal(cinco.status, 200);
+  assert.match(cinco.mail.text, /Total US\$41,500\.00/);
+  assert.match(cinco.mail.text, /anticipo US\$20,750\.00/);
 
-  assert.equal(status, 200);
-  assert.equal(json.pedido, true);
-  assert.equal(json.filename, null);
-  // Sin acuerdo firmado no hay PDF que mandar, pero el pedido sí llega.
-  assert.deepEqual(mail.to, ["ninitgroup@gmail.com"]);
-  assert.equal(mail.attachments.length, 0);
-  assert.match(mail.subject, /PEDIDO DE COTIZACIÓN/);
-  assert.match(mail.subject, /6-Stall/);
-  assert.match(mail.text, /no tiene precio de lista/);
-  // Y nunca inventa un total.
-  assert.doesNotMatch(mail.text, /Total US\$0\.00/);
+  const seis = await firmaAbierta({}, { modelo: "6-stall", cantidad: "2" });
+  assert.equal(seis.status, 200);
+  assert.match(seis.mail.text, /Total US\$93,000\.00/);
+  assert.match(seis.mail.text, /anticipo US\$46,500\.00/);
+  assert.equal(seis.mail.attachments.length, 1);
+});
+
+test("ningún modelo del catálogo quedó sin precio", async () => {
+  // Si alguno vuelve a quedar en "On request", el cliente lo puede elegir y
+  // después no hay acuerdo que firmar: mejor que salte acá.
+  for (const m of modelosElegibles()) {
+    assert.equal(esAPedido(m), false, m.etiqueta);
+    assert.ok(Number(m.quote.unit_price) > 0, m.etiqueta);
+  }
+});
+
+test("la forma de entrega elegida viaja al acuerdo, y una inventada no", async () => {
+  const { mail } = await firmaAbierta({}, { modelo: "2-stall" });
+  assert.match(mail.html, /Long Beach, CA/);
+
+  const inventada = await firmaAbierta({}, { entrega: "Free helicopter drop" });
+  assert.doesNotMatch(inventada.mail.html, /helicopter/i);
+  // Cae en la primera de la lista: el retiro por Miami.
+  assert.match(inventada.mail.html, /Miami, FL/);
 });
 
 test("un modelo con precio SÍ exige firma aunque digan que es un pedido", async () => {

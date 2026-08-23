@@ -2,20 +2,47 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#16365c">
 <title>Purchase Agreement · 3-Station Luxury — NINI T-GROUP</title>
 <link rel="icon" href="/cotizacion/img/logo.png">
-<link rel="stylesheet" href="/cotizacion/quote.css?v=12">
-<link rel="stylesheet" href="/cotizacion/ajustes.css?v=12">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Purchase Agreement · 3-Station Luxury — NINI T-GROUP">
+<meta property="og:description" content="Choose your unit, complete your details and sign online — 3-Station Luxury from US$23,500.00.">
+<meta property="og:image" content="/cotizacion/img/3-stall/crm-exterior.jpg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Instrument+Serif&amp;display=swap">
+
+<link rel="stylesheet" href="/cotizacion/quote.css?v=13">
+<link rel="stylesheet" href="/cotizacion/ajustes.css?v=13">
+<link rel="stylesheet" href="/cotizacion/estilo.css?v=13">
 <style>
 	html { -webkit-text-size-adjust: 100%; }
-	body { margin: 0; background: #eef1f5; }
+	body { margin: 0; background: #f6f8fb; }
 	@media print { body { background: #fff; } }
 </style>
 </head>
 <body>
 
+<header class="ntg-bar">
+	<div class="ntg-bar-in">
+		<img src="/cotizacion/img/logo.png" alt="NINI T-GROUP" class="ntg-bar-logo">
+		<div class="ntg-bar-doc">
+			<span class="ntg-bar-kicker">Purchase Agreement</span>
+			<span class="ntg-bar-num" data-ntg-mirror="quote-number">NTG 3-STALL</span>
+		</div>
+		<div class="ntg-bar-total">
+			<span>Total</span>
+			<strong data-ntg-mirror="total">US$23,500.00</strong>
+		</div>
+		<a class="ntg-bar-cta" href="#nq-firmar">Sign</a>
+	</div>
+	<div class="ntg-bar-progress"><i></i></div>
+</header>
 <div class="nq-doc">
 <div class="nq-sheet">
 
@@ -24,11 +51,13 @@
 		<div class="nq-head-brand">
 			<img src="/cotizacion/img/logo.png" alt="NINI T-GROUP" class="nq-logo">
 		</div>
-		<div class="nq-head-title">PURCHASE AGREEMENT</div>
+		<div class="nq-head-title">Purchase Agreement</div>
 	</header>
 
+	<p class="ntg-welcome"><strong>Welcome!</strong> This is your Purchase Agreement, ready to complete. Pick the unit you want, fill in your details and sign right here on this page — it takes about two minutes. Nothing is charged online, and our team confirms every order by hand.</p>
+
 	<!-- Parties -->
-	<section class="nq-parties">
+	<section class="nq-parties ntg-reveal">
 		<div class="nq-from">
 			<span class="nq-eyebrow">From</span>
 			<strong>NINI T-GROUP LLC</strong>
@@ -48,13 +77,19 @@
 	</section>
 
 	<!-- Meta bar -->
-	<section class="nq-meta">
+	<section class="nq-meta ntg-reveal">
 		<div><span>Agreement No.</span><strong data-nq="quote-number">NTG 3-STALL</strong></div>
-		<div><span>Agreement Date</span><strong class="nq-fecha nq-hoy">August 22, 2026</strong></div>
+		<div><span>Agreement Date</span><strong class="nq-fecha nq-hoy">August 23, 2026</strong></div>
 		<div><span>Delivery Time</span><strong>45-60 calendar days</strong></div>
 	</section>
 
-		<section class="nq-block nq-pick" id="nq-elegir">
+	<nav class="ntg-steps" aria-label="Steps">
+		<a class="ntg-step" href="#nq-elegir"><b>1</b> Choose your unit</a>
+		<a class="ntg-step" href="#ninit-request"><b>2</b> Your details</a>
+		<a class="ntg-step" href="#nq-firmar"><b>3</b> Review &amp; sign</a>
+	</nav>
+
+		<section class="nq-block nq-pick ntg-reveal" id="nq-elegir">
 		<h3 class="nq-h2">Choose Your Unit</h3>
 		<p class="nq-pick-intro">Pick the trailer you want: the photos, specifications and pricing below change with it.</p>
 		<div class="nq-modelos" role="radiogroup" aria-label="Choose your unit">
@@ -87,16 +122,16 @@
 				<span class="nq-modelo-foto"><span class="nq-modelo-sinfoto">5-Stall</span></span>
 				<span class="nq-modelo-txt">
 					<strong>5-Stall</strong>
-					<em>Large events — price on request</em>
-					<b>Price on request</b>
+					<em>Large events — extra capacity</em>
+					<b>US$41,500.00</b>
 				</span>
 			</label><label class="nq-modelo">
 				<input type="radio" name="modelo" form="nq-form" value="6-stall">
 				<span class="nq-modelo-foto"><img src="/cotizacion/img/thumbs/6-stall.jpg" alt="6-Stall" loading="lazy" decoding="async"></span>
 				<span class="nq-modelo-txt">
 					<strong>6-Stall</strong>
-					<em>Maximum capacity — price on request</em>
-					<b>Price on request</b>
+					<em>Maximum capacity — largest unit</em>
+					<b>US$46,500.00</b>
 				</span>
 			</label><label class="nq-modelo">
 				<input type="radio" name="modelo" form="nq-form" value="ada-2">
@@ -115,26 +150,37 @@
 	<h2 class="nq-model-title" data-nq="modelo-nombre">NTG 3-Station Luxury Portable Restroom Trailer</h2>
 
 	<!-- Hero + floorplan -->
-	<section class="nq-hero">
+	<section class="nq-hero ntg-reveal">
 		<img src="/cotizacion/img/3-stall/crm-exterior.jpg" alt="3-Station Luxury exterior" decoding="async" data-nq="hero">
 		<img src="/cotizacion/img/3-stall/crm-floorplan.jpg" alt="Floor plan" loading="lazy" decoding="async" data-nq="floorplan">
 	</section>
 
-	<section class="nq-interior" data-nq="interior">
-		<img src="/cotizacion/img/3-stall/crm-interior-1.jpg" alt="Interior" loading="lazy" decoding="async">
-		<img src="/cotizacion/img/3-stall/crm-interior-2.jpg" alt="Interior" loading="lazy" decoding="async">
-		<img src="/cotizacion/img/3-stall/crm-interior-3.jpg" alt="Interior" loading="lazy" decoding="async">
-		<img src="/cotizacion/img/3-stall/crm-interior-4.jpg" alt="Interior" loading="lazy" decoding="async">
+	<!-- Fotos de la unidad: pasan solas y se arrastran con el dedo (realce.js).
+	     Sin JS queda una tira que igual se puede scrollear a mano. -->
+	<section class="ntg-car ntg-reveal" data-ntg-car tabindex="0" aria-roledescription="carousel" aria-label="3-Station Luxury photos">
+		<div class="ntg-car-track nq-interior" data-nq="interior">
+			<img src="/cotizacion/img/3-stall/crm-interior-1.jpg" alt="Interior" loading="lazy" decoding="async">
+			<img src="/cotizacion/img/3-stall/crm-interior-2.jpg" alt="Interior" loading="lazy" decoding="async">
+			<img src="/cotizacion/img/3-stall/crm-interior-3.jpg" alt="Interior" loading="lazy" decoding="async">
+			<img src="/cotizacion/img/3-stall/crm-interior-4.jpg" alt="Interior" loading="lazy" decoding="async">
+		</div>
+		<button type="button" class="ntg-car-prev" aria-label="Previous photo">&#8249;</button>
+		<button type="button" class="ntg-car-next" aria-label="Next photo">&#8250;</button>
+		<div class="ntg-car-bottom">
+			<div class="ntg-car-dots"></div>
+			<span class="ntg-car-hint">Swipe — tap a photo to see it full size</span>
+			<span class="ntg-car-count"></span>
+		</div>
 	</section>
 
 	<!-- Specifications -->
-	<section class="nq-block">
+	<section class="nq-block ntg-reveal">
 		<h3 class="nq-h2">Trailer Specifications</h3>
-		<ul class="nq-specs" data-nq="specs"><li>Body size: 12.5 x 7.5 x 8.5 ft.</li><li>Total weight capacity: 7,700 lbs.</li><li>Tanks: 300 gal (Fresh Water) / 550 gal (Waste Water).</li><li>Chassis: Triple axle configuration / High-strength hot-dip galvanized.</li><li>Premium appliances: automatic soap dispensers, paper towel dispensers, and high-speed electric hand dryers in every stall.</li><li>Stealth design: 100% concealed plumbing and wiring inside the walls.</li></ul>
+		<ul class="nq-specs" data-nq="specs"><li>Three (3) private stalls.</li><li>Body size: 12 x 7 x 8.5 ft (17 ft total length including tow bar).</li><li>Total weight capacity: 7,700 lbs.</li><li>Tanks: 200 gal (Fresh Water) / 400 gal (Waste Water).</li><li>Chassis: Single axle / High-strength hot-dip galvanized.</li><li>Premium appliances: automatic soap dispensers, paper towel dispensers, and high-speed electric hand dryers in every stall.</li><li>Stealth design: 100% concealed plumbing and wiring inside the walls.</li></ul>
 	</section>
 
 	<!-- Feature gallery -->
-	<section class="nq-block">
+	<section class="nq-block ntg-reveal">
 		<h3 class="nq-h2">Features &amp; Equipment</h3>
 		<div class="nq-features">
 			<div class="nq-feature">
@@ -213,7 +259,7 @@
 	</section>
 
 	<!-- Customization -->
-	<section class="nq-block">
+	<section class="nq-block ntg-reveal">
 		<h3 class="nq-h2">Customization Options <span class="nq-incl">(Included in Price)</span></h3>
 		<ul class="nq-terms"><li>Exterior Color: Fully customizable body color. Choose from our premium exterior palette (Pure White, Quartz Grey, Champagne Gold, Deep Burgundy, and more) to match your branding or event style.</li><li>Interior Finishes: Customize the interior by selecting your preferred combination of wooden cabinet finishes, marble countertop styles, and waterproof vinyl flooring.</li></ul>
 
@@ -283,13 +329,13 @@
 	</section>
 
 	<!-- Validity -->
-	<section class="nq-validity">
+	<section class="nq-validity ntg-reveal">
 		<p>For inquiries, modifications, or to place an order, contact us:</p>
 		<p><strong>www.ninitgroup.com | sales@ninitgroup.com | +1 (786) 385-9402</strong></p>
 		<p class="nq-small">This quotation is valid for 15 days from the date of issue. Prices subject to change without prior notice. Bank details will be provided upon request.</p>
 	</section>
 
-		<section class="nq-block nq-request" id="ninit-request">
+		<section class="nq-block nq-request ntg-reveal" id="ninit-request">
 		<h3 class="nq-h2">Build Your Quote</h3>
 		<p class="nq-agree-intro">Fill in your details and choose the configuration you want. Every option below is included in the price — none of them costs extra. The totals update as you choose.</p>
 
@@ -305,7 +351,7 @@
 				<div class="nq-fdivider nq-full">Your configuration — all options below are included at no extra cost</div>
 
 				<div class="nq-ffield"><label>Units</label><select name="cantidad"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
-				<div class="nq-ffield"><label>Delivery Method</label><select name="entrega"><option value="Delivery to my address — included, no charge">Delivery to my address — included, no charge</option><option value="Pickup at the NINI T-GROUP facility in Doral, Miami">Pickup at the NINI T-GROUP facility in Doral, Miami</option></select></div>
+				<div class="nq-ffield"><label>Delivery Method</label><select name="entrega"><option value="Pickup at NINI T-GROUP Hub — Miami, FL (Free)">Pickup at NINI T-GROUP Hub — Miami, FL (Free)</option><option value="Pickup at NINI T-GROUP Hub — Long Beach, CA (Free)">Pickup at NINI T-GROUP Hub — Long Beach, CA (Free)</option><option value="Direct Turnkey Delivery to my address (Ground freight quoted separately)">Direct Turnkey Delivery to my address (Ground freight quoted separately)</option></select></div>
 				<div class="nq-ffield"><label>Exterior Color</label><select name="exterior"><option value="Pure White">Pure White</option><option value="Quartz Grey">Quartz Grey</option><option value="Champagne Gold">Champagne Gold</option><option value="Deep Burgundy">Deep Burgundy</option><option value="Onyx Black">Onyx Black</option></select></div>
 				<div class="nq-ffield"><label>Interior Finish</label><select name="interior"><option value="Pure White (Matte)">Pure White (Matte)</option><option value="Snow Mountain Stone (Matte)">Snow Mountain Stone (Matte)</option><option value="Florence Black Gold (Matte)">Florence Black Gold (Matte)</option><option value="Florence White Gold (Matte)">Florence White Gold (Matte)</option><option value="Armani Gray (Matte)">Armani Gray (Matte)</option><option value="Pandora (Glossy)">Pandora (Glossy)</option><option value="Italian Gray (Glossy)">Italian Gray (Glossy)</option><option value="Fish Belly White (Glossy)">Fish Belly White (Glossy)</option><option value="White Jade (Glossy)">White Jade (Glossy)</option><option value="Pure Black (Matte)">Pure Black (Matte)</option></select></div>
 
@@ -322,14 +368,14 @@
 			<div class="nq-client-row"><span>Quantity</span><strong data-nq="qty">1</strong></div>
 			<div class="nq-client-row"><span>Exterior color</span><strong data-nq="exterior">Pure White</strong></div>
 			<div class="nq-client-row"><span>Interior finish</span><strong data-nq="interior-fin">Pure White (Matte)</strong></div>
-			<div class="nq-client-row"><span>Delivery method</span><strong data-nq="entrega">Delivery to my address — included, no charge</strong></div>
+			<div class="nq-client-row"><span>Delivery method</span><strong data-nq="entrega">Pickup at NINI T-GROUP Hub — Miami, FL (Free)</strong></div>
 			<div class="nq-client-row nq-client-total"><span>Total price</span><strong data-nq="total">US$23,500.00</strong></div>
 		</div>
 		<p class="nq-scroll-hint">Scroll down to review the full proposal, accept it, and sign.</p>
 	</section>
 
 	<!-- Price table -->
-	<section class="nq-block">
+	<section class="nq-block ntg-reveal">
 		<h3 class="nq-h2">Your Trailer Price</h3>
 		<table class="nq-price">
 			<thead><tr><th>Description</th><th class="nq-c">Qty</th><th class="nq-r">Amount</th></tr></thead>
@@ -337,36 +383,36 @@
 				<tr>
 					<td>
 						<strong data-nq="modelo-nombre">NTG 3-Station Luxury Portable Restroom Trailer</strong>
-						<span class="nq-sub" data-nq="nota-config">Maximum Premium Upgrade. Triple axle configuration.</span>
+						<span class="nq-sub" data-nq="nota-config">Maximum Premium Upgrade. Single axle configuration.</span>
 					</td>
 					<td class="nq-c" data-nq="qty">1</td>
 					<td class="nq-r" data-nq="linea">US$23,500.00</td>
 				</tr>
 				
 				<tr>
-					<td>Shipping &amp; Logistics<span class="nq-sub">Delivery is complimentary — fully assembled, inspected, and ready to operate, no extra charge.</span></td>
+					<td>Shipping &amp; Logistics<span class="nq-sub">Free pickup at our Miami, FL and Long Beach, CA hubs. Direct Turnkey Delivery to your address is quoted separately by ground freight.</span></td>
 					<td class="nq-c">1</td>
-					<td class="nq-r">Delivery Included (No Charge)</td>
+					<td class="nq-r">Per Delivery Method Selected</td>
 				</tr>
 			</tbody>
 			<tfoot>
-				<tr><td colspan="2" class="nq-r"><strong>Total Amount (Unit + Shipping/Logistics)</strong></td><td class="nq-r"><strong data-nq="total">US$23,500.00</strong></td></tr>
+				<tr><td colspan="2" class="nq-r"><strong>Total Amount (Unit)</strong></td><td class="nq-r"><strong data-nq="total">US$23,500.00</strong></td></tr>
 			</tfoot>
 		</table>
 	</section>
 
 	<!-- Terms -->
-	<section class="nq-block">
+	<section class="nq-block ntg-reveal">
 		<h3 class="nq-h2">Terms and Conditions</h3>
 		<div class="nq-payment">
 			<p><strong>Down Payment (Initial Payment): <span data-nq="deposit">US$11,750.00</span></strong> — Deposit to start production (customer contributes approximately <span data-nq="pct">50</span>% initial payment).</p>
 			<p><strong>Remaining Balance: <span data-nq="balance">US$11,750.00</span></strong> — To be settled before unit dispatch.</p>
 		</div>
-		<ul class="nq-terms"><li>Pickup Location: Unit also available for pickup at our Doral, Miami facility, if preferred. Delivery is complimentary either way — at no additional cost to the Buyer.</li><li>Warranty: 12-Month Manufacturer Warranty.</li><li>Customizations: Custom colors for interior and exterior from our premium palettes (e.g., Quartz Grey, Onyx Black, Deep Burgundy) are included at no additional cost.</li><li>Taxes: The quoted price does not include sales tax or registration fees. The customer is responsible for all applicable taxes based on the state of registration.</li><li>Condition: Fully &quot;Plug and Play&quot;, on wheels, ready to roll and connect immediately.</li></ul>
+		<ul class="nq-terms"><li>Delivery &amp; Pickup: Free pickup at the NINI T-GROUP Hub in Miami, FL or Long Beach, CA. Direct Turnkey Delivery to the Buyer&#039;s address is also available; ground freight is quoted separately based on destination.</li><li>Warranty: 24-Month Manufacturer Warranty.</li><li>Customizations: Custom colors for interior and exterior from our premium palettes (e.g., Quartz Grey, Onyx Black, Deep Burgundy) are included at no additional cost.</li><li>Taxes: The quoted price does not include sales tax or registration fees. The customer is responsible for all applicable taxes based on the state of registration.</li><li>Condition: Fully &quot;Plug and Play&quot;, on wheels, ready to roll and connect immediately.</li></ul>
 	</section>
 
 	<!-- Proposal Acceptance -->
-	<section class="nq-block nq-proposal">
+	<section class="nq-block nq-proposal ntg-reveal">
 		<div class="nq-proposal-kicker">Ready to move forward</div>
 		<h2 class="nq-proposal-title">Purchase Summary</h2>
 		<div class="nq-proposal-rule"></div>
@@ -399,12 +445,12 @@
 			</div>
 			<div>
 				<h4 class="nq-proposal-h4">What's Not Included</h4>
-				<ul class="nq-check-list nq-check-no"><li>Sales tax, registration, or state-specific fees</li><li>Site preparation, permits, or utility hookups at the delivery location</li><li>Modifications requested after production has started</li></ul>
+				<ul class="nq-check-list nq-check-no"><li>Sales tax, registration, or state-specific fees</li><li>Site preparation, permits, or utility hookups at the delivery location</li><li>Modifications requested after production has started</li><li>Ground freight for Direct Turnkey Delivery, quoted separately based on destination</li></ul>
 			</div>
 		</div>
 
 		<h4 class="nq-proposal-h4">Warranty</h4>
-		<p class="nq-proposal-text">12-Month Manufacturer Warranty covering structural components, plumbing, and electrical systems under normal use. Excludes damage from misuse, neglect, or unauthorized modification.</p>
+		<p class="nq-proposal-text">24-Month Manufacturer Warranty covering structural components, plumbing, and electrical systems under normal use. Excludes damage from misuse, neglect, or unauthorized modification.</p>
 
 		<h4 class="nq-proposal-h4">Included Documentation</h4>
 		<ul class="nq-check-list nq-check-yes"><li>Manufacturer Certificate of Origin (MCO/MSO)</li><li>Bill of Sale</li><li>VIN Identification</li><li>Registration Documentation</li></ul>
@@ -438,7 +484,7 @@
 		<h4 class="nq-proposal-h4">Contact</h4>
 		<p class="nq-proposal-text">NINI T-GROUP LLC · +1 (786) 385-9402 · sales@ninitgroup.com · www.ninitgroup.com</p>
 
-		<div class="nq-sign-block">
+		<div class="nq-sign-block" id="nq-firmar">
 			<label class="nq-agree-intro nq-accept-row">
 				<input type="checkbox" name="accepted" form="nq-form" class="nq-accept-checkbox nq-sign-agree" required>
 				<span>I accept this Purchase Agreement and authorize NINI T-GROUP to begin the project.</span>
@@ -457,7 +503,7 @@
 						<button type="button" class="nq-sign-clear">Clear</button>
 						<input type="hidden" name="signature" class="nq-signature-input" form="nq-form">
 					</div>
-					<div class="nq-sign-line nq-sign-live-filled nq-fecha nq-hoy">August 22, 2026</div>
+					<div class="nq-sign-line nq-sign-live-filled nq-fecha nq-hoy">August 23, 2026</div>
 				</div>
 				<div>
 					<span class="nq-sign-role">NINIT Group Representative</span>
@@ -466,7 +512,7 @@
 					<div class="nq-sign-line nq-rep-signed">
 						<img src="/cotizacion/img/nicolas-signature.png" alt="Nicolas Hercun signature" class="nq-rep-sig-img">
 					</div>
-					<div class="nq-sign-line nq-sign-live nq-sign-live-filled nq-fecha nq-hoy">August 22, 2026</div>
+					<div class="nq-sign-line nq-sign-live nq-sign-live-filled nq-fecha nq-hoy">August 23, 2026</div>
 				</div>
 			</div>
 			<p class="nq-return">Sign above with your mouse or finger, then submit. Our team will confirm receipt and follow up with your deposit invoice.</p>
@@ -488,7 +534,16 @@
 
 </div><!-- /.nq-sheet -->
 </div><!-- /.nq-doc -->
-<script type="application/json" id="nq-catalogo">[{"clave":"2-stall","etiqueta":"2-Stall","nota":"Compact — weddings and private events","nombre":"NTG 2-Station Luxury Portable Restroom Trailer","numero":"NTG 2-STALL","precio":19500,"entrega":"45-60 calendar days","notaConfig":"","thumb":"/cotizacion/img/thumbs/2-stall.jpg","hero":"/cotizacion/img/2-stall/hero.jpg","floorplan":"/cotizacion/img/2-stall/floorplan.jpg","interior":["/cotizacion/img/2-stall/int-1.jpg","/cotizacion/img/2-stall/int-2.jpg","/cotizacion/img/2-stall/int-3.jpg","/cotizacion/img/2-stall/int-4.jpg"],"specs":["Two (2) private stalls.","High-capacity A/C and heating system.","LED interior lighting and full exterior DOT safety lighting.","Commercial-grade ceramic flush toilet in every stall.","Sinks with waterproof cabinet, countertop and mirror in every stall.","Fresh water and waste water tanks, with waste level gauge.","Heavy-duty water pump and pressurizer.","Electric brake system, foldable steps, stabilizer jacks and handrails.","Fully \"Plug and Play\": on wheels, ready to roll and connect immediately."]},{"clave":"3-stall","etiqueta":"3-Stall","nota":"Most popular — best balance","nombre":"NTG 3-Station Luxury Portable Restroom Trailer","numero":"NTG 3-STALL","precio":23500,"entrega":"45-60 calendar days","notaConfig":"Maximum Premium Upgrade. Triple axle configuration.","thumb":"/cotizacion/img/thumbs/3-stall.jpg","hero":"/cotizacion/img/3-stall/crm-exterior.jpg","floorplan":"/cotizacion/img/3-stall/crm-floorplan.jpg","interior":["/cotizacion/img/3-stall/crm-interior-1.jpg","/cotizacion/img/3-stall/crm-interior-2.jpg","/cotizacion/img/3-stall/crm-interior-3.jpg","/cotizacion/img/3-stall/crm-interior-4.jpg"],"specs":["Body size: 12.5 x 7.5 x 8.5 ft.","Total weight capacity: 7,700 lbs.","Tanks: 300 gal (Fresh Water) / 550 gal (Waste Water).","Chassis: Triple axle configuration / High-strength hot-dip galvanized.","Premium appliances: automatic soap dispensers, paper towel dispensers, and high-speed electric hand dryers in every stall.","Stealth design: 100% concealed plumbing and wiring inside the walls."]},{"clave":"4-stall","etiqueta":"4-Stall","nota":"Festivals and high traffic","nombre":"NTG 4-Station Luxury Portable Restroom Trailer","numero":"NTG 4-STALL","precio":28500,"entrega":"45-60 calendar days","notaConfig":"","thumb":"/cotizacion/img/thumbs/4-stall.jpg","hero":"/cotizacion/img/4-stall/hero.jpg","floorplan":"/cotizacion/img/4-stall/floorplan.jpg","interior":["/cotizacion/img/4-stall/int-1.jpg","/cotizacion/img/4-stall/int-2.jpg","/cotizacion/img/4-stall/int-3.jpg","/cotizacion/img/4-stall/int-4.jpg","/cotizacion/img/4-stall/int-5.jpg","/cotizacion/img/4-stall/int-6.jpg","/cotizacion/img/4-stall/equipo-1.jpg","/cotizacion/img/4-stall/equipo-2.jpg","/cotizacion/img/4-stall/equipo-ac.jpg","/cotizacion/img/4-stall/equipo-tanque.jpg","/cotizacion/img/4-stall/equipo-electrico.jpg"],"specs":["Four (4) private stalls.","High-capacity A/C and heating system.","LED interior lighting and full exterior DOT safety lighting.","Commercial-grade ceramic flush toilet in every stall.","Sinks with waterproof cabinet, countertop and mirror in every stall.","Fresh water and waste water tanks, with waste level gauge.","Heavy-duty water pump and pressurizer.","Electric brake system, foldable steps, stabilizer jacks and handrails.","Fully \"Plug and Play\": on wheels, ready to roll and connect immediately."]},{"clave":"5-stall","etiqueta":"5-Stall","nota":"Large events — price on request","nombre":"NTG 5-Station Luxury Portable Restroom Trailer","numero":"NTG 5-STALL","precio":null,"entrega":"45-60 calendar days","notaConfig":"","thumb":"","hero":"","floorplan":"","interior":["/cotizacion/img/6-stall/int-1.jpg","/cotizacion/img/6-stall/int-2.jpg"],"specs":["Five (5) private stalls.","High-capacity A/C and heating system.","LED interior lighting and full exterior DOT safety lighting.","Commercial-grade ceramic flush toilet in every stall.","Sinks with waterproof cabinet, countertop and mirror in every stall.","Fresh water and waste water tanks, with waste level gauge.","Heavy-duty water pump and pressurizer.","Electric brake system, foldable steps, stabilizer jacks and handrails.","Fully \"Plug and Play\": on wheels, ready to roll and connect immediately."]},{"clave":"6-stall","etiqueta":"6-Stall","nota":"Maximum capacity — price on request","nombre":"NTG 6-Station Luxury Portable Restroom Trailer","numero":"NTG 6-STALL","precio":null,"entrega":"45-60 calendar days","notaConfig":"","thumb":"/cotizacion/img/thumbs/6-stall.jpg","hero":"/cotizacion/img/6-stall/hero.png","floorplan":"","interior":["/cotizacion/img/6-stall/int-1.jpg","/cotizacion/img/6-stall/int-2.jpg"],"specs":["Six (6) private stalls.","High-capacity A/C and heating system.","LED interior lighting and full exterior DOT safety lighting.","Commercial-grade ceramic flush toilet in every stall.","Sinks with waterproof cabinet, countertop and mirror in every stall.","Fresh water and waste water tanks, with waste level gauge.","Heavy-duty water pump and pressurizer.","Electric brake system, foldable steps, stabilizer jacks and handrails.","Fully \"Plug and Play\": on wheels, ready to roll and connect immediately."]},{"clave":"ada-2","etiqueta":"ADA+2","nota":"Federal ADA compliance","nombre":"NTG ADA+2 Accessible Portable Restroom Trailer","numero":"NTG ADA-2","precio":29500,"entrega":"45-60 calendar days","notaConfig":"","thumb":"/cotizacion/img/thumbs/ada-2.jpg","hero":"/cotizacion/img/ada-2/hero.png","floorplan":"","interior":["/cotizacion/img/ada-2/int-1.png"],"specs":["One (1) ADA accessible stall with ramp access, plus two (2) standard private stalls.","High-capacity A/C and heating system.","LED interior lighting and full exterior DOT safety lighting.","Commercial-grade ceramic flush toilet in every stall.","Sinks with waterproof cabinet, countertop and mirror in every stall.","Fresh water and waste water tanks, with waste level gauge.","Heavy-duty water pump and pressurizer.","Electric brake system, foldable steps, stabilizer jacks and handrails.","Fully \"Plug and Play\": on wheels, ready to roll and connect immediately."]}]</script>
-<script src="/cotizacion/firma.js?v=12" defer></script>
+
+<div class="ntg-mb">
+	<div>
+		<span>Total</span>
+		<strong data-ntg-mirror="total">US$23,500.00</strong>
+	</div>
+	<a class="ntg-mb-cta" href="#nq-firmar">Review &amp; sign →</a>
+</div>
+<script type="application/json" id="nq-catalogo">[{"clave":"2-stall","etiqueta":"2-Stall","nota":"Compact — weddings and private events","nombre":"NTG 2-Station Luxury Portable Restroom Trailer","numero":"NTG 2-STALL","precio":19500,"entrega":"45-60 calendar days","notaConfig":"Single axle configuration.","thumb":"/cotizacion/img/thumbs/2-stall.jpg","hero":"/cotizacion/img/2-stall/hero.jpg","floorplan":"/cotizacion/img/2-stall/floorplan.jpg","interior":["/cotizacion/img/2-stall/int-1.jpg","/cotizacion/img/2-stall/int-2.jpg","/cotizacion/img/2-stall/int-3.jpg","/cotizacion/img/2-stall/int-4.jpg"],"specs":["Two (2) private stalls: one (1) Ladies (toilet + sink) and one (1) Gentlemen (toilet + urinal + sink).","Body size: 9.5 x 7.5 x 8.5 ft (14.5 ft total length including tow bar).","Chassis: Single axle / High-strength hot-dip galvanized.","Tanks: 200 gal (Fresh Water) / 400 gal (Waste Water).","High-capacity A/C and heating system.","LED interior lighting and full exterior DOT safety lighting.","Commercial-grade ceramic flush toilet in every stall.","Sinks with waterproof cabinet, countertop and mirror in every stall.","Fresh water and waste water tanks, with waste level gauge.","Heavy-duty water pump and pressurizer.","Electric brake system, foldable steps, stabilizer jacks and handrails.","Fully \"Plug and Play\": on wheels, ready to roll and connect immediately."]},{"clave":"3-stall","etiqueta":"3-Stall","nota":"Most popular — best balance","nombre":"NTG 3-Station Luxury Portable Restroom Trailer","numero":"NTG 3-STALL","precio":23500,"entrega":"45-60 calendar days","notaConfig":"Maximum Premium Upgrade. Single axle configuration.","thumb":"/cotizacion/img/thumbs/3-stall.jpg","hero":"/cotizacion/img/3-stall/crm-exterior.jpg","floorplan":"/cotizacion/img/3-stall/crm-floorplan.jpg","interior":["/cotizacion/img/3-stall/crm-interior-1.jpg","/cotizacion/img/3-stall/crm-interior-2.jpg","/cotizacion/img/3-stall/crm-interior-3.jpg","/cotizacion/img/3-stall/crm-interior-4.jpg"],"specs":["Three (3) private stalls.","Body size: 12 x 7 x 8.5 ft (17 ft total length including tow bar).","Total weight capacity: 7,700 lbs.","Tanks: 200 gal (Fresh Water) / 400 gal (Waste Water).","Chassis: Single axle / High-strength hot-dip galvanized.","Premium appliances: automatic soap dispensers, paper towel dispensers, and high-speed electric hand dryers in every stall.","Stealth design: 100% concealed plumbing and wiring inside the walls."]},{"clave":"4-stall","etiqueta":"4-Stall","nota":"Festivals and high traffic","nombre":"NTG 4-Station Luxury Portable Restroom Trailer","numero":"NTG 4-STALL","precio":28500,"entrega":"45-60 calendar days","notaConfig":"Dual (tandem) axle configuration.","thumb":"/cotizacion/img/thumbs/4-stall.jpg","hero":"/cotizacion/img/4-stall/hero.jpg","floorplan":"/cotizacion/img/4-stall/floorplan.jpg","interior":["/cotizacion/img/4-stall/int-1.jpg","/cotizacion/img/4-stall/int-2.jpg","/cotizacion/img/4-stall/int-3.jpg","/cotizacion/img/4-stall/int-4.jpg","/cotizacion/img/4-stall/int-5.jpg","/cotizacion/img/4-stall/int-6.jpg","/cotizacion/img/4-stall/equipo-1.jpg","/cotizacion/img/4-stall/equipo-2.jpg","/cotizacion/img/4-stall/equipo-ac.jpg","/cotizacion/img/4-stall/equipo-tanque.jpg","/cotizacion/img/4-stall/equipo-electrico.jpg"],"specs":["Four (4) private stalls: two (2) Ladies (toilet + sink) and two (2) Gentlemen (toilet + urinal + sink).","Body size: 18 x 7 x 8.5 ft (23 ft total length including tow bar).","Chassis: Dual (tandem) axle / High-strength hot-dip galvanized.","Tanks: 200 gal (Fresh Water) / 400 gal (Waste Water).","High-capacity A/C and heating system.","LED interior lighting and full exterior DOT safety lighting.","Commercial-grade ceramic flush toilet in every stall.","Sinks with waterproof cabinet, countertop and mirror in every stall.","Fresh water and waste water tanks, with waste level gauge.","Heavy-duty water pump and pressurizer.","Electric brake system, foldable steps, stabilizer jacks and handrails.","Fully \"Plug and Play\": on wheels, ready to roll and connect immediately."]},{"clave":"5-stall","etiqueta":"5-Stall","nota":"Large events — extra capacity","nombre":"NTG 5-Station Luxury Portable Restroom Trailer","numero":"NTG 5-STALL","precio":41500,"entrega":"45-60 calendar days","notaConfig":"","thumb":"","hero":"","floorplan":"","interior":["/cotizacion/img/6-stall/int-1.jpg","/cotizacion/img/6-stall/int-2.jpg"],"specs":["Five (5) private stalls.","High-capacity A/C and heating system.","LED interior lighting and full exterior DOT safety lighting.","Commercial-grade ceramic flush toilet in every stall.","Sinks with waterproof cabinet, countertop and mirror in every stall.","Fresh water and waste water tanks, with waste level gauge.","Heavy-duty water pump and pressurizer.","Electric brake system, foldable steps, stabilizer jacks and handrails.","Fully \"Plug and Play\": on wheels, ready to roll and connect immediately."]},{"clave":"6-stall","etiqueta":"6-Stall","nota":"Maximum capacity — largest unit","nombre":"NTG 6-Station Luxury Portable Restroom Trailer","numero":"NTG 6-STALL","precio":46500,"entrega":"45-60 calendar days","notaConfig":"","thumb":"/cotizacion/img/thumbs/6-stall.jpg","hero":"/cotizacion/img/6-stall/hero.png","floorplan":"","interior":["/cotizacion/img/6-stall/int-1.jpg","/cotizacion/img/6-stall/int-2.jpg"],"specs":["Six (6) private stalls.","High-capacity A/C and heating system.","LED interior lighting and full exterior DOT safety lighting.","Commercial-grade ceramic flush toilet in every stall.","Sinks with waterproof cabinet, countertop and mirror in every stall.","Fresh water and waste water tanks, with waste level gauge.","Heavy-duty water pump and pressurizer.","Electric brake system, foldable steps, stabilizer jacks and handrails.","Fully \"Plug and Play\": on wheels, ready to roll and connect immediately."]},{"clave":"ada-2","etiqueta":"ADA+2","nota":"Federal ADA compliance","nombre":"NTG ADA+2 Accessible Portable Restroom Trailer","numero":"NTG ADA-2","precio":29500,"entrega":"45-60 calendar days","notaConfig":"","thumb":"/cotizacion/img/thumbs/ada-2.jpg","hero":"/cotizacion/img/ada-2/hero.png","floorplan":"","interior":["/cotizacion/img/ada-2/int-1.png"],"specs":["One (1) ADA accessible stall with ramp access, plus two (2) standard private stalls.","High-capacity A/C and heating system.","LED interior lighting and full exterior DOT safety lighting.","Commercial-grade ceramic flush toilet in every stall.","Sinks with waterproof cabinet, countertop and mirror in every stall.","Fresh water and waste water tanks, with waste level gauge.","Heavy-duty water pump and pressurizer.","Electric brake system, foldable steps, stabilizer jacks and handrails.","Fully \"Plug and Play\": on wheels, ready to roll and connect immediately."]}]</script>
+<script src="/cotizacion/firma.js?v=13" defer></script>
+<script src="/cotizacion/realce.js?v=13" defer></script>
 </body>
 </html>

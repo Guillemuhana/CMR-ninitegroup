@@ -29,9 +29,9 @@ import {
   fechaLarga,
 } from "./datos.js";
 
-// Subir esto cuando cambien quote.css o firma.js, para que el navegador del
-// cliente no siga mostrando la versión vieja en caché.
-export const ASSET_VERSION = "12";
+// Subir esto cuando cambien quote.css, estilo.css, firma.js o realce.js, para
+// que el navegador del cliente no siga mostrando la versión vieja en caché.
+export const ASSET_VERSION = "13";
 
 const esc = (s) =>
   String(s ?? "")
@@ -202,7 +202,56 @@ export function render({ modelo, cliente: emitida }) {
 
 `;
 
-  const cuerpo = `
+  // Barra fija de arriba: de qué acuerdo se trata, cuánto sale y el botón que
+  // baja directo a la firma. El total se copia solo desde el documento
+  // (realce.js), así el precio lo sigue calculando un solo lugar.
+  const barraSuperior = `
+<header class="ntg-bar">
+	<div class="ntg-bar-in">
+		<img src="${esc(logo)}" alt="NINI T-GROUP" class="ntg-bar-logo">
+		<div class="ntg-bar-doc">
+			<span class="ntg-bar-kicker">Purchase Agreement</span>
+			<span class="ntg-bar-num" data-ntg-mirror="quote-number">${esc(d.quote_number)}</span>
+		</div>
+		<div class="ntg-bar-total">
+			<span>Total</span>
+			<strong data-ntg-mirror="total">${esc(usd(d.total))}</strong>
+		</div>
+		<a class="ntg-bar-cta" href="#nq-firmar">Sign</a>
+	</div>
+	<div class="ntg-bar-progress"><i></i></div>
+</header>`;
+
+  // Barra de abajo, solo en el celular: el total y el botón siempre a mano.
+  const barraMovil = `
+<div class="ntg-mb">
+	<div>
+		<span>Total</span>
+		<strong data-ntg-mirror="total">${esc(usd(d.total))}</strong>
+	</div>
+	<a class="ntg-mb-cta" href="#nq-firmar">Review &amp; sign →</a>
+</div>`;
+
+  // Una línea en criollo antes del papeleo: quien abre esto pidió un
+  // presupuesto por WhatsApp, no es un abogado leyendo un contrato.
+  const bienvenida = abierta
+    ? `	<p class="ntg-welcome"><strong>Welcome!</strong> This is your Purchase Agreement, ready to complete. Pick the unit you want, fill in your details and sign right here on this page — it takes about two minutes. Nothing is charged online, and our team confirms every order by hand.</p>`
+    : `	<p class="ntg-welcome"><strong>Hi ${esc(
+        (cliente.nombre || "").split(" ")[0] || "there"
+      )}!</strong> Here is your Purchase Agreement, prepared just for you. Take your time to review it — when you are happy with it, accept and sign at the bottom of the page. Any question at all, we are one message away.</p>`;
+
+  // Los tres pasos: dónde está parado el cliente dentro del documento.
+  const pasos = !abierta
+    ? ""
+    : `	<nav class="ntg-steps" aria-label="Steps">
+		<a class="ntg-step" href="#nq-elegir"><b>1</b> Choose your unit</a>
+		<a class="ntg-step" href="#ninit-request"><b>2</b> Your details</a>
+		<a class="ntg-step" href="#nq-firmar"><b>3</b> Review &amp; sign</a>
+	</nav>
+
+`;
+
+  const cuerpo = `${barraSuperior}
 <div class="nq-doc">
 <div class="nq-sheet">
 
@@ -211,8 +260,10 @@ export function render({ modelo, cliente: emitida }) {
 		<div class="nq-head-brand">
 			<img src="${esc(logo)}" alt="NINI T-GROUP" class="nq-logo">
 		</div>
-		<div class="nq-head-title">PURCHASE AGREEMENT</div>
+		<div class="nq-head-title">Purchase Agreement</div>
 	</header>
+
+${bienvenida}
 
 	<!-- Parties -->
 	<section class="nq-parties">
@@ -249,7 +300,7 @@ export function render({ modelo, cliente: emitida }) {
 		<div><span>Delivery Time</span><strong>${esc(d.delivery_time)}</strong></div>
 	</section>
 
-	${selectorModelos}
+${pasos}	${selectorModelos}
 	<!-- Model title -->
 	<h2 class="nq-model-title"${vivo("modelo-nombre")}>${esc(modelo.name)}</h2>
 
@@ -259,10 +310,23 @@ export function render({ modelo, cliente: emitida }) {
 		<img src="${esc(modelo.floorplan)}" alt="Floor plan" loading="lazy" decoding="async"${vivo("floorplan")}>
 	</section>
 
-	<section class="nq-interior"${vivo("interior")}>
-		${modelo.interior
-      .map((src) => `<img src="${esc(src)}" alt="Interior" loading="lazy" decoding="async">`)
-      .join("\n\t\t")}
+	<!-- Fotos de la unidad: pasan solas y se arrastran con el dedo (realce.js).
+	     Sin JS queda una tira que igual se puede scrollear a mano. -->
+	<section class="ntg-car" data-ntg-car tabindex="0" aria-roledescription="carousel" aria-label="${esc(
+    modelo.short
+  )} photos">
+		<div class="ntg-car-track nq-interior"${vivo("interior")}>
+			${modelo.interior
+        .map((src) => `<img src="${esc(src)}" alt="Interior" loading="lazy" decoding="async">`)
+        .join("\n\t\t\t")}
+		</div>
+		<button type="button" class="ntg-car-prev" aria-label="Previous photo">&#8249;</button>
+		<button type="button" class="ntg-car-next" aria-label="Next photo">&#8250;</button>
+		<div class="ntg-car-bottom">
+			<div class="ntg-car-dots"></div>
+			<span class="ntg-car-hint">Swipe — tap a photo to see it full size</span>
+			<span class="ntg-car-count"></span>
+		</div>
 	</section>
 
 	<!-- Specifications -->
@@ -344,13 +408,13 @@ export function render({ modelo, cliente: emitida }) {
 					<td class="nq-r">−${esc(usd(d.discount))}</td>
 				</tr>` : ""}
 				<tr>
-					<td>Shipping &amp; Logistics<span class="nq-sub">Delivery is complimentary — fully assembled, inspected, and ready to operate, no extra charge.</span></td>
+					<td>Shipping &amp; Logistics<span class="nq-sub">Free pickup at our Miami, FL and Long Beach, CA hubs. Direct Turnkey Delivery to your address is quoted separately by ground freight.</span></td>
 					<td class="nq-c">1</td>
-					<td class="nq-r">${d.shipping_cost === 0 ? "Delivery Included (No Charge)" : esc(usd(d.shipping_cost))}</td>
+					<td class="nq-r">${d.shipping_cost === 0 ? "Per Delivery Method Selected" : esc(usd(d.shipping_cost))}</td>
 				</tr>
 			</tbody>
 			<tfoot>
-				<tr><td colspan="2" class="nq-r"><strong>Total Amount (Unit + Shipping/Logistics${d.discount > 0 ? " − Discount" : ""})</strong></td><td class="nq-r"><strong${vivo("total")}>${esc(usd(d.total))}</strong></td></tr>
+				<tr><td colspan="2" class="nq-r"><strong>Total Amount (Unit${d.shipping_cost > 0 ? " + Shipping/Logistics" : ""}${d.discount > 0 ? " − Discount" : ""})</strong></td><td class="nq-r"><strong${vivo("total")}>${esc(usd(d.total))}</strong></td></tr>
 			</tfoot>
 		</table>
 	</section>
@@ -432,7 +496,7 @@ export function render({ modelo, cliente: emitida }) {
 		<h4 class="nq-proposal-h4">Contact</h4>
 		<p class="nq-proposal-text">${esc(empresa.name)} · ${esc(empresa.phone)} · ${esc(empresa.email)} · ${esc(empresa.website)}</p>
 
-		<div class="nq-sign-block">
+		<div class="nq-sign-block" id="nq-firmar">
 			<label class="nq-agree-intro nq-accept-row">
 				<input type="checkbox" name="accepted" form="nq-form" class="nq-accept-checkbox nq-sign-agree" required>
 				<span>${esc(contrato.acceptance_text)}</span>
@@ -493,26 +557,61 @@ export function render({ modelo, cliente: emitida }) {
 </div><!-- /.nq-sheet -->
 </div><!-- /.nq-doc -->`;
 
+  // Las secciones aparecen suavemente al llegar scrolleando. Se marcan acá con
+  // una pasada de regex en vez de repetir la clase en cada <section>: son
+  // siempre las mismas y así el HTML de arriba queda legible. Si realce.js no
+  // llega a cargar, la clase no hace nada y el documento se ve completo.
+  // El ( [^"]*)? es a propósito: el nombre tiene que terminar ahí o seguir con
+  // un espacio. Sin eso "ntg-car" también le pegaba a "ntg-car-track" y a las
+  // flechas, y animar la pista del carrusel le rompe el scroll.
+  const cuerpoConAparicion = cuerpo.replace(
+    /class="(nq-block|nq-hero|nq-parties|nq-meta|nq-validity|ntg-car)( [^"]*)?"/g,
+    'class="$1$2 ntg-reveal"'
+  );
+
+  const titulo = `Purchase Agreement · ${modelo.short}${
+    abierta ? "" : ` · ${cliente.nombre}`
+  } — NINI T-GROUP`;
+  // Lo que se ve en la previsualización cuando el link se manda por WhatsApp.
+  const resumenSocial = abierta
+    ? `Choose your unit, complete your details and sign online — ${modelo.short} from ${usd(
+        modelo.quote.unit_price
+      )}.`
+    : `${modelo.name} — ${usd(d.total)}. Prepared for ${cliente.nombre}.`;
+
   // La página vive fuera de WordPress, así que el <head> y el fondo (que antes
   // ponía el tema) se definen acá. quote.css se usa sin tocar.
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Purchase Agreement · ${esc(modelo.short)}${abierta ? "" : ` · ${esc(cliente.nombre)}`} — NINI T-GROUP</title>
+<meta name="theme-color" content="#16365c">
+<title>${esc(titulo)}</title>
 <link rel="icon" href="/cotizacion/img/logo.png">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="${esc(titulo)}">
+<meta property="og:description" content="${esc(resumenSocial)}">
+${modelo.hero ? `<meta property="og:image" content="${esc(modelo.hero)}">` : ""}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Instrument+Serif&amp;display=swap">
+
 <link rel="stylesheet" href="/cotizacion/quote.css?v=${ASSET_VERSION}">
 <link rel="stylesheet" href="/cotizacion/ajustes.css?v=${ASSET_VERSION}">
+<link rel="stylesheet" href="/cotizacion/estilo.css?v=${ASSET_VERSION}">
 <style>
 	html { -webkit-text-size-adjust: 100%; }
-	body { margin: 0; background: #eef1f5; }
+	body { margin: 0; background: #f6f8fb; }
 	@media print { body { background: #fff; } }
 </style>
 </head>
 <body>
-${cuerpo}
+${cuerpoConAparicion}
+${barraMovil}
 ${
   abierta
     ? `<script type="application/json" id="nq-catalogo">${JSON.stringify(catalogo).replace(
@@ -522,6 +621,7 @@ ${
     : ""
 }
 <script src="/cotizacion/firma.js?v=${ASSET_VERSION}" defer></script>
+<script src="/cotizacion/realce.js?v=${ASSET_VERSION}" defer></script>
 </body>
 </html>
 `;

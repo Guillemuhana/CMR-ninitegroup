@@ -80,7 +80,7 @@ export const modelos = {
     nota: "Compact — weddings and private events",
     slug: "ntg-2stall",
     banos: 2,
-    config_note: "",
+    config_note: "Single axle configuration.",
 
     quote: { ...CONDICIONES, quote_number: "NTG 2-STALL", unit_price: 19500.0 },
 
@@ -96,7 +96,13 @@ export const modelos = {
       IMG + "2-stall/int-4.jpg",
     ],
 
-    specs: ["Two (2) private stalls.", ...EQUIPO_ESTANDAR],
+    specs: [
+      "Two (2) private stalls: one (1) Ladies (toilet + sink) and one (1) Gentlemen (toilet + urinal + sink).",
+      "Body size: 9.5 x 7.5 x 8.5 ft (14.5 ft total length including tow bar).",
+      "Chassis: Single axle / High-strength hot-dip galvanized.",
+      "Tanks: 200 gal (Fresh Water) / 400 gal (Waste Water).",
+      ...EQUIPO_ESTANDAR,
+    ],
     features: EQUIPAMIENTO,
   },
 
@@ -107,7 +113,7 @@ export const modelos = {
     nota: "Most popular — best balance",
     slug: "ntg-3stall",
     banos: 3,
-    config_note: "Maximum Premium Upgrade. Triple axle configuration.",
+    config_note: "Maximum Premium Upgrade. Single axle configuration.",
 
     quote: {
       ...CONDICIONES,
@@ -134,10 +140,11 @@ export const modelos = {
     ],
 
     specs: [
-      "Body size: 12.5 x 7.5 x 8.5 ft.",
+      "Three (3) private stalls.",
+      "Body size: 12 x 7 x 8.5 ft (17 ft total length including tow bar).",
       "Total weight capacity: 7,700 lbs.",
-      "Tanks: 300 gal (Fresh Water) / 550 gal (Waste Water).",
-      "Chassis: Triple axle configuration / High-strength hot-dip galvanized.",
+      "Tanks: 200 gal (Fresh Water) / 400 gal (Waste Water).",
+      "Chassis: Single axle / High-strength hot-dip galvanized.",
       "Premium appliances: automatic soap dispensers, paper towel dispensers, and high-speed electric hand dryers in every stall.",
       "Stealth design: 100% concealed plumbing and wiring inside the walls.",
     ],
@@ -152,7 +159,7 @@ export const modelos = {
     nota: "Festivals and high traffic",
     slug: "ntg-4stall",
     banos: 4,
-    config_note: "",
+    config_note: "Dual (tandem) axle configuration.",
 
     quote: { ...CONDICIONES, quote_number: "NTG 4-STALL", unit_price: 28500.0 },
 
@@ -177,24 +184,29 @@ export const modelos = {
       IMG + "4-stall/equipo-electrico.jpg", // tablero eléctrico y bomba de agua
     ],
 
-    specs: ["Four (4) private stalls.", ...EQUIPO_ESTANDAR],
+    specs: [
+      "Four (4) private stalls: two (2) Ladies (toilet + sink) and two (2) Gentlemen (toilet + urinal + sink).",
+      "Body size: 18 x 7 x 8.5 ft (23 ft total length including tow bar).",
+      "Chassis: Dual (tandem) axle / High-strength hot-dip galvanized.",
+      "Tanks: 200 gal (Fresh Water) / 400 gal (Waste Water).",
+      ...EQUIPO_ESTANDAR,
+    ],
     features: EQUIPAMIENTO,
   },
 
-  // 5-stall y 6-stall: NO tienen precio oficial en el CRM (el catálogo solo
-  // cierra 2, 3, 4 y ADA+2), así que van "a pedido": el cliente los puede
-  // elegir y mandar la solicitud, pero no se firma un acuerdo sin precio. En
-  // cuanto haya precio, se le pone unit_price y quedan firmables como el resto.
+  // 5-stall y 6-stall: precio cerrado por Nico el 23-ago-2026. Antes iban "a
+  // pedido" (sin unit_price, sin firma posible); ahora se firman como el resto
+  // y el 50% de anticipo lo calcula calcular() solo.
   "5-stall": {
     name: "NTG 5-Station Luxury Portable Restroom Trailer",
     short: "5-Station Luxury",
     etiqueta: "5-Stall",
-    nota: "Large events — price on request",
+    nota: "Large events — extra capacity",
     slug: "ntg-5stall",
     banos: 5,
     config_note: "",
 
-    quote: { ...CONDICIONES, quote_number: "NTG 5-STALL", a_pedido: true },
+    quote: { ...CONDICIONES, quote_number: "NTG 5-STALL", unit_price: 41500.0 },
 
     // El 5-stall comparte interior con el 6-stall y no tiene foto de exterior
     // propia en el catálogo: se muestran los interiores reales y nada más.
@@ -211,12 +223,12 @@ export const modelos = {
     name: "NTG 6-Station Luxury Portable Restroom Trailer",
     short: "6-Station Luxury",
     etiqueta: "6-Stall",
-    nota: "Maximum capacity — price on request",
+    nota: "Maximum capacity — largest unit",
     slug: "ntg-6stall",
     banos: 6,
     config_note: "",
 
-    quote: { ...CONDICIONES, quote_number: "NTG 6-STALL", a_pedido: true },
+    quote: { ...CONDICIONES, quote_number: "NTG 6-STALL", unit_price: 46500.0 },
 
     // Miniatura liviana para el selector (la foto grande pesa de más en el
     // celular). Se generan con: npx sharp-cli -i <foto> -o thumbs/<modelo>.jpg resize 420
@@ -267,8 +279,8 @@ export function modelosElegibles() {
 export const esAPedido = (modelo) => !!modelo?.quote?.a_pedido;
 
 export const terminos = [
-  "Pickup Location: Unit also available for pickup at our Doral, Miami facility, if preferred. Delivery is complimentary either way — at no additional cost to the Buyer.",
-  "Warranty: 12-Month Manufacturer Warranty.",
+  "Delivery & Pickup: Free pickup at the NINI T-GROUP Hub in Miami, FL or Long Beach, CA. Direct Turnkey Delivery to the Buyer's address is also available; ground freight is quoted separately based on destination.",
+  "Warranty: 24-Month Manufacturer Warranty.",
   "Customizations: Custom colors for interior and exterior from our premium palettes (e.g., Quartz Grey, Onyx Black, Deep Burgundy) are included at no additional cost.",
   "Taxes: The quoted price does not include sales tax or registration fees. The customer is responsible for all applicable taxes based on the state of registration.",
   'Condition: Fully "Plug and Play", on wheels, ready to roll and connect immediately.',
@@ -296,8 +308,9 @@ export const opcionesCliente = {
     "Onyx Black",
   ],
   entrega: [
-    "Delivery to my address — included, no charge",
-    "Pickup at the NINI T-GROUP facility in Doral, Miami",
+    "Pickup at NINI T-GROUP Hub — Miami, FL (Free)",
+    "Pickup at NINI T-GROUP Hub — Long Beach, CA (Free)",
+    "Direct Turnkey Delivery to my address (Ground freight quoted separately)",
   ],
   // Máximo de unidades que se pueden pedir desde el formulario. Más que esto
   // es un pedido mayorista y lo cotiza el equipo a mano.
@@ -337,9 +350,10 @@ export const contrato = {
     "Sales tax, registration, or state-specific fees",
     "Site preparation, permits, or utility hookups at the delivery location",
     "Modifications requested after production has started",
+    "Ground freight for Direct Turnkey Delivery, quoted separately based on destination",
   ],
   warranty:
-    "12-Month Manufacturer Warranty covering structural components, plumbing, and electrical systems under normal use. Excludes damage from misuse, neglect, or unauthorized modification.",
+    "24-Month Manufacturer Warranty covering structural components, plumbing, and electrical systems under normal use. Excludes damage from misuse, neglect, or unauthorized modification.",
   included_documentation: [
     "Manufacturer Certificate of Origin (MCO/MSO)",
     "Bill of Sale",
@@ -379,8 +393,9 @@ export const contrato = {
 export function calcular(modelo, cliente) {
   const q = { ...modelo.quote, ...cliente.precio };
 
-  // Modelo sin precio de lista (5-stall, 6-stall): no hay total que mostrar ni
-  // acuerdo que firmar, se cotiza a pedido.
+  // Modelo sin precio de lista: no hay total que mostrar ni acuerdo que firmar,
+  // se cotiza a pedido. Hoy todos los del catálogo tienen precio; el mecanismo
+  // queda para cuando entre un modelo nuevo antes de que le cierren el número.
   const aPedido = !!q.a_pedido && !(Number(q.unit_price) > 0);
 
   const cantidad = Math.max(1, parseInt(q.quantity, 10) || 1);

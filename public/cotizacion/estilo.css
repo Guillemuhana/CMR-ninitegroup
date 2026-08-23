@@ -1,0 +1,1018 @@
+/* NINIT — capa de estilo moderna del Purchase Agreement.
+ *
+ * El orden de las hojas es a propósito y conviene respetarlo:
+ *   1. quote.css   — el archivo del plugin de WordPress, copiado sin tocar.
+ *   2. ajustes.css — las correcciones puntuales (fotos enteras, tabla en el
+ *                    celular, selector de unidad, modelo a pedido).
+ *   3. estilo.css  — ESTE: el restyle. Tipografía, jerarquía, aire, efectos y
+ *                    el comportamiento responsive de punta a punta.
+ *
+ * Va último para poder pisar a los dos anteriores sin borrarles nada: si algún
+ * día hay que volver al documento "viejo", se saca este <link> y listo.
+ *
+ * Dos reglas que se respetan en todo el archivo:
+ *   - El documento tiene que imprimirse igual de bien que verse: todo el cromo
+ *     de pantalla (barra de arriba, barra del celular, lightbox, animaciones)
+ *     desaparece en @media print.
+ *   - Es un documento que lee un cliente, no un panel interno: aire, letra
+ *     grande, contraste alto y nada que se mueva de más.
+ */
+
+/* ============================================================
+   1. TOKENS
+   ============================================================ */
+:root {
+	color-scheme: light;
+
+	/* Marca */
+	--ntg-navy: #16365c;
+	--ntg-navy-d: #0d2444;
+	--ntg-navy-x: #071729;
+	--ntg-gold: #b58d42;
+	--ntg-gold-l: #d9b978;
+
+	/* Neutros */
+	--ntg-ink: #131a24;
+	--ntg-ink-2: #3b4757;
+	--ntg-muted: #6b7789;
+	--ntg-line: #e4e9f0;
+	--ntg-line-2: #eef2f7;
+	--ntg-soft: #f6f8fb;
+	--ntg-paper: #fff;
+
+	/* Estados */
+	--ntg-ok: #15803d;
+	--ntg-ok-soft: #ecfdf3;
+	--ntg-bad: #c0392b;
+
+	/* Elevación: sombras en capas, que es lo que da sensación de papel */
+	--ntg-sh-1: 0 1px 2px rgba(13, 36, 68, .05), 0 1px 3px rgba(13, 36, 68, .06);
+	--ntg-sh-2: 0 2px 4px rgba(13, 36, 68, .04), 0 8px 20px rgba(13, 36, 68, .08);
+	--ntg-sh-3: 0 4px 8px rgba(13, 36, 68, .05), 0 24px 48px rgba(13, 36, 68, .12);
+	--ntg-sh-cta: 0 6px 18px rgba(22, 54, 92, .30);
+
+	--ntg-r-s: 10px;
+	--ntg-r-m: 14px;
+	--ntg-r-l: 20px;
+
+	--ntg-ease: cubic-bezier(.22, 1, .36, 1);
+	--ntg-fast: .18s var(--ntg-ease);
+	--ntg-slow: .45s var(--ntg-ease);
+
+	/* Alto real de la barra de arriba: lo usan los scroll-margin de las
+	 * secciones, para que al saltar a un ancla el título no quede tapado. */
+	--ntg-bar-h: 62px;
+
+	/* Se repisan los del plugin para que TODO el documento herede la paleta */
+	--nqc-navy: var(--ntg-navy);
+	--nqc-navy-d: var(--ntg-navy-d);
+	--nqc-ink: var(--ntg-ink);
+	--nqc-muted: var(--ntg-muted);
+	--nqc-line: var(--ntg-line);
+	--nqc-soft: var(--ntg-soft);
+	--nqc-accent: var(--ntg-navy);
+	--nqc-gold: var(--ntg-gold);
+}
+
+/* ============================================================
+   2. BASE Y TIPOGRAFÍA
+   ============================================================ */
+html { scroll-behavior: smooth; }
+
+body {
+	background: var(--ntg-soft);
+	/* Dos manchas de color muy suaves detrás del papel: le sacan el gris
+	 * plano de fondo sin competir con el documento. */
+	background-image:
+		radial-gradient(60rem 40rem at 12% -10%, rgba(22, 54, 92, .10), transparent 60%),
+		radial-gradient(50rem 34rem at 92% 4%, rgba(181, 141, 66, .10), transparent 60%);
+	background-attachment: fixed;
+}
+
+.nq-doc {
+	font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+	font-size: clamp(15.5px, 0.55vw + 14px, 17px);
+	line-height: 1.62;
+	color: var(--ntg-ink-2);
+	letter-spacing: -0.003em;
+	padding-top: calc(var(--ntg-bar-h) + 20px);
+	padding-bottom: 64px;
+}
+
+/* Los importes, siempre con cifras del mismo ancho: si no, el total "baila"
+ * mientras el cliente cambia la cantidad. */
+.nq-price, .nq-psum-value, .nq-psum-price, .nq-client-row strong,
+.nq-modelo-txt b, .ntg-bar-total strong, .ntg-mb strong, .nq-meta strong {
+	font-variant-numeric: tabular-nums;
+	font-feature-settings: "tnum" 1;
+}
+
+.nq-sheet {
+	max-width: 980px;
+	border: none;
+	border-radius: var(--ntg-r-l);
+	box-shadow: var(--ntg-sh-3);
+	padding: clamp(24px, 4vw, 56px) clamp(18px, 4.4vw, 60px) clamp(28px, 3vw, 44px);
+	overflow: hidden; /* que nada se escape de las esquinas redondeadas */
+}
+
+/* ---------- Encabezado del documento ---------- */
+.nq-head {
+	align-items: flex-end;
+	gap: 16px;
+	padding-bottom: 20px;
+	border-bottom: none;
+	position: relative;
+	margin-bottom: 28px;
+}
+/* La línea de abajo, en degradé navy→dorado: es el único adorno de marca. */
+.nq-head::after {
+	content: "";
+	position: absolute;
+	left: 0; right: 0; bottom: 0;
+	height: 3px;
+	border-radius: 3px;
+	background: linear-gradient(90deg, var(--ntg-navy) 0%, var(--ntg-navy) 34%, var(--ntg-gold) 100%);
+}
+.nq-logo { max-height: 56px; }
+.nq-head-title {
+	font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
+	font-size: clamp(20px, 2.4vw, 30px);
+	font-weight: 400;
+	letter-spacing: .01em;
+	text-transform: none;
+	color: var(--ntg-navy);
+	line-height: 1.1;
+	text-align: right;
+}
+
+/* ---------- Bienvenida ----------
+ * Una línea en criollo antes del papeleo: quien abre esto es un cliente que
+ * pidió un presupuesto por WhatsApp, no un abogado. */
+.ntg-welcome {
+	margin: 0 0 24px;
+	padding: 16px 20px;
+	border-radius: var(--ntg-r-m);
+	background: linear-gradient(135deg, rgba(22, 54, 92, .06), rgba(181, 141, 66, .07));
+	border: 1px solid var(--ntg-line);
+	font-size: 16px;
+	line-height: 1.6;
+	color: var(--ntg-ink-2);
+}
+.ntg-welcome strong { color: var(--ntg-navy); }
+
+/* ---------- Partes ---------- */
+.nq-parties {
+	gap: clamp(14px, 2.4vw, 26px);
+	margin-bottom: 22px;
+}
+.nq-from, .nq-billto {
+	background: var(--ntg-soft);
+	border: 1px solid var(--ntg-line);
+	border-radius: var(--ntg-r-m);
+	padding: 18px 20px;
+}
+.nq-billto { background: linear-gradient(180deg, #fff 0%, var(--ntg-soft) 100%); }
+.nq-eyebrow {
+	font-size: 11.5px;
+	font-weight: 700;
+	letter-spacing: .14em;
+	color: var(--ntg-gold);
+	margin-bottom: 8px;
+}
+.nq-parties strong {
+	font-size: clamp(17px, 1.4vw, 19px);
+	font-weight: 700;
+	color: var(--ntg-ink);
+	letter-spacing: -.01em;
+	margin-bottom: 6px;
+}
+.nq-parties p { font-size: 15.5px; color: var(--ntg-muted); margin: 1px 0; }
+
+/* ---------- Barra de datos del acuerdo ---------- */
+.nq-meta {
+	gap: 0;
+	padding: 0;
+	background: var(--ntg-paper);
+	border: 1px solid var(--ntg-line);
+	border-radius: var(--ntg-r-m);
+	box-shadow: var(--ntg-sh-1);
+	overflow: hidden;
+	margin-bottom: 26px;
+}
+.nq-meta > div {
+	padding: 15px 20px;
+	border-right: 1px solid var(--ntg-line-2);
+	transition: background var(--ntg-fast);
+}
+.nq-meta > div:last-child { border-right: none; }
+.nq-meta > div:hover { background: var(--ntg-soft); }
+.nq-meta span { font-size: 11px; font-weight: 700; letter-spacing: .12em; color: var(--ntg-muted); }
+.nq-meta strong { font-size: 16.5px; font-weight: 700; color: var(--ntg-navy); letter-spacing: -.01em; }
+
+/* ============================================================
+   3. TÍTULOS DE SECCIÓN
+   ============================================================ */
+.nq-block { margin-bottom: clamp(28px, 4vw, 44px); scroll-margin-top: calc(var(--ntg-bar-h) + 16px); }
+.nq-h2 {
+	position: relative;
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 10px;
+	font-size: clamp(15px, 1.5vw, 17px);
+	font-weight: 800;
+	letter-spacing: .1em;
+	color: var(--ntg-navy);
+	padding: 0 0 12px;
+	border-bottom: 1px solid var(--ntg-line);
+	margin: 0 0 20px;
+}
+/* Subrayado corto en dorado, encima de la línea gris. */
+.nq-h2::after {
+	content: "";
+	position: absolute;
+	left: 0; bottom: -1px;
+	width: 42px; height: 2px;
+	border-radius: 2px;
+	background: var(--ntg-gold);
+}
+.nq-incl { font-size: 13.5px; letter-spacing: 0; color: var(--ntg-muted); font-weight: 600; }
+
+.nq-model-title {
+	font-family: "Instrument Serif", Georgia, serif;
+	font-size: clamp(22px, 3.2vw, 34px);
+	font-weight: 400;
+	letter-spacing: -.01em;
+	color: var(--ntg-navy);
+	margin: 4px 0 22px;
+}
+
+/* ============================================================
+   4. BARRA SUPERIOR FIJA + PASOS
+   ============================================================ */
+.ntg-bar {
+	position: fixed;
+	top: 0; left: 0; right: 0;
+	z-index: 60;
+	background: rgba(255, 255, 255, .82);
+	-webkit-backdrop-filter: saturate(180%) blur(14px);
+	backdrop-filter: saturate(180%) blur(14px);
+	border-bottom: 1px solid var(--ntg-line);
+	transition: box-shadow var(--ntg-fast), background var(--ntg-fast);
+}
+.ntg-bar.is-stuck { box-shadow: var(--ntg-sh-2); background: rgba(255, 255, 255, .94); }
+.ntg-bar-in {
+	max-width: 980px;
+	margin: 0 auto;
+	height: var(--ntg-bar-h);
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 0 clamp(14px, 3vw, 24px);
+}
+.ntg-bar-logo { height: 30px; width: auto; display: block; flex: 0 0 auto; }
+.ntg-bar-doc { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
+.ntg-bar-kicker {
+	font-size: 10.5px; font-weight: 700; letter-spacing: .14em;
+	text-transform: uppercase; color: var(--ntg-muted);
+}
+.ntg-bar-num {
+	font-size: 14px; font-weight: 700; color: var(--ntg-navy);
+	white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ntg-bar-total { margin-left: auto; text-align: right; line-height: 1.15; }
+.ntg-bar-total span {
+	display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .12em;
+	text-transform: uppercase; color: var(--ntg-muted);
+}
+.ntg-bar-total strong { font-size: 16px; font-weight: 800; color: var(--ntg-navy); }
+.ntg-bar-cta {
+	flex: 0 0 auto;
+	display: inline-flex; align-items: center; gap: 7px;
+	padding: 10px 18px;
+	border-radius: 999px;
+	font-size: 14.5px; font-weight: 700; text-decoration: none;
+	color: #fff;
+	background: linear-gradient(135deg, var(--ntg-navy) 0%, var(--ntg-navy-d) 100%);
+	box-shadow: 0 3px 10px rgba(22, 54, 92, .28);
+	transition: transform var(--ntg-fast), box-shadow var(--ntg-fast), filter var(--ntg-fast);
+}
+.ntg-bar-cta:hover { transform: translateY(-1px); box-shadow: var(--ntg-sh-cta); filter: brightness(1.08); }
+.ntg-bar-cta:active { transform: translateY(0); }
+
+/* Barra de lectura: cuánto del acuerdo lleva leído. */
+.ntg-bar-progress { height: 2px; background: transparent; }
+.ntg-bar-progress i {
+	display: block; height: 100%; width: 0;
+	background: linear-gradient(90deg, var(--ntg-navy), var(--ntg-gold));
+	transition: width .1s linear;
+}
+
+/* Los tres pasos de la cotización abierta. */
+.ntg-steps {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+	margin: 0 0 26px;
+}
+.ntg-step {
+	display: flex; align-items: center; gap: 10px;
+	padding: 12px 14px;
+	border: 1px solid var(--ntg-line);
+	border-radius: var(--ntg-r-m);
+	background: var(--ntg-paper);
+	text-decoration: none;
+	color: var(--ntg-muted);
+	font-size: 14.5px; font-weight: 600;
+	transition: border-color var(--ntg-fast), box-shadow var(--ntg-fast), transform var(--ntg-fast), color var(--ntg-fast);
+}
+.ntg-step b {
+	flex: 0 0 auto;
+	display: grid; place-items: center;
+	width: 25px; height: 25px;
+	border-radius: 50%;
+	background: var(--ntg-soft);
+	border: 1px solid var(--ntg-line);
+	color: var(--ntg-navy);
+	font-size: 12.5px; font-weight: 800;
+	transition: background var(--ntg-fast), color var(--ntg-fast), border-color var(--ntg-fast);
+}
+.ntg-step:hover { transform: translateY(-1px); border-color: #c3d0e2; color: var(--ntg-navy); box-shadow: var(--ntg-sh-1); }
+.ntg-step.is-active { border-color: var(--ntg-navy); color: var(--ntg-navy); box-shadow: 0 0 0 3px rgba(22, 54, 92, .10); }
+.ntg-step.is-active b { background: var(--ntg-navy); border-color: var(--ntg-navy); color: #fff; }
+
+/* ============================================================
+   5. ELEGIR LA UNIDAD
+   ============================================================ */
+.nq-pick {
+	background: linear-gradient(180deg, #fbfcfe 0%, #f3f6fa 100%);
+	border: 1px solid #dde5ef;
+	border-radius: var(--ntg-r-l);
+	padding: clamp(18px, 2.6vw, 26px);
+	box-shadow: var(--ntg-sh-1);
+	scroll-margin-top: calc(var(--ntg-bar-h) + 16px);
+}
+.nq-pick-intro { font-size: 15.5px; }
+.nq-modelos { gap: 14px; }
+.nq-modelo {
+	border-width: 1.5px;
+	border-radius: var(--ntg-r-m);
+	box-shadow: var(--ntg-sh-1);
+	transition: transform var(--ntg-fast), border-color var(--ntg-fast), box-shadow var(--ntg-fast);
+}
+.nq-modelo:hover { transform: translateY(-3px); box-shadow: var(--ntg-sh-2); border-color: #b9c6d8; }
+.nq-modelo:focus-within { border-color: var(--ntg-navy); box-shadow: 0 0 0 3px rgba(22, 54, 92, .16); }
+.nq-modelo-foto { height: 118px; overflow: hidden; }
+.nq-modelo-foto img { transition: transform var(--ntg-slow); }
+.nq-modelo:hover .nq-modelo-foto img { transform: scale(1.06); }
+.nq-modelo-txt strong { font-size: 16.5px; font-weight: 800; letter-spacing: -.01em; }
+.nq-modelo-txt b { font-size: 16px; font-weight: 800; }
+/* Tilde en la esquina de la tarjeta elegida: se ve de un vistazo cuál es. */
+.nq-modelo::after {
+	content: "✓";
+	position: absolute;
+	top: 8px; right: 8px;
+	width: 26px; height: 26px;
+	display: grid; place-items: center;
+	border-radius: 50%;
+	background: var(--ntg-navy);
+	color: #fff;
+	font-size: 14px; font-weight: 700;
+	box-shadow: 0 2px 8px rgba(13, 36, 68, .35);
+	opacity: 0;
+	transform: scale(.5);
+	transition: opacity var(--ntg-fast), transform var(--ntg-fast);
+	pointer-events: none;
+}
+.nq-modelo:has(input:checked)::after,
+.nq-modelo.is-elegida::after { opacity: 1; transform: scale(1); }
+.nq-modelo:has(input:checked),
+.nq-modelo.is-elegida {
+	border-color: var(--ntg-navy);
+	box-shadow: 0 0 0 3px rgba(22, 54, 92, .15), var(--ntg-sh-2);
+}
+
+/* ============================================================
+   6. FOTOS
+   ============================================================ */
+.nq-hero img, .nq-interior img {
+	border-radius: var(--ntg-r-m);
+	border-color: var(--ntg-line);
+	background: var(--ntg-soft);
+}
+/* Las fotos se pueden tocar para verlas grandes (lo maneja realce.js). */
+.ntg-zoom { cursor: zoom-in; transition: filter var(--ntg-fast), transform var(--ntg-fast); }
+.ntg-zoom:hover { filter: brightness(1.03); }
+
+/* ---------- Carrusel de las fotos de la unidad ----------
+ * Las fotos de detalle de cada unidad pasan solas, se arrastran con el dedo y
+ * tienen flechas y puntitos. El desplazamiento es scroll nativo con
+ * scroll-snap: se siente igual que cualquier galería del teléfono, funciona
+ * sin JS (queda una tira que se arrastra) y no hace falta ninguna librería.
+ *
+ * Las fotos van con object-fit: contain sobre un fondo suave: vienen con
+ * proporciones distintas y acá interesa que se vea la unidad ENTERA, sin
+ * recortarle los costados.
+ */
+.ntg-car {
+	position: relative;
+	margin-bottom: clamp(26px, 4vw, 38px);
+	border-radius: var(--ntg-r-l);
+	background: linear-gradient(180deg, #f7f9fc 0%, #eef2f8 100%);
+	border: 1px solid var(--ntg-line);
+	box-shadow: var(--ntg-sh-1);
+	overflow: hidden;
+}
+.ntg-car-track {
+	display: flex !important;   /* pisa el column-count de ajustes.css */
+	column-count: auto !important;
+	gap: 0;
+	margin: 0 !important;
+	overflow-x: auto;
+	overflow-y: hidden;
+	scroll-snap-type: x mandatory;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+	scroll-behavior: smooth;
+}
+.ntg-car-track::-webkit-scrollbar { display: none; }
+.ntg-car-track img {
+	flex: 0 0 100%;
+	width: 100%;
+	height: clamp(230px, 44vw, 500px);
+	object-fit: contain;
+	background: transparent;
+	border: none !important;
+	border-radius: 0 !important;
+	margin: 0 !important;
+	scroll-snap-align: center;
+	scroll-snap-stop: always;
+	padding: 14px;
+}
+
+/* Flechas: discretas, sobre la foto, y solo con mouse. */
+.ntg-car-prev, .ntg-car-next {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 42px; height: 42px;
+	display: grid; place-items: center;
+	border: 1px solid var(--ntg-line);
+	border-radius: 50%;
+	background: rgba(255, 255, 255, .92);
+	-webkit-backdrop-filter: blur(6px);
+	backdrop-filter: blur(6px);
+	color: var(--ntg-navy);
+	font-size: 19px;
+	line-height: 1;
+	cursor: pointer;
+	box-shadow: var(--ntg-sh-2);
+	opacity: 0;
+	transition: opacity var(--ntg-fast), background var(--ntg-fast), transform var(--ntg-fast);
+	z-index: 2;
+}
+.ntg-car-prev { left: 12px; }
+.ntg-car-next { right: 12px; }
+.ntg-car:hover .ntg-car-prev,
+.ntg-car:hover .ntg-car-next,
+.ntg-car:focus-within .ntg-car-prev,
+.ntg-car:focus-within .ntg-car-next { opacity: 1; }
+.ntg-car-prev:hover, .ntg-car-next:hover { background: #fff; transform: translateY(-50%) scale(1.06); }
+.ntg-car-una .ntg-car-prev,
+.ntg-car-una .ntg-car-next,
+.ntg-car-una .ntg-car-dots,
+.ntg-car-una .ntg-car-count { display: none; }
+
+/* Puntitos + contador, en una barrita abajo. */
+.ntg-car-bottom {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px;
+	border-top: 1px solid var(--ntg-line);
+	background: rgba(255, 255, 255, .7);
+}
+.ntg-car-dots { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.ntg-car-dot {
+	width: 8px; height: 8px;
+	padding: 0;
+	border: none;
+	border-radius: 999px;
+	background: #c3cddb;
+	cursor: pointer;
+	transition: width var(--ntg-fast), background var(--ntg-fast);
+}
+.ntg-car-dot.is-on { width: 24px; background: var(--ntg-navy); }
+.ntg-car-count {
+	margin-left: auto;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .08em;
+	color: var(--ntg-muted);
+	font-variant-numeric: tabular-nums;
+}
+.ntg-car-hint {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--ntg-muted);
+}
+
+/* El latido del total cuando cambia el precio o el modelo. */
+@keyframes ntg-tick {
+	0%   { transform: none; }
+	35%  { transform: translateY(-2px) scale(1.05); }
+	100% { transform: none; }
+}
+.ntg-tick { animation: ntg-tick .42s var(--ntg-ease); display: inline-block; }
+
+/* ============================================================
+   7. FICHA TÉCNICA Y LISTAS
+   ============================================================ */
+.nq-specs {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 4px 28px;
+}
+.nq-specs li, .nq-terms li { padding-left: 26px; margin-bottom: 10px; font-size: 15.8px; }
+.nq-specs li::before, .nq-terms li::before {
+	left: 0; top: 8px;
+	width: 8px; height: 8px;
+	background: var(--ntg-gold);
+	box-shadow: 0 0 0 3px rgba(181, 141, 66, .16);
+}
+
+/* ---------- Galería de equipamiento ---------- */
+.nq-features {
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	gap: 14px;
+}
+.nq-feature {
+	align-items: center;
+	border-color: var(--ntg-line);
+	border-radius: var(--ntg-r-m);
+	padding: 13px;
+	box-shadow: var(--ntg-sh-1);
+	transition: transform var(--ntg-fast), box-shadow var(--ntg-fast), border-color var(--ntg-fast);
+}
+.nq-feature:hover { transform: translateY(-2px); box-shadow: var(--ntg-sh-2); border-color: #cfd9e6; }
+.nq-feature-img { flex-basis: 84px; width: 84px; height: 84px; border-radius: var(--ntg-r-s); overflow: hidden; }
+.nq-feature-img img { border-radius: 0; transition: transform var(--ntg-slow); }
+.nq-feature:hover .nq-feature-img img { transform: scale(1.08); }
+.nq-feature-txt h4 { margin: 0 0 4px; font-size: 15.5px; font-weight: 700; color: var(--ntg-navy); }
+.nq-feature-txt p { font-size: 14.5px; color: var(--ntg-muted); line-height: 1.5; }
+
+/* ---------- Catálogo de terminaciones ---------- */
+.nq-finishes { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 16px; }
+.nq-finish-swatch {
+	border-radius: var(--ntg-r-m);
+	box-shadow: var(--ntg-sh-1);
+	transition: transform var(--ntg-fast), box-shadow var(--ntg-fast);
+}
+.nq-finish:hover .nq-finish-swatch { transform: translateY(-3px) scale(1.02); box-shadow: var(--ntg-sh-2); }
+.nq-finish-swatch img { transition: transform var(--ntg-slow); }
+.nq-finish:hover .nq-finish-swatch img { transform: scale(1.08); }
+.nq-finish-num { color: var(--ntg-gold); letter-spacing: .1em; }
+.nq-finishes-intro { font-size: 15.5px; }
+
+/* ============================================================
+   8. VALIDEZ
+   ============================================================ */
+.nq-validity {
+	border: 1px solid var(--ntg-line);
+	border-radius: var(--ntg-r-m);
+	background: var(--ntg-soft);
+	padding: 22px 20px;
+	margin-bottom: clamp(28px, 4vw, 40px);
+}
+
+/* ============================================================
+   9. FORMULARIO
+   ============================================================ */
+.nq-request {
+	background: var(--ntg-paper);
+	border: 1px solid var(--ntg-line);
+	border-radius: var(--ntg-r-l);
+	padding: clamp(20px, 3vw, 30px);
+	box-shadow: var(--ntg-sh-1);
+	scroll-margin-top: calc(var(--ntg-bar-h) + 16px);
+}
+.nq-form-grid { gap: 16px 18px; }
+.nq-ffield label { font-size: 13.5px; font-weight: 700; letter-spacing: .01em; color: var(--ntg-ink-2); }
+.nq-ffield input,
+.nq-ffield select,
+.nq-ffield textarea {
+	font-size: 16px;
+	padding: 12px 14px;
+	border: 1.5px solid var(--ntg-line);
+	border-radius: var(--ntg-r-s);
+	background: var(--ntg-soft);
+	transition: border-color var(--ntg-fast), box-shadow var(--ntg-fast), background var(--ntg-fast);
+}
+.nq-ffield input:hover,
+.nq-ffield select:hover,
+.nq-ffield textarea:hover { border-color: #c8d3e1; }
+.nq-ffield input:focus,
+.nq-ffield select:focus,
+.nq-ffield textarea:focus {
+	background: var(--ntg-paper);
+	border-color: var(--ntg-navy);
+	box-shadow: 0 0 0 4px rgba(22, 54, 92, .12);
+}
+.nq-ffield input::placeholder, .nq-ffield textarea::placeholder { color: #a6b0be; }
+/* Flecha propia en los desplegables: la del sistema se ve distinta en cada
+ * navegador y rompe la prolijidad del bloque. */
+.nq-ffield select {
+	-webkit-appearance: none;
+	appearance: none;
+	padding-right: 40px;
+	background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%2316365c' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 14px center;
+}
+.nq-fdivider {
+	font-size: 12.5px;
+	letter-spacing: .12em;
+	color: var(--ntg-gold);
+	border-top-color: var(--ntg-line);
+	padding-top: 18px;
+	margin-top: 10px;
+}
+.nq-req { color: var(--ntg-bad); }
+
+/* ---------- Resumen que se completa solo ---------- */
+.nq-client-card {
+	border-color: var(--ntg-line);
+	border-radius: var(--ntg-r-m);
+	background: var(--ntg-soft);
+	box-shadow: var(--ntg-sh-1);
+}
+.nq-client-row { padding: 13px 18px; border-bottom-color: var(--ntg-line-2); }
+.nq-client-row span { font-size: 10.5px; letter-spacing: .12em; }
+.nq-client-row strong { font-size: 15px; }
+
+/* ============================================================
+   10. PRECIO
+   ============================================================ */
+.nq-price {
+	border-collapse: separate;
+	border-spacing: 0;
+	border: 1px solid var(--ntg-line);
+	border-radius: var(--ntg-r-m);
+	overflow: hidden;
+	box-shadow: var(--ntg-sh-1);
+	font-size: 16px;
+}
+.nq-price th {
+	background: linear-gradient(135deg, var(--ntg-navy) 0%, var(--ntg-navy-d) 100%);
+	font-size: 11.5px;
+	letter-spacing: .12em;
+	padding: 13px 16px;
+}
+.nq-price td { padding: 15px 16px; border-bottom: 1px solid var(--ntg-line-2); }
+.nq-price tbody tr:last-child td { border-bottom: none; }
+.nq-price tbody tr { transition: background var(--ntg-fast); }
+.nq-price tbody tr:hover { background: #fafbfd; }
+.nq-price .nq-sub { font-size: 14px; line-height: 1.5; margin-top: 5px; }
+.nq-price tfoot td {
+	background: var(--ntg-soft);
+	border-top: 2px solid var(--ntg-navy);
+	font-size: 17.5px;
+	padding: 16px;
+}
+.nq-price tfoot strong { color: var(--ntg-navy); letter-spacing: -.01em; }
+.nq-note { border-radius: var(--ntg-r-s); border-left-color: var(--ntg-gold); font-size: 15.5px; }
+.nq-payment {
+	border-radius: var(--ntg-r-m);
+	border-color: var(--ntg-line);
+	background: var(--ntg-soft);
+	padding: 18px 20px;
+}
+
+/* ============================================================
+   11. ACUERDO / PROPUESTA
+   ============================================================ */
+.nq-proposal {
+	background: linear-gradient(180deg, #fff 0%, #fafcfe 100%);
+	border: 1px solid var(--ntg-line);
+	border-radius: var(--ntg-r-l);
+	padding: clamp(22px, 3.4vw, 40px);
+	box-shadow: var(--ntg-sh-1);
+}
+.nq-proposal-kicker { color: var(--ntg-gold); letter-spacing: .16em; font-size: 12px; }
+.nq-proposal-title {
+	font-family: "Instrument Serif", Georgia, serif;
+	font-size: clamp(24px, 3.4vw, 34px);
+	font-weight: 400;
+	letter-spacing: -.01em;
+}
+.nq-proposal-rule { background: linear-gradient(90deg, var(--ntg-navy), var(--ntg-gold)); height: 3px; width: 64px; }
+.nq-proposal-summary {
+	background: var(--ntg-paper);
+	border: 1px solid var(--ntg-line);
+	border-radius: var(--ntg-r-m);
+	box-shadow: var(--ntg-sh-1);
+	padding: 4px 22px;
+}
+.nq-psum-row { border-bottom-color: var(--ntg-line-2); }
+.nq-psum-label { font-size: 11.5px; letter-spacing: .12em; }
+.nq-psum-value { font-size: 16px; color: var(--ntg-ink); }
+.nq-psum-price { font-size: clamp(20px, 2.4vw, 24px); font-weight: 800; letter-spacing: -.02em; }
+.nq-proposal-h4 {
+	font-size: 12.5px;
+	letter-spacing: .14em;
+	color: var(--ntg-gold);
+	margin: 30px 0 12px;
+}
+.nq-proposal-text { font-size: 15.8px; line-height: 1.72; color: var(--ntg-ink-2); }
+.nq-check-list li, .nq-plain-list li { font-size: 15.3px; color: var(--ntg-ink-2); }
+.nq-check-yes li::before { color: var(--ntg-ok); font-weight: 800; }
+.nq-plain-list li::before { background: var(--ntg-gold); }
+
+/* ---------- Aceptación y firma ---------- */
+.nq-sign-block { scroll-margin-top: calc(var(--ntg-bar-h) + 16px); }
+.nq-accept-row {
+	align-items: center;
+	gap: 13px;
+	padding: 16px 18px;
+	border: 1.5px solid var(--ntg-line);
+	border-radius: var(--ntg-r-m);
+	background: var(--ntg-soft);
+	transition: border-color var(--ntg-fast), background var(--ntg-fast), box-shadow var(--ntg-fast);
+}
+.nq-accept-row:hover { border-color: #c3d0e2; }
+.nq-accept-row:has(input:checked) {
+	border-color: var(--ntg-ok);
+	background: var(--ntg-ok-soft);
+	box-shadow: 0 0 0 3px rgba(21, 128, 61, .10);
+}
+.nq-accept-checkbox { width: 22px; height: 22px; min-width: 22px; border-radius: 6px; }
+.nq-accept-checkbox:checked { background: var(--ntg-ok); border-color: var(--ntg-ok); }
+.nq-accept-checkbox:checked::after { left: 7px; top: 3px; width: 6px; height: 11px; }
+
+.nq-sign-pad-wrap { margin-top: 6px; }
+.nq-sign-pad {
+	height: 130px;
+	border: 2px dashed #c9d3e0;
+	border-radius: var(--ntg-r-m);
+	background: repeating-linear-gradient(45deg, #fdfefe 0 10px, #f7f9fc 10px 20px);
+	transition: border-color var(--ntg-fast), box-shadow var(--ntg-fast);
+}
+.nq-sign-pad:hover { border-color: var(--ntg-gold); }
+.nq-sign-pad.is-drawing {
+	border-color: var(--ntg-navy);
+	border-style: solid;
+	box-shadow: 0 0 0 4px rgba(22, 54, 92, .10);
+	background: #fff;
+}
+.nq-sign-clear {
+	border-radius: 999px;
+	border: 1px solid var(--ntg-line);
+	background: var(--ntg-paper);
+	color: var(--ntg-muted);
+	font-weight: 600;
+	padding: 6px 16px;
+	transition: background var(--ntg-fast), color var(--ntg-fast), border-color var(--ntg-fast);
+}
+.nq-sign-clear:hover { background: var(--ntg-soft); color: var(--ntg-navy); border-color: #c3d0e2; }
+.nq-sign-role { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ntg-gold); }
+.nq-sign-line { border-bottom-color: #cbd4e0; font-size: 14.5px; }
+.nq-return { font-size: 15.5px; }
+
+/* ---------- Botones ---------- */
+.nq-btn-submit {
+	position: relative;
+	overflow: hidden;
+	max-width: 420px;
+	padding: 16px 30px;
+	font-size: 17.5px;
+	border-radius: 999px;
+	background: linear-gradient(135deg, var(--ntg-navy) 0%, var(--ntg-navy-d) 55%, var(--ntg-navy-x) 100%);
+	box-shadow: var(--ntg-sh-cta);
+	letter-spacing: .01em;
+}
+/* Brillo que cruza el botón al pasar el mouse. */
+.nq-btn-submit::after {
+	content: "";
+	position: absolute;
+	top: 0; bottom: 0; left: -60%;
+	width: 45%;
+	background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .28), transparent);
+	transform: skewX(-18deg);
+	transition: left .6s var(--ntg-ease);
+}
+.nq-btn-submit:hover::after { left: 120%; }
+.nq-btn-submit:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(22, 54, 92, .35); }
+.nq-btn-submit:active { transform: translateY(0); }
+.nq-btn-submit:disabled::after { display: none; }
+.nq-privacy { font-size: 14px; }
+.nq-form-feedback.is-success,
+.nq-form-feedback.is-error { border-radius: var(--ntg-r-m); }
+
+.nq-pedido-aviso { border-left: 3px solid var(--ntg-gold); border-radius: var(--ntg-r-s); }
+
+/* ---------- Pie ---------- */
+.nq-foot {
+	border-top: 1px solid var(--ntg-line);
+	color: var(--ntg-muted);
+	font-size: 13.5px;
+	padding-top: 20px;
+	margin-top: 36px;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+/* ============================================================
+   12. BARRA DEL CELULAR
+   Aparece al hacer scroll: total siempre a la vista + el botón que
+   lleva a la firma, para no tener que buscarlo entre 40 KB de acuerdo.
+   ============================================================ */
+.ntg-mb {
+	position: fixed;
+	left: 0; right: 0; bottom: 0;
+	z-index: 55;
+	display: none;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+	background: rgba(255, 255, 255, .94);
+	-webkit-backdrop-filter: saturate(180%) blur(14px);
+	backdrop-filter: saturate(180%) blur(14px);
+	border-top: 1px solid var(--ntg-line);
+	box-shadow: 0 -6px 22px rgba(13, 36, 68, .10);
+	transform: translateY(110%);
+	transition: transform var(--ntg-slow);
+}
+.ntg-mb.is-on { transform: translateY(0); }
+.ntg-mb span {
+	display: block; font-size: 10px; font-weight: 700; letter-spacing: .12em;
+	text-transform: uppercase; color: var(--ntg-muted);
+}
+.ntg-mb strong { font-size: 17px; font-weight: 800; color: var(--ntg-navy); }
+.ntg-mb-cta {
+	margin-left: auto;
+	display: inline-flex; align-items: center; gap: 6px;
+	padding: 13px 20px;
+	border-radius: 999px;
+	background: linear-gradient(135deg, var(--ntg-navy), var(--ntg-navy-d));
+	color: #fff; font-size: 15.5px; font-weight: 700; text-decoration: none;
+	box-shadow: var(--ntg-sh-cta);
+}
+.ntg-mb-cta:active { transform: scale(.98); }
+
+/* ============================================================
+   13. LIGHTBOX
+   ============================================================ */
+.ntg-lb {
+	position: fixed;
+	inset: 0;
+	z-index: 90;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	background: rgba(7, 23, 41, .92);
+	-webkit-backdrop-filter: blur(4px);
+	backdrop-filter: blur(4px);
+	opacity: 0;
+	transition: opacity var(--ntg-fast);
+	cursor: zoom-out;
+}
+.ntg-lb.is-open { display: flex; }
+.ntg-lb.is-shown { opacity: 1; }
+.ntg-lb img {
+	max-width: 100%;
+	max-height: 100%;
+	border-radius: var(--ntg-r-m);
+	box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+	transform: scale(.96);
+	transition: transform var(--ntg-slow);
+}
+.ntg-lb.is-shown img { transform: scale(1); }
+.ntg-lb-close {
+	position: absolute;
+	top: 16px; right: 16px;
+	width: 42px; height: 42px;
+	display: grid; place-items: center;
+	border: none;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, .14);
+	color: #fff;
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+	transition: background var(--ntg-fast);
+}
+.ntg-lb-close:hover { background: rgba(255, 255, 255, .28); }
+
+/* ============================================================
+   14. APARICIÓN AL HACER SCROLL
+   Solo se activa si realce.js pudo arrancar (marca .ntg-js en el <html>):
+   sin JS el documento se ve entero, nunca en blanco.
+   ============================================================ */
+.ntg-js .ntg-reveal {
+	opacity: 0;
+	transform: translateY(18px);
+	transition: opacity .55s var(--ntg-ease), transform .55s var(--ntg-ease);
+	will-change: opacity, transform;
+}
+.ntg-js .ntg-reveal.is-in { opacity: 1; transform: none; }
+
+/* ============================================================
+   15. RESPONSIVE
+   La cotización se manda por WhatsApp: la mayoría la abre en el celular.
+   ============================================================ */
+@media (max-width: 1024px) {
+	.nq-modelos { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 860px) {
+	:root { --ntg-bar-h: 56px; }
+	.nq-head { flex-direction: row; align-items: center; }
+	.nq-head-title { font-size: 19px; }
+	.nq-parties { grid-template-columns: 1fr; }
+	.nq-meta { grid-auto-flow: row; grid-template-columns: 1fr; }
+	.nq-meta > div { border-right: none; border-bottom: 1px solid var(--ntg-line-2); }
+	.nq-meta > div:last-child { border-bottom: none; }
+	.ntg-steps { grid-template-columns: 1fr; gap: 8px; }
+	.ntg-step { padding: 10px 13px; font-size: 14px; }
+	.nq-specs { grid-template-columns: 1fr; }
+	.nq-features { grid-template-columns: 1fr; }
+	.nq-proposal-cols { grid-template-columns: 1fr; }
+	.ntg-mb { display: flex; }
+	.nq-doc { padding-bottom: 96px; } /* que la barra de abajo no tape el pie */
+}
+
+@media (max-width: 640px) {
+	.ntg-bar-doc { display: none; }       /* en 360px no entra: manda el total */
+	.ntg-bar-total { margin-left: auto; }
+	.ntg-bar-cta { padding: 9px 15px; font-size: 14px; }
+	.nq-head-title { font-size: 16px; letter-spacing: 0; }
+	.nq-logo { max-height: 42px; }
+	.nq-finishes { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+	.nq-feature { align-items: flex-start; }
+	.nq-form-grid { grid-template-columns: 1fr; }
+	.nq-sign-grid { grid-template-columns: 1fr; }
+	.nq-accept-row { padding: 14px; }
+	.nq-btn-submit { max-width: none; }
+	/* En el celular el carrusel se pasa con el dedo: las flechas estorban. */
+	.ntg-car-prev, .ntg-car-next { display: none; }
+	.ntg-car-track img { padding: 8px; }
+}
+
+@media (max-width: 420px) {
+	.nq-sheet { border-radius: 14px; }
+	.nq-finishes { grid-template-columns: repeat(2, 1fr); }
+	.ntg-mb-cta { padding: 12px 16px; font-size: 14.5px; }
+	.ntg-mb strong { font-size: 15.5px; }
+}
+
+/* Quien pidió menos movimiento, no ve movimiento. */
+@media (prefers-reduced-motion: reduce) {
+	html { scroll-behavior: auto; }
+	.ntg-js .ntg-reveal { opacity: 1; transform: none; transition: none; }
+	*, *::before, *::after {
+		animation-duration: .001ms !important;
+		transition-duration: .001ms !important;
+	}
+}
+
+/* ============================================================
+   16. IMPRESIÓN
+   El acuerdo firmado se imprime y se archiva: todo el cromo de
+   pantalla se va, y el papel queda igual de prolijo.
+   ============================================================ */
+@media print {
+	body { background: #fff !important; background-image: none !important; }
+	.nq-doc { padding-top: 0; padding-bottom: 0; }
+	.nq-sheet { box-shadow: none; border-radius: 0; padding: 0 10mm; overflow: visible; }
+	.ntg-bar, .ntg-mb, .ntg-lb, .ntg-steps, .ntg-welcome { display: none !important; }
+	.ntg-js .ntg-reveal { opacity: 1 !important; transform: none !important; }
+
+	/* En papel no hay carrusel: las fotos se despliegan todas, en dos columnas,
+	 * para que el acuerdo impreso muestre la unidad completa. */
+	.ntg-car { border: none; box-shadow: none; background: none; overflow: visible; }
+	.ntg-car-track {
+		display: block !important;
+		overflow: visible !important;
+		column-count: 2;
+		column-gap: 8px;
+	}
+	.ntg-car-track img {
+		width: 100%;
+		height: auto;
+		max-height: 200px;
+		padding: 0;
+		margin-bottom: 8px !important;
+		break-inside: avoid;
+	}
+	.ntg-car-prev, .ntg-car-next, .ntg-car-bottom { display: none !important; }
+	.nq-pick, .nq-request { display: none !important; }
+	.nq-head::after { background: var(--ntg-navy); }
+	.nq-feature, .nq-block, .nq-sign-grid, .nq-proposal-summary { break-inside: avoid; }
+	.nq-h2 { break-after: avoid; }
+	.nq-price { box-shadow: none; }
+	.nq-specs { grid-template-columns: 1fr 1fr; }
+	.nq-features { grid-template-columns: 1fr 1fr; }
+	.ntg-zoom { cursor: default; }
+}

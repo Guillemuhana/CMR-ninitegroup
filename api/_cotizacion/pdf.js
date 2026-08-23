@@ -355,9 +355,9 @@ export function construirPDF({ modelo, cliente, d, firma }) {
   }
   filaPrecio(
     "Shipping & Logistics",
-    "Delivery is complimentary - fully assembled, inspected, and ready to operate, no extra charge.",
+    "Free pickup at our Miami, FL and Long Beach, CA hubs. Direct Turnkey Delivery to your address is quoted separately by ground freight.",
     1,
-    d.shipping_cost === 0 ? "Delivery Included (No Charge)" : usd(d.shipping_cost)
+    d.shipping_cost === 0 ? "Per Delivery Method Selected" : usd(d.shipping_cost)
   );
 
   setFill(SOFT);
@@ -365,7 +365,7 @@ export function construirPDF({ modelo, cliente, d, firma }) {
   doc.setFont("helvetica", "bold").setFontSize(11.5);
   setColor(NAVY);
   doc.text(
-    `Total Amount (Unit + Shipping/Logistics${d.discount > 0 ? " - Discount" : ""})`,
+    `Total Amount (Unit${d.shipping_cost > 0 ? " + Shipping/Logistics" : ""}${d.discount > 0 ? " - Discount" : ""})`,
     IZQ + 3,
     y + 7.2
   );

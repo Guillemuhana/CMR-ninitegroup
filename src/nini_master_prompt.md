@@ -154,7 +154,7 @@ Customers pay registration fees and taxes directly in their state during registr
 • VIN documentation support
 
 WARRANTY
-12-month factory warranty. Do not promise coverage beyond that unless explicitly confirmed.
+24-month factory warranty. Do not promise coverage beyond that unless explicitly confirmed.
 
 FINANCING
 NTG does not finance directly. Correct response: “We work with financing partners and can help guide you through available options.”

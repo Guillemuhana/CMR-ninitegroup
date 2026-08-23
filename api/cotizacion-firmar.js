@@ -249,8 +249,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ ok: false, error: ERROR_GENERICO });
     }
 
-    // Un modelo sin precio de lista (5-stall, 6-stall) no se puede firmar: lo
-    // que llega es un pedido de cotización, sin acuerdo ni firma.
+    // Un modelo sin precio de lista no se puede firmar: lo que llega es un
+    // pedido de cotización, sin acuerdo ni firma.
     const pedido = !!cliente.abierta && esAPedido(modelo);
 
     const firmaDataUrl = String(signature || "");
