@@ -134,7 +134,26 @@ body {
 	border-radius: 3px;
 	background: linear-gradient(90deg, var(--ntg-navy) 0%, var(--ntg-navy) 34%, var(--ntg-gold) 100%);
 }
-.nq-logo { max-height: 56px; }
+/* El logo es solo el dibujo del trailer: el nombre va al lado, escrito. */
+.nq-head-brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.nq-logo { max-height: 56px; border-radius: 10px; }
+.nq-head-name {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.12;
+	font-size: clamp(17px, 2vw, 22px);
+	font-weight: 800;
+	letter-spacing: -.015em;
+	color: var(--ntg-navy);
+	white-space: nowrap;
+}
+.nq-head-name small {
+	font-size: 11.5px;
+	font-weight: 600;
+	letter-spacing: .06em;
+	color: var(--ntg-gold);
+	margin-top: 4px;
+}
 .nq-head-title {
 	font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
 	font-size: clamp(20px, 2.4vw, 30px);
@@ -271,14 +290,15 @@ body {
 	gap: 14px;
 	padding: 0 clamp(14px, 3vw, 24px);
 }
-.ntg-bar-logo { height: 30px; width: auto; display: block; flex: 0 0 auto; }
-.ntg-bar-doc { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
-.ntg-bar-kicker {
-	font-size: 10.5px; font-weight: 700; letter-spacing: .14em;
-	text-transform: uppercase; color: var(--ntg-muted);
+.ntg-bar-logo { height: 32px; width: auto; display: block; flex: 0 0 auto; border-radius: 7px; }
+.ntg-bar-doc { display: flex; flex-direction: column; line-height: 1.18; min-width: 0; }
+.ntg-bar-brand {
+	font-size: 15px; font-weight: 800; letter-spacing: -.015em;
+	color: var(--ntg-navy); white-space: nowrap;
 }
 .ntg-bar-num {
-	font-size: 14px; font-weight: 700; color: var(--ntg-navy);
+	font-size: 11px; font-weight: 700; letter-spacing: .1em;
+	text-transform: uppercase; color: var(--ntg-muted);
 	white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ntg-bar-total { margin-left: auto; text-align: right; line-height: 1.15; }
@@ -944,11 +964,17 @@ body {
 }
 
 @media (max-width: 640px) {
-	.ntg-bar-doc { display: none; }       /* en 360px no entra: manda el total */
+	/* El nombre de la empresa se queda: lo que se va es el número de acuerdo,
+	 * que en 360px pelea con el total. */
+	.ntg-bar-num { display: none; }
+	.ntg-bar-brand { font-size: 14px; }
 	.ntg-bar-total { margin-left: auto; }
 	.ntg-bar-cta { padding: 9px 15px; font-size: 14px; }
-	.nq-head-title { font-size: 16px; letter-spacing: 0; }
-	.nq-logo { max-height: 42px; }
+	.nq-head-title { font-size: 15px; letter-spacing: 0; }
+	.nq-head-brand { gap: 10px; }
+	.nq-head-name { font-size: 16px; }
+	.nq-head-name small { display: none; }
+	.nq-logo { max-height: 40px; }
 	.nq-finishes { grid-template-columns: repeat(3, 1fr); gap: 12px; }
 	.nq-feature { align-items: flex-start; }
 	.nq-form-grid { grid-template-columns: 1fr; }

@@ -31,7 +31,7 @@ import {
 
 // Subir esto cuando cambien quote.css, estilo.css, firma.js o realce.js, para
 // que el navegador del cliente no siga mostrando la versión vieja en caché.
-export const ASSET_VERSION = "13";
+export const ASSET_VERSION = "14";
 
 const esc = (s) =>
   String(s ?? "")
@@ -202,15 +202,20 @@ export function render({ modelo, cliente: emitida }) {
 
 `;
 
+  // El logo es solo el dibujo del trailer, sin texto: sin esto el cliente no
+  // lee el nombre de la empresa en ningún lado del encabezado. Sale del mismo
+  // dato que firma el acuerdo, sin el "LLC", que en un logotipo sobra.
+  const marca = empresa.name.replace(/\s+LLC\.?$/i, "");
+
   // Barra fija de arriba: de qué acuerdo se trata, cuánto sale y el botón que
   // baja directo a la firma. El total se copia solo desde el documento
   // (realce.js), así el precio lo sigue calculando un solo lugar.
   const barraSuperior = `
 <header class="ntg-bar">
 	<div class="ntg-bar-in">
-		<img src="${esc(logo)}" alt="NINI T-GROUP" class="ntg-bar-logo">
+		<img src="${esc(logo)}" alt="${esc(marca)}" class="ntg-bar-logo">
 		<div class="ntg-bar-doc">
-			<span class="ntg-bar-kicker">Purchase Agreement</span>
+			<span class="ntg-bar-brand">${esc(marca)}</span>
 			<span class="ntg-bar-num" data-ntg-mirror="quote-number">${esc(d.quote_number)}</span>
 		</div>
 		<div class="ntg-bar-total">
@@ -258,7 +263,8 @@ export function render({ modelo, cliente: emitida }) {
 	<!-- Header -->
 	<header class="nq-head">
 		<div class="nq-head-brand">
-			<img src="${esc(logo)}" alt="NINI T-GROUP" class="nq-logo">
+			<img src="${esc(logo)}" alt="${esc(marca)}" class="nq-logo">
+			<span class="nq-head-name">${esc(marca)}<small>${esc(empresa.website)}</small></span>
 		</div>
 		<div class="nq-head-title">Purchase Agreement</div>
 	</header>
