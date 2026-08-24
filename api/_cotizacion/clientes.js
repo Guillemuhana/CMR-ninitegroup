@@ -76,6 +76,63 @@ export const cotizaciones = [
     },
   },
 
+
+  // Eunice Camacho — Camacho's Party Rentals (Sebastopol, CA). Pidió las dos
+  // unidades cotizadas POR SEPARADO, así que van dos acuerdos con su propio
+  // número y su propio link: uno el 3-Stall y otro el 4-Stall. Cada uno ya
+  // lleva sus datos y el precio cerrado: no tiene nada que completar, solo
+  // firmar. Los links son nominados a propósito para no tocar el de la
+  // cotización abierta, que se le sigue mandando a cualquier otro cliente.
+  {
+    slug: "eunice-camacho-3stall",
+    token: "c4p7r9",
+    modelo: "3-stall",
+    fecha: "2026-08-24",
+
+    nombre: "Eunice Camacho",
+    email: "eunicecamacho19@gmail.com",
+    telefono: "(707) 308-8935",
+    ubicacion: "Sebastopol, CA 95472",
+    empresa: "Camacho's Party Rentals",
+
+    config_note:
+      "Single axle configuration. West Coast Fast-Track fulfillment: free scheduled pickup at our Long Beach, CA Hub, or turnkey insured ground delivery to Sebastopol, CA (ZIP 95472). Clean VIN, Bill of Sale and Manufacturer Certificate of Origin (MCO) included, ready for California DMV registration.",
+
+    // Precio de campaña cerrado con ella. El anticipo (50% = 11.750) lo saca
+    // calcular() solo: no se escribe a mano.
+    precio: {
+      quote_number: "NTG 0558",
+      unit_price: 23500.0,
+      quantity: 1,
+      shipping_cost: 0.0,
+      delivery_time: "30-45 calendar days",
+    },
+  },
+
+  {
+    slug: "eunice-camacho-4stall",
+    token: "c4p8t2",
+    modelo: "4-stall",
+    fecha: "2026-08-24",
+
+    nombre: "Eunice Camacho",
+    email: "eunicecamacho19@gmail.com",
+    telefono: "(707) 308-8935",
+    ubicacion: "Sebastopol, CA 95472",
+    empresa: "Camacho's Party Rentals",
+
+    config_note:
+      "Dual (tandem) axle configuration. West Coast Fast-Track fulfillment: free scheduled pickup at our Long Beach, CA Hub, or turnkey insured ground delivery to Sebastopol, CA (ZIP 95472). Clean VIN, Bill of Sale and Manufacturer Certificate of Origin (MCO) included, ready for California DMV registration.",
+
+    // Anticipo 50% = 14.250, calculado por calcular().
+    precio: {
+      quote_number: "NTG 0559",
+      unit_price: 28500.0,
+      quantity: 1,
+      shipping_cost: 0.0,
+      delivery_time: "30-45 calendar days",
+    },
+  },
   // Cotización interna de prueba. No es de ningún cliente: existe para poder
   // firmar y comprobar que el circuito de mail sigue funcionando sin escribirle
   // a nadie de verdad. Al firmarla, el aviso va a sales@ninitgroup.com igual que
