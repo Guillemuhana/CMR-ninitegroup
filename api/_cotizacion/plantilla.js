@@ -18,6 +18,7 @@ import {
   firmaRep,
   opcionesCliente,
   opcionesInterior,
+  coloresExterior,
   modelosElegibles,
   esAPedido,
   terminos,
@@ -31,7 +32,7 @@ import {
 
 // Subir esto cuando cambien quote.css, estilo.css, firma.js o realce.js, para
 // que el navegador del cliente no siga mostrando la versión vieja en caché.
-export const ASSET_VERSION = "14";
+export const ASSET_VERSION = "15";
 
 const esc = (s) =>
   String(s ?? "")
@@ -357,22 +358,42 @@ ${pasos}	${selectorModelos}
 	</section>
 
 	<!-- Customization -->
-	<section class="nq-block">
-		<h3 class="nq-h2">Customization Options <span class="nq-incl">(Included in Price)</span></h3>
-		<ul class="nq-terms">${li(personalizacion)}</ul>
-
-		<p class="nq-finishes-intro">NTG Surface Catalog — premium finishes available at no extra cost:</p>
-		<div class="nq-finishes">
-			${terminaciones
-        .map(
-          (fin, i) => `<div class="nq-finish">
-				<div class="nq-finish-swatch"><img src="${esc(fin.img)}" alt="${esc(fin.name)}" loading="lazy"></div>
-				<p class="nq-finish-num">${String(i + 1).padStart(2, "0")}</p>
-				<p class="nq-finish-name">${esc(fin.name)}</p>
-				<p class="nq-finish-type">${esc(fin.finish)}</p>
-			</div>`
-        )
-        .join("\n\t\t\t")}
+	<section class="nq-block ntg-custom">
+		<h3 class="nq-h2">Customization <span class="nq-incl">(Included in Price)</span></h3>
+		<div class="ntg-custom-cols">
+			<div class="ntg-custom-col">
+				<h4 class="ntg-custom-h">${esc(personalizacion[0].titulo)}</h4>
+				<p class="ntg-custom-p">${esc(personalizacion[0].texto)}</p>
+				<ul class="ntg-colores">
+					${opcionesCliente.exterior
+            .map(
+              (c) =>
+                `<li><i style="background:${esc(
+                  coloresExterior[c] || "#d8dde4"
+                )}"></i>${esc(c)}</li>`
+            )
+            .join("\n\t\t\t\t\t")}
+				</ul>
+			</div>
+			<div class="ntg-custom-col">
+				<h4 class="ntg-custom-h">${esc(
+          personalizacion[1].titulo
+        )} <span class="ntg-custom-tag">NTG Surface Catalog</span></h4>
+				<p class="ntg-custom-p">${esc(personalizacion[1].texto)}</p>
+				<div class="nq-finishes">
+					${terminaciones
+            .map(
+              (fin) => `<div class="nq-finish">
+						<div class="nq-finish-swatch"><img src="${esc(fin.img)}" alt="${esc(
+                fin.name
+              )}" loading="lazy" decoding="async"></div>
+						<p class="nq-finish-name">${esc(fin.name)}</p>
+						<p class="nq-finish-type">${esc(fin.finish)}</p>
+					</div>`
+            )
+            .join("\n\t\t\t\t\t")}
+				</div>
+			</div>
 		</div>
 	</section>
 

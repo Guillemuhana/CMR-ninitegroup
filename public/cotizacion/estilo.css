@@ -582,18 +582,73 @@ body {
 .nq-feature-txt h4 { margin: 0 0 4px; font-size: 15.5px; font-weight: 700; color: var(--ntg-navy); }
 .nq-feature-txt p { font-size: 14.5px; color: var(--ntg-muted); line-height: 1.5; }
 
-/* ---------- Catálogo de terminaciones ---------- */
-.nq-finishes { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 16px; }
+/* ---------- Personalización: color de exterior y terminaciones ----------
+   Antes esto era media pantalla: dos parrafones repitiendo por escrito los
+   colores, y abajo diez muestras enormes numeradas. Ahora van los dos ejes
+   uno al lado del otro, con la muestra del color a la vista y el catálogo
+   chico: se entiende de un vistazo y ocupa un tercio de lo que ocupaba. */
+.ntg-custom-cols {
+	display: grid;
+	grid-template-columns: minmax(200px, 1fr) 2.4fr;
+	gap: 32px;
+	align-items: start;
+}
+.ntg-custom-h {
+	margin: 0 0 5px;
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--ntg-navy);
+	text-transform: uppercase;
+	letter-spacing: .09em;
+}
+.ntg-custom-tag {
+	margin-left: 7px;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: .07em;
+	color: var(--ntg-gold);
+	text-transform: none;
+}
+.ntg-custom-p {
+	margin: 0 0 14px;
+	font-size: 13.5px;
+	line-height: 1.5;
+	color: var(--ntg-muted);
+}
+
+/* Los colores de exterior: el nombre solo no dice nada, la muestra sí. */
+.ntg-colores { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.ntg-colores li {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--ntg-navy);
+}
+.ntg-colores i {
+	flex: none;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	border: 1px solid rgba(19, 26, 36, .16);
+	box-shadow: var(--ntg-sh-1);
+}
+
+.nq-finishes { grid-template-columns: repeat(5, 1fr); gap: 12px 10px; }
 .nq-finish-swatch {
-	border-radius: var(--ntg-r-m);
+	border-radius: var(--ntg-r-s);
 	box-shadow: var(--ntg-sh-1);
 	transition: transform var(--ntg-fast), box-shadow var(--ntg-fast);
 }
-.nq-finish:hover .nq-finish-swatch { transform: translateY(-3px) scale(1.02); box-shadow: var(--ntg-sh-2); }
+.nq-finish:hover .nq-finish-swatch { transform: translateY(-2px) scale(1.02); box-shadow: var(--ntg-sh-2); }
 .nq-finish-swatch img { transition: transform var(--ntg-slow); }
 .nq-finish:hover .nq-finish-swatch img { transform: scale(1.08); }
-.nq-finish-num { color: var(--ntg-gold); letter-spacing: .1em; }
-.nq-finishes-intro { font-size: 15.5px; }
+/* El número no le sirve a nadie: los nombres son los que se eligen en el
+   formulario. Se saca y el catálogo baja una línea de alto por muestra. */
+.nq-finish-num { display: none; }
+.nq-finish-name { margin: 5px 0 0; font-size: 12.5px; line-height: 1.2; }
+.nq-finish-type { font-size: 10.5px; letter-spacing: .06em; }
 
 /* ============================================================
    8. VALIDEZ
@@ -959,6 +1014,8 @@ body {
 	.nq-specs { grid-template-columns: 1fr; }
 	.nq-features { grid-template-columns: 1fr; }
 	.nq-proposal-cols { grid-template-columns: 1fr; }
+	.ntg-custom-cols { grid-template-columns: 1fr; gap: 26px; }
+	.ntg-colores { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 	.ntg-mb { display: flex; }
 	.nq-doc { padding-bottom: 96px; } /* que la barra de abajo no tape el pie */
 }

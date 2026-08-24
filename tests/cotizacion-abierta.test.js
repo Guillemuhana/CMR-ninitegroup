@@ -5,7 +5,7 @@
 // No se manda ningún mail: se reemplaza nodemailer.createTransport antes de
 // importar el endpoint y se mira el mail que HABRÍA salido. Lo que se protege
 // es lo caro de equivocarse:
-//   - que el acuerdo firmado llegue a ninitgroup@gmail.com y NUNCA al cliente;
+//   - que el acuerdo firmado llegue a las dos casillas de NINIT y NUNCA al cliente;
 //   - que el precio sea el de lista aunque el navegador mande otro;
 //   - que una cotización emitida siga ignorando lo que venga del navegador.
 
@@ -118,12 +118,12 @@ const firmaAbierta = (over = {}, cliente = {}) =>
     ...over,
   });
 
-test("el acuerdo firmado llega a ninitgroup@gmail.com y a nadie más", async () => {
+test("el acuerdo firmado llega a las dos casillas de NINIT y a nadie más", async () => {
   const { status, json, mail } = await firmaAbierta();
 
   assert.equal(status, 200);
   assert.equal(json.ok, true);
-  assert.deepEqual(mail.to, ["ninitgroup@gmail.com"]);
+  assert.deepEqual(mail.to, ["sales@ninitgroup.com", "ninitgroup@gmail.com"]);
   // El cliente NO recibe copia: su mail solo sirve para contestarle.
   assert.equal(mail.cc, undefined);
   assert.equal(mail.bcc, undefined);
@@ -191,7 +191,7 @@ test("el honeypot corta el envío sin mandar nada", async () => {
   assert.equal(mail, null);
 });
 
-test("una cotización emitida sigue yendo a sales@ y con SUS datos", async () => {
+test("una cotización emitida sigue yendo a NINIT y con SUS datos", async () => {
   const { status, mail } = await firmar({
     quote: "prueba-interna",
     signature: FIRMA,
@@ -203,7 +203,7 @@ test("una cotización emitida sigue yendo a sales@ y con SUS datos", async () =>
   });
 
   assert.equal(status, 200);
-  assert.deepEqual(mail.to, ["sales@ninitgroup.com"]);
+  assert.deepEqual(mail.to, ["sales@ninitgroup.com", "ninitgroup@gmail.com"]);
   assert.match(mail.subject, /Prueba Interna NTG/);
   assert.doesNotMatch(mail.subject, /Maria Fernandez/);
 });

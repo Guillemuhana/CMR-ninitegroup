@@ -16,8 +16,8 @@
 // Variables de entorno (las mismas del reporte diario, ya configuradas):
 //   GMAIL_USER                    cuenta que envía
 //   GMAIL_APP_PASSWORD            contraseña de aplicación de Google
-//   COTIZACION_EMAIL_TO           opcional. Default: sales@ninitgroup.com
-//   COTIZACION_ABIERTA_EMAIL_TO   opcional, para la abierta. Default: ninitgroup@gmail.com
+//   COTIZACION_EMAIL_TO           opcional. Default: sales@ninitgroup.com + ninitgroup@gmail.com
+//   COTIZACION_ABIERTA_EMAIL_TO   opcional, para la abierta. Mismo default
 
 import nodemailer from "nodemailer";
 
@@ -33,10 +33,15 @@ import {
 import { buscarCotizacion } from "./_cotizacion/clientes.js";
 import { construirPDF } from "./_cotizacion/pdf.js";
 
-const DESTINO_DEFAULT = "sales@ninitgroup.com";
-// La cotización abierta la puede firmar cualquiera que reciba el link, así que
-// el aviso va a la casilla que mira el equipo todos los días.
-const DESTINO_ABIERTA = "ninitgroup@gmail.com";
+// El acuerdo firmado lo miran las DOS casillas del equipo: sales@ (la
+// comercial, que es la que firma los acuerdos) y ninitgroup@ (la que se mira
+// todos los días). Al cliente no se le manda copia nunca: se la manda el
+// equipo a mano cuando corresponde.
+const DESTINO_NINIT = "sales@ninitgroup.com, ninitgroup@gmail.com";
+const DESTINO_DEFAULT = DESTINO_NINIT;
+// La cotización abierta la puede firmar cualquiera que reciba el link, pero el
+// aviso va a las mismas dos casillas.
+const DESTINO_ABIERTA = DESTINO_NINIT;
 const MAX_FIRMA = 400_000; // el dataURL de un trazo ronda los 10-40 KB
 const MAX_NOTA = 1500;
 

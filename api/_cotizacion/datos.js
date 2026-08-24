@@ -290,10 +290,35 @@ export const terminos = [
   'Condition: Fully "Plug and Play", on wheels, ready to roll and connect immediately.',
 ];
 
+/**
+ * Los dos ejes que el cliente elige sin pagar de más. Antes eran dos parrafones
+ * que repetían por escrito los colores que la página ya muestra en muestras;
+ * ahora es el título y una línea corta al lado de cada paleta.
+ */
 export const personalizacion = [
-  "Exterior Color: Fully customizable body color. Choose from our premium exterior palette (Pure White, Quartz Grey, Champagne Gold, Deep Burgundy, and more) to match your branding or event style.",
-  "Interior Finishes: Customize the interior by selecting your preferred combination of wooden cabinet finishes, marble countertop styles, and waterproof vinyl flooring.",
+  {
+    titulo: "Exterior Color",
+    texto: "Fully customizable body color, from our premium exterior palette.",
+  },
+  {
+    titulo: "Interior Finishes",
+    texto:
+      "Your combination of cabinet finish, marble countertop and waterproof vinyl flooring.",
+  },
 ];
+
+/**
+ * Color aproximado de cada opción de exterior, SOLO para pintar la muestra en
+ * la página. El que manda es el nombre: es el que se valida al firmar
+ * (opcionesCliente.exterior) y el que viaja en el acuerdo.
+ */
+export const coloresExterior = {
+  "Pure White": "#f1f1ee",
+  "Quartz Grey": "#8b9199",
+  "Champagne Gold": "#c9ae82",
+  "Deep Burgundy": "#5f1f2b",
+  "Onyx Black": "#1d1f22",
+};
 
 /**
  * Opciones que el cliente elige por su cuenta en la cotización abierta
