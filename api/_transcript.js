@@ -78,3 +78,28 @@ export function construirTranscript(mensajes, { presupuesto = PRESUPUESTO_CHARS 
 
   return { transcript: partes.join("\n"), incluidos: cabeza.length + cola.length, omitidos };
 }
+
+// ── Idioma del cliente ────────────────────────────────────────
+//
+// Se mira SOLO lo que escribió el cliente (direccion "in"): el bot y el
+// vendedor a veces contestan en español a un lead que escribe en inglés, y si
+// se contaran esos mensajes la IA le respondería en el idioma equivocado.
+//
+// Regla del master prompt de NTG: si el cliente escribe en inglés se le
+// responde SOLO en inglés; si escribe en español, SOLO en español.
+export function detectarIdioma(mensajes) {
+  const texto = (mensajes || [])
+    .filter((m) => m.direccion === "in")
+    .map((m) => (m.contenido || ""))
+    .join(" ")
+    .toLowerCase();
+  if (!texto.trim()) return "es"; // sin mensajes del cliente → español por defecto
+
+  const esHits =
+    (texto.match(/[áéíóúñ¿¡]/g) || []).length +
+    (texto.match(/\b(que|qué|hola|gracias|necesito|necesita|precio|cuánto|cuanto|está|cómo|como|para|por|quiero|buenas|días|dias|usted|información|informacion|enviar|tienen|tenes|tenés|disculpa|estoy|quisiera|comprar|costo|valor)\b/g) || []).length;
+  const enHits =
+    (texto.match(/\b(the|you|i'm|hello|hi|hey|price|need|how|what|thanks|thank|please|want|good|morning|info|information|send|can|could|would|your|you're|is|are|for|with|about|interested|looking|quote|cost|buy|much|available)\b/g) || []).length;
+
+  return enHits > esHits ? "en" : "es";
+}

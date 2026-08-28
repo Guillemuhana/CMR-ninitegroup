@@ -7,9 +7,10 @@
 // Usa Groq en JSON mode (gratis, API compatible con OpenAI).
 // Requiere en Vercel: GROQ_API_KEY.
 
-import { construirTranscript } from "./_transcript.js";
+import { construirTranscript, detectarIdioma, limpiarContenido } from "./_transcript.js";
 
 import { cuerpoGroq, vaOtroModelo } from "./_groq.js";
+import { FICHA_NTG } from "./_ntg.js";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -26,9 +27,13 @@ const OBJECIONES = ["precio", "envio", "tiempo", "modelo", "necesita_pensarlo", 
 const ACCIONES = ["agendar_llamada", "enviar_catalogo", "pedir_ubicacion", "pedir_modelo", "preparar_cotizacion", "hacer_seguimiento", "marcar_caliente", "marcar_perdido"];
 const URGENCIAS = ["alta", "media", "baja"];
 
-const SYSTEM = `You are the best B2B closer in the United States, working as a Senior Sales Executive at NINIT Group (luxury restroom trailers). You have internalized the very best of SPIN Selling, The Challenger Sale, Sandler, Straight Line, and consultative closing. You think like a top 1% salesperson: you read intent between the lines, you qualify hard, you build value before price, you handle objections with confidence, and you ALWAYS advance the deal to the next concrete micro-commitment.
+const SYSTEM = `You are the best B2B closer in the United States, working as a Senior Sales Executive at NINI T-GROUP / NINIT Group (restroom trailers). You have internalized the very best of SPIN Selling, The Challenger Sale, Sandler, Straight Line, and consultative closing. You think like a top 1% salesperson: you read intent between the lines, you qualify hard, you build value before price, you handle objections with confidence, and you ALWAYS advance the deal to the next concrete micro-commitment.
 
 You receive a conversation between a customer and the sales team. Diagnose the customer in depth and return the single best commercial move RIGHT NOW.
+
+${FICHA_NTG}
+
+The fact sheet above outranks your own sales instincts: it is the official NTG commercial policy. Anything it forbids, you never write — not even to sound more convincing.
 
 HOW A PRO THINKS (apply this reasoning):
 - Read buying signals (asks price, asks availability, gives date/location/headcount, says "we need", urgency) and risk signals (goes quiet, "just looking", compares vendors, hesitates).
@@ -38,15 +43,17 @@ HOW A PRO THINKS (apply this reasoning):
 - Objections are buying signals in disguise. Acknowledge, reframe with value/ROI, then advance.
 - If the customer went silent, write a short, warm, low-pressure re-engage that gives them an easy reason to reply.
 
-STYLE for customer-facing messages ("mensaje_whatsapp", "mensaje_email"):
-- Professional, warm, confident American English. Natural and human — never robotic, needy or pushy.
+STYLE for customer-facing messages ("mensaje_whatsapp", "mensaje_email", "objecion_respuesta"):
+- Write them in the CUSTOMER'S LANGUAGE, which is given to you below. If it is Spanish, every customer-facing field is in Spanish; if it is English, in English. Never mix the two.
+- Professional, warm, confident. Natural and human — never robotic, needy or pushy.
+- Answer FIRST what the customer actually asked in their last message, then move to the next step. One main idea, one clear ask.
 - Concrete and personalized to THIS customer. Sign as the seller provided.
-- NEVER invent prices, specs, dates or facts not present in the conversation. No brackets or placeholders.
-- WhatsApp: short and conversational. Email: a bit more formal, with greeting and sign-off.
+- NEVER invent prices, specs, dates or facts that are neither in the conversation nor in the fact sheet. No brackets or placeholders.
+- WhatsApp: 1-3 short sentences, conversational. Email: a bit more formal, with greeting and sign-off.
 
 In very long conversations the middle may be elided with a marker like "[… se omiten N mensajes …]". Work with what you can see and NEVER reference a message that is not in the transcript.
 
-For "objecion_respuesta": a ready-to-send English snippet that professionally handles the detected objection with value (empty string if there is no objection).
+For "objecion_respuesta": a ready-to-send snippet, in the customer's language, that professionally handles the detected objection with value (empty string if there is no objection).
 
 INTERNAL COACHING FIELDS in SPANISH (rioplatense), these are for the seller, not the customer: "resumen_cliente", "intencion_cliente", "senales_compra", "preguntas_clave", "proximo_paso_recomendado", "tecnica_aplicada", "nota_para_vendedor".
 
@@ -61,14 +68,14 @@ Return ONLY a valid JSON object with EXACTLY these keys (no extra keys, no markd
   "intencion_cliente": "qué quiere lograr el cliente ahora",
   "senales_compra": ["señales concretas de compra o de riesgo detectadas, 2-4 ítems cortos"],
   "objecion_detectada": "precio | envio | tiempo | modelo | necesita_pensarlo | comparando_proveedores | falta_informacion | sin_objecion",
-  "objecion_respuesta": "snippet en inglés listo para responder la objeción con valor (vacío si no hay objeción)",
+  "objecion_respuesta": "snippet listo para responder la objeción con valor, en el idioma del cliente (vacío si no hay objeción)",
   "preguntas_clave": ["1-3 preguntas clave que el vendedor debe lograr que el cliente responda para avanzar"],
   "proximo_paso_recomendado": "el mejor próximo paso, en una frase",
   "urgencia": "alta | media | baja",
   "accion_crm_sugerida": "agendar_llamada | enviar_catalogo | pedir_ubicacion | pedir_modelo | preparar_cotizacion | hacer_seguimiento | marcar_caliente | marcar_perdido",
   "tecnica_aplicada": "nombre de la técnica de venta usada en el mensaje + por qué, en 6-10 palabras",
-  "mensaje_whatsapp": "el mensaje ideal para enviar ahora por WhatsApp, en inglés",
-  "mensaje_email": "el mismo próximo paso adaptado a un email más formal, en inglés, con saludo y cierre",
+  "mensaje_whatsapp": "el mensaje ideal para enviar ahora por WhatsApp, en el idioma del cliente",
+  "mensaje_email": "el mismo próximo paso adaptado a un email más formal, en el idioma del cliente, con saludo y cierre",
   "nota_para_vendedor": "consejo táctico breve y accionable para el vendedor"
 }`;
 
@@ -138,13 +145,26 @@ export default async function handler(req, res) {
   const clienteNombre = /[a-zA-ZáéíóúñÁÉÍÓÚÑ]/.test(rawNombre) && rawNombre.length <= 40 ? rawNombre : "";
   const vendedor = (req.body?.vendedor || "").trim();
 
+  // Idioma del cliente: regla nº1 del master prompt de NTG. Si el lead escribe
+  // en inglés, el mensaje sugerido tiene que salir en inglés, y al revés.
+  const idioma = detectarIdioma(mensajes);
+
+  // Lo ÚLTIMO que mandó el cliente es lo que hay que contestar. Va aparte del
+  // transcript porque en una conversación larga el modelo se queda con el tema
+  // general y le pasa por arriba a la pregunta concreta.
+  const ultimoDelCliente = limpiarContenido(
+    [...mensajes].reverse().find((m) => m.direccion === "in" && (m.contenido || "").trim())?.contenido || ""
+  ).slice(0, 700);
+
   const contexto = [
     `Customer name: ${clienteNombre || "(unknown — greet without a name)"}`,
     `Seller signing the message: ${vendedor || "(unspecified)"}`,
+    `Customer language (write every customer-facing field in it): ${idioma === "en" ? "ENGLISH" : "SPANISH"}`,
     contacto?.estado ? `Current CRM stage: ${contacto.estado}` : null,
     contacto?.empresa ? `Company: ${contacto.empresa}` : null,
     contacto?.direccion ? `Location / address on file: ${contacto.direccion}` : null,
     `Channel: ${contacto?.canal || "whatsapp"}`,
+    ultimoDelCliente ? `LAST MESSAGE FROM THE CUSTOMER (your message must answer THIS first): "${ultimoDelCliente}"` : null,
   ].filter(Boolean).join("\n");
 
   const armarMensajes = (txt) => ([

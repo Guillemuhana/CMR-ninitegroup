@@ -9,9 +9,10 @@
 // Requiere en Vercel: GROQ_API_KEY (Settings → Environment Variables).
 //   Conseguí la key en https://console.groq.com/keys
 
-import { construirTranscript } from "./_transcript.js";
+import { construirTranscript, detectarIdioma } from "./_transcript.js";
 
 import { cuerpoGroq, vaOtroModelo } from "./_groq.js";
+import { FICHA_NTG } from "./_ntg.js";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -74,25 +75,6 @@ async function traducir(req, res) {
   return res.status(200).json({ traduccion });
 }
 
-// Detecta el idioma mirando SOLO los mensajes entrantes del cliente (direccion "in"),
-// para no confundirse con el bot/vendedor que a veces responde en español.
-function detectarIdioma(mensajes) {
-  const texto = (mensajes || [])
-    .filter((m) => m.direccion === "in")
-    .map((m) => (m.contenido || ""))
-    .join(" ")
-    .toLowerCase();
-  if (!texto.trim()) return "es"; // sin mensajes del cliente → español por defecto
-
-  const esHits =
-    (texto.match(/[áéíóúñ¿¡]/g) || []).length +
-    (texto.match(/\b(que|qué|hola|gracias|necesito|necesita|precio|cuánto|cuanto|está|cómo|como|para|por|quiero|buenas|días|dias|usted|información|informacion|enviar|tienen|tenes|tenés|disculpa|estoy|quisiera|comprar|costo|valor)\b/g) || []).length;
-  const enHits =
-    (texto.match(/\b(the|you|i'm|hello|hi|hey|price|need|how|what|thanks|thank|please|want|good|morning|info|information|send|can|could|would|your|you're|is|are|for|with|about|interested|looking|quote|cost|buy|much|available)\b/g) || []).length;
-
-  return enHits > esHits ? "en" : "es";
-}
-
 function buildSystem(vendedor, idioma) {
   const firma = vendedor && vendedor !== "(sin especificar)" ? vendedor : "el vendedor";
   const idiomaNombre = idioma === "en" ? "INGLÉS (English)" : "ESPAÑOL rioplatense";
@@ -122,8 +104,13 @@ PARTE 2 — La RESPUESTA IDEAL para mandarle ahora al cliente por WhatsApp, escr
 - El mensaje va en el idioma del cliente (español o inglés, el que detectaste). Saludá al cliente por su nombre SOLO si te paso un nombre real del cliente; si no, saludá sin nombre (ej. "Hola, ¿cómo estás?" / "Hi, how are you?").
 - Presentate de forma natural y humana como ${firma} de NINIT Group. Escribilo bien redactado, con espacios y acentos correctos. No suene a guion ni repitas frases armadas; variá la redacción.
 - Tono cordial y cercano, como un vendedor humano real. Sin corchetes ni placeholders (completá con datos reales), sin encabezados, sin asteriscos ni comillas: solo el texto del mensaje, tal cual se manda.
+- Corto: 1 a 3 oraciones, UNA sola idea. Nada de folletos ni de repetir lo que ya se le explicó.
 
-No inventes datos ni precios que no estén en la conversación.`;
+No inventes datos ni precios que no estén en la conversación ni en la ficha comercial de abajo.
+
+${FICHA_NTG}
+
+La ficha es la política comercial oficial de NTG y manda sobre cualquier ocurrencia tuya: lo que ahí dice que NUNCA se afirma, no lo escribís. Si el cliente pregunta algo que no está ni en la conversación ni en la ficha, el mensaje dice que lo confirmás con el equipo — nunca lo inventa.`;
 }
 
 export default async function handler(req, res) {
