@@ -7,7 +7,7 @@
 // Usa Groq en JSON mode (gratis, API compatible con OpenAI).
 // Requiere en Vercel: GROQ_API_KEY.
 
-import { construirTranscript, detectarIdioma, limpiarContenido } from "./_transcript.js";
+import { construirTranscript, datosDelLead, detectarIdioma, limpiarContenido } from "./_transcript.js";
 
 import { cuerpoGroq, vaOtroModelo } from "./_groq.js";
 import { FICHA_NTG } from "./_ntg.js";
@@ -35,9 +35,14 @@ ${FICHA_NTG}
 
 The fact sheet above outranks your own sales instincts: it is the official NTG commercial policy. Anything it forbids, you never write — not even to sound more convincing.
 
+NEVER RE-ASK WHAT THE CUSTOMER ALREADY TOLD YOU (highest priority rule after the fact sheet):
+Many leads arrive from a Facebook / Messenger ad form, so their FIRST message already contains their data as "Label: value" lines (full name, phone, email, ZIP code, the trailer size they picked, sometimes a promo price). Whatever the customer already stated — in the form or anywhere in the conversation — is SETTLED. Asking for it again ("what model are you interested in?", "what's your ZIP?", "may I have your name?") reads as if nobody read them and is the fastest way to lose the lead.
+So: acknowledge what they gave (briefly and naturally, at most a short confirmation), build the whole message ON TOP of it, and ask only for something genuinely MISSING. "preguntas_clave" may only list information that is NOT anywhere in the conversation or in the data block below.
+If the customer picked a model, talk about THAT model. If they gave a ZIP, use it for delivery ("to your area in <ZIP>", offer to price the transport to it) instead of asking where they are. If their message quotes a promo price, that price is what applies to them — it overrides the fact sheet's base price and you never contradict it.
+
 HOW A PRO THINKS (apply this reasoning):
 - Read buying signals (asks price, asks availability, gives date/location/headcount, says "we need", urgency) and risk signals (goes quiet, "just looking", compares vendors, hesitates).
-- Never dump a price on the first ask. First qualify: event date, location, guest count, model/configuration. Sell value, quality and reliability before the number.
+- Never dump a price on the first ask. Qualify first — event date, location, guest count, model/configuration — but ONLY the pieces that are still missing: whatever the lead form or the conversation already answered is done, take it and move on. Sell value, quality and reliability before the number.
 - Every message has ONE clear objective and ends with ONE clear ask (a call, a quote, a piece of info). Never stack three requests.
 - Match temperature: cold → build curiosity and trust softly; warm → deepen and qualify; hot → push to a call or quote decisively but never desperate.
 - Objections are buying signals in disguise. Acknowledge, reframe with value/ROI, then advance.
@@ -152,6 +157,10 @@ export default async function handler(req, res) {
   // Lo ÚLTIMO que mandó el cliente es lo que hay que contestar. Va aparte del
   // transcript porque en una conversación larga el modelo se queda con el tema
   // general y le pasa por arriba a la pregunta concreta.
+  // Datos que el lead ya aportó (el formulario de Messenger llega completo en el
+  // primer mensaje). Se pasan aparte para que la IA no vuelva a preguntarlos.
+  const datosYaDados = datosDelLead(mensajes);
+
   const ultimoDelCliente = limpiarContenido(
     [...mensajes].reverse().find((m) => m.direccion === "in" && (m.contenido || "").trim())?.contenido || ""
   ).slice(0, 700);
@@ -164,6 +173,10 @@ export default async function handler(req, res) {
     contacto?.empresa ? `Company: ${contacto.empresa}` : null,
     contacto?.direccion ? `Location / address on file: ${contacto.direccion}` : null,
     `Channel: ${contacto?.canal || "whatsapp"}`,
+    datosYaDados.length
+      ? `DATA THE CUSTOMER ALREADY GAVE (treat as known — NEVER ask for any of it again):
+${datosYaDados.map((d) => `  · ${d}`).join("\n")}`
+      : null,
     ultimoDelCliente ? `LAST MESSAGE FROM THE CUSTOMER (your message must answer THIS first): "${ultimoDelCliente}"` : null,
   ].filter(Boolean).join("\n");
 

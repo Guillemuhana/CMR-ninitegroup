@@ -9,7 +9,7 @@
 // Requiere en Vercel: GROQ_API_KEY (Settings → Environment Variables).
 //   Conseguí la key en https://console.groq.com/keys
 
-import { construirTranscript, detectarIdioma } from "./_transcript.js";
+import { construirTranscript, datosDelLead, detectarIdioma } from "./_transcript.js";
 
 import { cuerpoGroq, vaOtroModelo } from "./_groq.js";
 import { FICHA_NTG } from "./_ntg.js";
@@ -106,6 +106,8 @@ PARTE 2 — La RESPUESTA IDEAL para mandarle ahora al cliente por WhatsApp, escr
 - Tono cordial y cercano, como un vendedor humano real. Sin corchetes ni placeholders (completá con datos reales), sin encabezados, sin asteriscos ni comillas: solo el texto del mensaje, tal cual se manda.
 - Corto: 1 a 3 oraciones, UNA sola idea. Nada de folletos ni de repetir lo que ya se le explicó.
 
+NUNCA vuelvas a pedir un dato que el cliente YA dio. Muchos leads entran por un formulario de Facebook/Messenger y su primer mensaje ya trae los datos en líneas "Etiqueta: valor" (nombre, teléfono, email, ZIP, el modelo que eligió y a veces un precio promocional). Todo eso está resuelto: volver a preguntarlo ("¿qué modelo te interesa?", "¿de qué zona sos?", "¿me pasás tu nombre?") le grita al cliente que nadie leyó lo que mandó. Tomá esos datos como sabidos, armá el mensaje sobre ellos (hablá del modelo que eligió, usá el ZIP para el envío) y pedí sólo lo que de verdad falta. Si el cliente menciona un precio de promoción, ese es el precio que le aplica y manda sobre los precios de referencia de la ficha.
+
 No inventes datos ni precios que no estén en la conversación ni en la ficha comercial de abajo.
 
 ${FICHA_NTG}
@@ -146,12 +148,26 @@ export default async function handler(req, res) {
   const clienteNombre = /[a-zA-ZáéíóúñÁÉÍÓÚÑ]/.test(rawNombre) && rawNombre.length <= 40 ? rawNombre : "";
   const vendedor = (req.body?.vendedor || "").trim();
   const idioma = detectarIdioma(mensajes);
+  // Lo que el lead ya aportó (formulario de Messenger): va aparte para que la
+  // IA lo dé por sabido en vez de volver a preguntarlo.
+  const datosYaDados = datosDelLead(mensajes);
 
   const messages = [
     { role: "system", content: buildSystem(vendedor, idioma) },
     {
       role: "user",
-      content: `Nombre del cliente: ${clienteNombre || "(desconocido — saludar sin nombre)"}\nVendedor que firma el mensaje: ${vendedor || "(sin especificar)"}\n\nConversación (orden cronológico):\n${transcript}`,
+      content: [
+        `Nombre del cliente: ${clienteNombre || "(desconocido — saludar sin nombre)"}`,
+        `Vendedor que firma el mensaje: ${vendedor || "(sin especificar)"}`,
+        datosYaDados.length
+          ? `
+DATOS QUE EL CLIENTE YA DIO (dalos por sabidos, NO los vuelvas a preguntar):
+${datosYaDados.map((d) => `  · ${d}`).join("\n")}`
+          : null,
+        `
+Conversación (orden cronológico):
+${transcript}`,
+      ].filter(Boolean).join("\n"),
     },
   ];
 

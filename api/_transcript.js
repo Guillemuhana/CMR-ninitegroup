@@ -103,3 +103,70 @@ export function detectarIdioma(mensajes) {
 
   return enHits > esHits ? "en" : "es";
 }
+
+// ── Datos que el cliente YA dio ───────────────────────────────
+//
+// Los leads que entran por Facebook / Messenger llegan con el formulario ya
+// completo en el primer mensaje, en líneas "Etiqueta: valor":
+//
+//   Hello! I filled out your form and would like to know more about your business.
+//   Which trailer size fits your needs best?: 2-Stall Luxury Trailer ($19,500 Promo)
+//   Full name: El Compa Chuy II
+//   Phone number: (714) 914-3720
+//   Email: chuy@example.com
+//   Zip code: 92505
+//
+// La IA leía eso como texto suelto y arrancaba preguntando el nombre, el modelo
+// o el ZIP que el cliente acababa de mandar: la forma más rápida de perder un
+// lead. Acá se extraen esos datos y se le pasan al modelo aparte, para que los
+// dé por sabidos y pregunte sólo lo que de verdad falta.
+
+const CAMPOS_LEAD = [
+  { clave: "Nombre", re: /(?:full name|nombre completo|nombre y apellido|your name|name|nombre)\s*[:=]\s*([^\n]{2,80})/i },
+  { clave: "Teléfono", re: /(?:phone number|phone|mobile|whatsapp|tel[ée]fono|telefono|celular)\s*[:=]\s*([^\n]{5,40})/i },
+  { clave: "Email", re: /(?:e-?mail|correo(?: electr[oó]nico)?)\s*[:=]\s*([^\s\n]{5,80})/i },
+  { clave: "Código postal (ZIP)", re: /(?:zip code|zipcode|zip|postal code|c[oó]digo postal)\s*[:=]\s*([^\n]{3,20})/i },
+  { clave: "Modelo que le interesa", re: /(?:which trailer size[^:\n]{0,40}|trailer size|which model[^:\n]{0,40}|modelo[^:\n]{0,30}|qu[ée] tama[nñ]o[^:\n]{0,40})\s*[:=]\s*([^\n]{2,80})/i },
+  { clave: "Ubicación", re: /(?:city and state|city|ciudad|state|location|ubicaci[oó]n|direcci[oó]n)\s*[:=]\s*([^\n]{2,60})/i },
+  { clave: "Fecha del evento", re: /(?:event date|date of (?:the )?event|fecha del evento|fecha)\s*[:=]\s*([^\n]{3,40})/i },
+  { clave: "Cantidad de personas", re: /(?:guest count|number of guests|guests|invitados|cantidad de (?:personas|invitados)|personas)\s*[:=]\s*([^\n]{1,40})/i },
+  { clave: "Uso / negocio", re: /(?:business type|type of business|what is your business|uso|rubro|negocio)\s*[:=]\s*([^\n]{2,60})/i },
+];
+
+const BASURA = /^(n\/?a|none|ninguno|no|-{1,3}|\.+|\?+)$/i;
+
+function limpiarValor(v) {
+  return String(v || "").replace(/\s+/g, " ").trim().replace(/^["'*]+|["'*,.;]+$/g, "").trim();
+}
+
+/**
+ * Devuelve un array de líneas "Campo: valor" con todo lo que el cliente ya
+ * aportó en la conversación (formulario de anuncio o texto libre).
+ * Se mira SOLO lo que escribió el cliente (direccion "in").
+ */
+export function datosDelLead(mensajes) {
+  const texto = (mensajes || [])
+    .filter((m) => m.direccion === "in")
+    .map((m) => String(m.contenido || "").replace(/\r\n?/g, "\n"))
+    .join("\n");
+  if (!texto.trim()) return [];
+
+  const datos = new Map();
+
+  for (const { clave, re } of CAMPOS_LEAD) {
+    const val = limpiarValor(texto.match(re)?.[1]);
+    if (val && !BASURA.test(val)) datos.set(clave, val);
+  }
+
+  // Respaldos por si el dato vino sin etiqueta (el cliente lo tipeó suelto).
+  if (!datos.has("Email")) {
+    const mail = texto.match(/[\w.+-]+@[\w-]+\.[\w.]{2,}/)?.[0];
+    if (mail) datos.set("Email", mail);
+  }
+  if (!datos.has("Modelo que le interesa")) {
+    const modelo = texto.match(/\b(?:ada\s*\+?\s*\d|\d\s*[-–\s]?stall)\b[^\n,.]{0,40}/i)?.[0];
+    if (modelo) datos.set("Modelo que le interesa", limpiarValor(modelo));
+  }
+
+  return [...datos].map(([k, v]) => `${k}: ${v}`);
+}
