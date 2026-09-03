@@ -425,7 +425,7 @@
           decir(
             "error",
             (err && err.message) ||
-              "Something went wrong. Please try again or call us at +1 (786) 385-9402."
+              "Something went wrong. Please try again or call us at +1 (800) 495-5693."
           );
           btn.disabled = false;
           btn.textContent = original;

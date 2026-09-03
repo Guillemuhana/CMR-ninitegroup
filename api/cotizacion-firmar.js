@@ -46,7 +46,7 @@ const MAX_FIRMA = 400_000; // el dataURL de un trazo ronda los 10-40 KB
 const MAX_NOTA = 1500;
 
 const ERROR_GENERICO =
-  "Something went wrong. Please try again or call us at +1 (786) 385-9402.";
+  "Something went wrong. Please try again or call us at +1 (800) 495-5693.";
 
 /** Hoy en Miami, como "YYYY-MM-DD". */
 function hoyISO() {

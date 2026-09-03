@@ -9,7 +9,7 @@ const IMG = "/cotizacion/img/";
 export const empresa = {
   name: "NINI T-GROUP LLC",
   ein: "39-3860417",
-  phone: "+1 (786) 385-9402",
+  phone: "+1 (800) 495-5693",
   email: "sales@ninitgroup.com",
   address: "Miami, Florida, USA",
   country: "United States",
