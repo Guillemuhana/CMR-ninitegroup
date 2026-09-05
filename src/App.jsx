@@ -209,10 +209,10 @@ SÍ decir: "trailers construidos por fabricantes seleccionados", "soporte con ba
 Web: ninitgroup.com · Email: sales@ninitgroup.com · WhatsApp: +1 786 385 9402.
 
 ════ CATÁLOGO Y PRECIOS OFICIALES (venta) ════
-- 2-Stall   → USD 19,500
-- 3-Stall   → USD 23,500  (el más popular, mejor balance)
-- 4-Stall   → USD 28,500  (festivales / alto flujo)
-- ADA + 2   → USD 29,500  (cumplimiento federal ADA)
+- 2-Stall   → USD 21,500
+- 3-Stall   → USD 25,500  (el más popular, mejor balance)
+- 4-Stall   → USD 31,500  (festivales / alto flujo)
+- ADA + 2   → USD 30,500  (cumplimiento federal ADA)
 Estos precios incluyen: producción, logística internacional, entrega al hub logístico de NTG más cercano, ensamblado, inspección y preparación para operar.
 Catálogo: https://ninitgroup.com/wp-content/uploads/2026/04/NINITGROUP_CATALOG.pdf
 
@@ -2750,7 +2750,7 @@ const PLANTILLAS = [
     items: [
       {
         label: "Precios de venta",
-        texto: `Here's a quick overview of our pricing:\n\n🏆 2-Stall White Marble: $21,500 (pre-sale) / $24,000 (ready to ship)\n⭐ 3-Stall (most popular): $25,000 (pre-sale) / $27,500 (ready to ship)\n🔥 4-Stall: $32,500 (pre-sale) / $35,000 (ready to ship)\n♿ ADA+2 Accessible: $29,500 (pre-sale) / $32,000 (ready to ship)\n\n📦 FREE shipping for Florida clients!\n\nReady-to-ship units have limited stock. Want to reserve yours with a deposit?`,
+        texto: `Here's a quick overview of our pricing:\n\n🏆 2-Stall White Marble: $21,500\n⭐ 3-Stall (most popular): $25,500\n🔥 4-Stall: $31,500\n♿ ADA+2 Accessible: $30,500\n\n📦 FREE shipping for Florida clients!\n\nStock is limited. Want to reserve yours with a deposit?`,
       },
     ],
   },

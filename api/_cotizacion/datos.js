@@ -82,7 +82,7 @@ export const modelos = {
     banos: 2,
     config_note: "Single axle configuration.",
 
-    quote: { ...CONDICIONES, quote_number: "NTG 2-STALL", unit_price: 19500.0 },
+    quote: { ...CONDICIONES, quote_number: "NTG 2-STALL", unit_price: 21500.0 },
 
     // Miniatura liviana para el selector (la foto grande pesa de más en el
     // celular). Se generan con: npx sharp-cli -i <foto> -o thumbs/<modelo>.jpg resize 420
@@ -118,7 +118,7 @@ export const modelos = {
     quote: {
       ...CONDICIONES,
       quote_number: "NTG 3-STALL",
-      unit_price: 23500.0,
+      unit_price: 25500.0,
     },
 
     // Fotos reales y actualizadas de la unidad: son las mismas que el vendedor
@@ -161,7 +161,7 @@ export const modelos = {
     banos: 4,
     config_note: "Dual (tandem) axle configuration.",
 
-    quote: { ...CONDICIONES, quote_number: "NTG 4-STALL", unit_price: 28500.0 },
+    quote: { ...CONDICIONES, quote_number: "NTG 4-STALL", unit_price: 31500.0 },
 
     // Miniatura liviana para el selector (la foto grande pesa de más en el
     // celular). Se generan con: npx sharp-cli -i <foto> -o thumbs/<modelo>.jpg resize 420
@@ -254,7 +254,7 @@ export const modelos = {
     banos: 3,
     config_note: "",
 
-    quote: { ...CONDICIONES, quote_number: "NTG ADA-2", unit_price: 29500.0 },
+    quote: { ...CONDICIONES, quote_number: "NTG ADA-2", unit_price: 30500.0 },
 
     // Miniatura liviana para el selector (la foto grande pesa de más en el
     // celular). Se generan con: npx sharp-cli -i <foto> -o thumbs/<modelo>.jpg resize 420
