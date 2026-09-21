@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Las dos versiones se declaran como alternativas la una de la otra. Es lo
+  que le dice a Google que /es/ no es contenido duplicado sino la misma
+  página en otro idioma, y a quién mostrarle cada una.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <url>
+    <loc>https://ntg-business.vercel.app/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ntg-business.vercel.app/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ntg-business.vercel.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ntg-business.vercel.app/"/>
+    <lastmod>2026-09-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <url>
+    <loc>https://ntg-business.vercel.app/es/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://ntg-business.vercel.app/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://ntg-business.vercel.app/es/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://ntg-business.vercel.app/"/>
+    <lastmod>2026-09-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+</urlset>

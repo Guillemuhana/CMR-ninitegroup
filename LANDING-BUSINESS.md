@@ -197,3 +197,87 @@ ve sin un solo estilo.
 Con el redirect, el directorio base pasa a ser `/business/` y todo resuelve
 dentro de la carpeta. En el dominio propio el problema no existe, porque ahí la
 página vive en la raíz.
+
+## Castellano: `/es/` se GENERA, no se edita
+
+La versión en castellano **no se toca a mano**. Se genera desde la inglesa:
+
+```
+node scripts/landing-es.mjs           # escribe public/business/es/index.html
+node scripts/landing-es.mjs --faltan  # sólo lista lo que no tiene traducción
+```
+
+La fuente única de verdad es `public/business/index.html`. El diccionario es
+`public/business/i18n-es.json`, con la frase en inglés como clave.
+
+**Si se cambia una frase en inglés, hay que actualizar su clave en el
+diccionario y volver a correr el script.** El script avisa: lista lo que
+quedó sin traducir y lo que quedó en el diccionario pero ya no está en la
+página. Nunca dejar frases sin traducir: quedan en inglés en la página
+española.
+
+### Por qué dos URL y no un botón que traduce
+
+Un selector de idioma en JavaScript cambia lo que ve la persona pero no lo que
+indexa Google: el buscador lee el HTML que manda el servidor, así que la
+versión en castellano sencillamente no existiría para él. Miami es mercado
+hispanohablante — esa página tiene que ser una URL propia, indexable, con su
+`hreflang`.
+
+Y para no terminar manteniendo dos páginas a mano (que es como se
+desincronizan), la española se genera.
+
+### Lo que el script hace además de traducir
+
+- `lang="en"` → `lang="es"`
+- Rutas relativas → `../` (la página vive un nivel más abajo)
+- Canónica, `og:url`, `og:locale` y el selector de idioma, invertidos
+- **El bloque JSON-LD**, que queda fuera del reemplazo de texto por estar
+  dentro de un `<script>` pero es justamente el que Google usa para el
+  resultado enriquecido. Si quedara en inglés, el desplegable de preguntas de
+  la página española saldría en inglés.
+
+El script tiene controles: si cambió el HTML inglés y alguno de esos
+reemplazos ya no encuentra su objetivo, avisa y sale con error en vez de
+escribir una página rota en silencio.
+
+## SEO
+
+| Qué | Dónde |
+|---|---|
+| Título y descripción apuntados a Miami | `<head>` de cada idioma |
+| Canónica + `hreflang` en/es/x-default | `<head>`, cruzados entre las dos |
+| Open Graph + Twitter Card con URL absolutas | `<head>` |
+| `robots.txt` y `sitemap.xml` con las alternativas | `public/business/` |
+| Datos estructurados | bloque JSON-LD antes de los scripts |
+| Sección local | `#miami` |
+
+Los datos estructurados son cuatro bloques: `Organization`, `WebPage`,
+`ItemList` (las cuatro unidades con precio) y **`FAQPage`** con las 11
+preguntas, que es el que más rinde — Google las muestra desplegables debajo
+del resultado y ocupa más pantalla.
+
+**Regla:** cada dato del JSON-LD tiene que coincidir con lo que dice la página
+y con `api/_ntg.js`. Marcar algo que la página no dice es motivo de
+penalización, y peor todavía si es un precio.
+
+La sección `#miami` dice sólo cosas verificables: Miami **es** un punto
+logístico real y las visitas ahí son con cita. Lo que no se puede hacer —y por
+eso no está— es afirmar que NTG tiene clientes en una ciudad, inventar cifras
+del mercado local o prometer demanda. Las frases sobre el mercado son
+cualitativas a propósito: un dato inventado ahí es un problema legal, no de
+posicionamiento.
+
+### Pendiente para que el SEO rinda de verdad
+
+Esto es la base técnica. Falta lo que depende de ustedes:
+
+- **Un dominio propio.** `ntg-business.vercel.app` no acumula autoridad y no
+  inspira confianza en una campaña. Cuando exista, hay que cambiar `BASE` en
+  `scripts/landing-es.mjs` y las URL absolutas del `<head>` y del JSON-LD.
+- **Google Search Console** y **Bing Webmaster**: dar de alta el sitio y
+  mandar el sitemap.
+- **Google Business Profile** con la dirección real de Miami. Sin eso no hay
+  posicionamiento local que valga.
+- **Reseñas.** Son el factor más pesado del ranking local y no se pueden
+  fabricar.
