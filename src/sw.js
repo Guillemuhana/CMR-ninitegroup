@@ -18,14 +18,18 @@ precacheAndRoute(self.__WB_MANIFEST || []);
 
 // Fallback de navegación al index cacheado (SPA offline).
 //
-// /cotizacion/ queda afuera: son páginas sueltas que se le mandan a clientes,
-// no rutas del CRM. Sin esta excepción, en cualquier dispositivo que tenga el
-// CRM instalado el service worker respondía la navegación con el index cacheado
-// y la primera visita al link de la cotización terminaba abriendo el CRM.
+// /cotizacion/ y /business/ quedan afuera: son páginas sueltas para un cliente
+// o un visitante, no rutas del CRM. Sin esta excepción, en cualquier
+// dispositivo que tenga el CRM instalado el service worker respondía la
+// navegación con el index cacheado y el link terminaba abriendo el CRM.
+//
+// Ojo con /business: hay que contemplar la URL sin barra final, porque es la
+// que se reparte en campañas (ninit-crm.vercel.app/business). Con sólo
+// /^\/business\// el caso sin barra se colaba y mostraba el CRM.
 try {
   registerRoute(
     new NavigationRoute(createHandlerBoundToURL("/index.html"), {
-      denylist: [/^\/cotizacion\//],
+      denylist: [/^\/cotizacion\//, /^\/business(\/|$)/],
     })
   );
 } catch { /* sin index precacheado en dev */ }
