@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="business.css?v=5">
+<link rel="stylesheet" href="business.css?v=6">
 </head>
 <body id="top">
 
@@ -85,7 +85,22 @@
 </section>
 
 <!-- ═══════════════ EL SISTEMA ═══════════════ -->
-<section class="section dark" id="system">
+<!--
+  La sección con más trabajo de animación de la página. Tres piezas:
+
+    · El fondo (.aurora) son dos manchas de color que respiran. Es CSS puro
+      y decorativo: si el navegador no lo soporta, abajo está el azul noche.
+    · La cadena de 8 pasos tiene un hilo que se va llenando con el scroll y
+      va encendiendo cada paso a medida que lo cruza.
+    · Las dos tarjetas entran desde los costados y la de NTG tiene un
+      reflejo que sigue al mouse.
+
+  Todo lo maneja GSAP + ScrollTrigger desde business.js. Si el CDN no
+  responde, business.js cae al IntersectionObserver de siempre y la sección
+  se ve igual, sólo que sin movimiento: nada queda invisible.
+-->
+<section class="section dark has-aurora" id="system">
+	<div class="aurora" aria-hidden="true"><i></i><i></i></div>
 	<div class="wrap">
 		<div class="section-head center reveal">
 			<span class="eyebrow on-dark">More than a trailer</span>
@@ -96,18 +111,51 @@
 			</p>
 		</div>
 
-		<div class="chain reveal">
-			<div class="chain-step"><span class="n">01</span><span class="t">Trailer</span></div>
-			<div class="chain-step"><span class="n">02</span><span class="t">Brand &amp; website</span></div>
-			<div class="chain-step"><span class="n">03</span><span class="t">Leads</span></div>
-			<div class="chain-step"><span class="n">04</span><span class="t">CRM</span></div>
-			<div class="chain-step"><span class="n">05</span><span class="t">Quote</span></div>
-			<div class="chain-step"><span class="n">06</span><span class="t">Booking</span></div>
-			<div class="chain-step"><span class="n">07</span><span class="t">Delivery</span></div>
-			<div class="chain-step"><span class="n">08</span><span class="t">Revenue</span></div>
+		<div class="chain reveal" id="chain">
+			<div class="chain-track" aria-hidden="true"><i class="chain-fill"></i></div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="15" height="9" rx="2"/><path d="M17 10h3l2 3v3h-5z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg></span>
+				<span class="n">01</span><span class="t">Trailer</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20"/><circle cx="5.5" cy="6.5" r=".6" fill="currentColor"/><circle cx="8" cy="6.5" r=".6" fill="currentColor"/></svg></span>
+				<span class="n">02</span><span class="t">Brand &amp; website</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.2"/><path d="M19 8v6M22 11h-6"/></svg></span>
+				<span class="n">03</span><span class="t">Leads</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M4 11.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></span>
+				<span class="n">04</span><span class="t">CRM</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>
+				<span class="n">05</span><span class="t">Quote</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2"/><path d="M3 10h18M8 2.5v4M16 2.5v4"/><path d="m9 15 2 2 4-4"/></svg></span>
+				<span class="n">06</span><span class="t">Booking</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v13H1z"/><path d="M14 8h4l3 3v5h-7z"/><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg></span>
+				<span class="n">07</span><span class="t">Delivery</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>
+				<span class="n">08</span><span class="t">Revenue</span>
+			</div>
 		</div>
 
-		<div class="versus reveal" style="margin-top:clamp(40px,5vw,64px)">
+		<div class="versus" style="margin-top:clamp(40px,5vw,64px)">
 			<div class="vs-card vs-them">
 				<h3>Buying a trailer</h3>
 				<ul class="vs-list">
@@ -119,7 +167,8 @@
 					<li>You learn the tools on your own</li>
 				</ul>
 			</div>
-			<div class="vs-card vs-us">
+			<div class="vs-card vs-us" id="vs-us">
+				<span class="vs-glow" aria-hidden="true"></span>
 				<h3>Launching with NTG</h3>
 				<ul class="vs-list">
 					<li>The asset — a factory-built restroom trailer</li>
@@ -1172,6 +1221,19 @@
 	</div>
 </footer>
 
-<script src="business.js?v=5" defer></script>
+<!--
+  GSAP + ScrollTrigger (scroll y parallax) y Lenis (scroll suave). ~80 KB
+  entre los tres, por CDN y sin build: la página sigue siendo un HTML suelto
+  que se puede mudar a WordPress copiando la carpeta.
+
+  Van con defer y ANTES de business.js, que corre después y pregunta si
+  window.gsap existe. Si el CDN falla o el visitante los bloquea, business.js
+  usa el IntersectionObserver de siempre: la página se ve igual, sin
+  animación. Nada del contenido depende de que estos archivos carguen.
+-->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js" defer></script>
+<script src="business.js?v=6" defer></script>
 </body>
 </html>

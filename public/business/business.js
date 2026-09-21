@@ -18,19 +18,149 @@
 	if (yr) yr.textContent = String(new Date().getFullYear());
 
 	/* ──────────────────────────────────────────────────────────
-	   Aparición al scrollear
+	   MOVIMIENTO
+
+	   Dos caminos, y el orden importa:
+
+	     · Si GSAP y ScrollTrigger cargaron, se usan ellos: scroll suave con
+	       Lenis, el hilo de la cadena que se llena, los pasos que se
+	       encienden y las tarjetas que entran de los costados.
+	     · Si el CDN no respondió, lo bloquea una extensión o el visitante
+	       pidió menos movimiento, se cae al IntersectionObserver de
+	       siempre. La página se ve igual, sólo que sin animación.
+
+	   La regla que no se negocia: NADA del contenido puede depender de que
+	   una librería externa cargue. Por eso el respaldo existe y por eso el
+	   estado inicial "invisible" siempre lo puede deshacer el respaldo.
 	   ────────────────────────────────────────────────────────── */
-	var reveals = document.querySelectorAll(".reveal");
-	if (!("IntersectionObserver" in window)) {
-		// Navegador viejo: se muestra todo de una y listo.
-		Array.prototype.forEach.call(reveals, function (el) { el.classList.add("in"); });
-	} else {
+	var menosMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+	var hayGsap = !menosMovimiento && typeof window.gsap !== "undefined" && typeof window.ScrollTrigger !== "undefined";
+
+	// Respaldo: mostrar las secciones al entrar en pantalla.
+	function revelarSimple() {
+		var reveals = document.querySelectorAll(".reveal");
+		if (!("IntersectionObserver" in window)) {
+			Array.prototype.forEach.call(reveals, function (el) { el.classList.add("in"); });
+			return;
+		}
 		var io = new IntersectionObserver(function (entries) {
 			entries.forEach(function (e) {
 				if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
 			});
 		}, { rootMargin: "0px 0px -8% 0px", threshold: 0.06 });
 		Array.prototype.forEach.call(reveals, function (el) { io.observe(el); });
+	}
+
+	if (!hayGsap) {
+		revelarSimple();
+	} else {
+		gsap.registerPlugin(ScrollTrigger);
+
+		// ── Scroll suave (Lenis) ──────────────────────────────────────────
+		// Lenis toma el control del scroll, así que hay que avisarle a
+		// ScrollTrigger en cada cuadro o las animaciones se desincronizan.
+		var lenis = null;
+		if (typeof window.Lenis !== "undefined") {
+			lenis = new Lenis({ duration: 1.05, smoothWheel: true, touchMultiplier: 1.6 });
+			lenis.on("scroll", ScrollTrigger.update);
+			gsap.ticker.add(function (t) { lenis.raf(t * 1000); });
+			gsap.ticker.lagSmoothing(0);
+
+			// Con Lenis manejando el scroll, los enlaces internos dejan de
+			// funcionar solos: hay que pasárselos.
+			document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+				a.addEventListener("click", function (ev) {
+					var destino = document.querySelector(a.getAttribute("href"));
+					if (!destino) return;
+					ev.preventDefault();
+					lenis.scrollTo(destino, { offset: -76 });
+				});
+			});
+		}
+
+		// ── Aparición de las secciones ────────────────────────────────────
+		document.querySelectorAll(".reveal").forEach(function (el) {
+			gsap.fromTo(el,
+				{ opacity: 0, y: 26 },
+				{
+					opacity: 1, y: 0, duration: .8, ease: "power2.out",
+					scrollTrigger: { trigger: el, start: "top 88%", once: true },
+					onStart: function () { el.classList.add("in"); }
+				}
+			);
+		});
+
+		// ── Parallax de la foto del hero ──────────────────────────────────
+		var heroBg = document.querySelector(".hero-bg");
+		if (heroBg) {
+			gsap.to(heroBg, {
+				yPercent: 14, ease: "none",
+				scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true }
+			});
+		}
+
+		// ── La cadena: el hilo se llena y va encendiendo cada paso ────────
+		var cadena = document.getElementById("chain");
+		if (cadena) {
+			var pasos = cadena.querySelectorAll(".chain-step");
+			var hilo = cadena.querySelector(".chain-fill");
+
+			// Entrada escalonada de las tarjetas.
+			gsap.from(pasos, {
+				opacity: 0, y: 24, scale: .96,
+				duration: .5, ease: "power2.out", stagger: .07,
+				scrollTrigger: { trigger: cadena, start: "top 85%", once: true }
+			});
+
+			// El hilo avanza con el scroll y cada paso se prende al ser
+			// alcanzado. Se apaga al volver hacia arriba, así el efecto
+			// funciona en los dos sentidos.
+			if (hilo) {
+				ScrollTrigger.create({
+					trigger: cadena,
+					start: "top 72%",
+					end: "bottom 45%",
+					scrub: .5,
+					onUpdate: function (self) {
+						var p = self.progress;
+						hilo.style.width = (p * 100).toFixed(2) + "%";
+						var hasta = Math.round(p * pasos.length);
+						pasos.forEach(function (paso, i) {
+							paso.classList.toggle("on", i < hasta);
+						});
+					}
+				});
+			}
+		}
+
+		// ── Las dos tarjetas entran desde los costados ────────────────────
+		var them = document.querySelector(".vs-them");
+		var us = document.querySelector(".vs-us");
+		if (them && us) {
+			var tl = gsap.timeline({
+				scrollTrigger: { trigger: ".versus", start: "top 80%", once: true }
+			});
+			tl.from(them, { opacity: 0, x: -38, duration: .7, ease: "power3.out" })
+			  .from(us,   { opacity: 0, x: 38,  duration: .7, ease: "power3.out" }, "-=.55")
+			  .from(us.querySelectorAll(".vs-list li"), {
+			  	opacity: 0, x: 16, duration: .4, ease: "power2.out", stagger: .06
+			  }, "-=.35");
+		}
+	}
+
+	/* ──────────────────────────────────────────────────────────
+	   Reflejo que sigue al mouse en la tarjeta de NTG.
+	   Va fuera del bloque de GSAP: es CSS y dos variables, no necesita
+	   librería. En touch no se dispara nunca.
+	   ────────────────────────────────────────────────────────── */
+	var tarjetaNtg = document.getElementById("vs-us");
+	if (tarjetaNtg && !menosMovimiento) {
+		tarjetaNtg.addEventListener("pointermove", function (ev) {
+			if (ev.pointerType === "touch") return;
+			var r = tarjetaNtg.getBoundingClientRect();
+			tarjetaNtg.style.setProperty("--mx", (ev.clientX - r.left) + "px");
+			tarjetaNtg.style.setProperty("--my", (ev.clientY - r.top) + "px");
+		});
 	}
 
 	/* ──────────────────────────────────────────────────────────
