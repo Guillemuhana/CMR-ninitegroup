@@ -223,10 +223,18 @@
 	/* ──────────────────────────────────────────────────────────
 	   FORMULARIO -> CRM
 
-	   POST /api/lead (rewrite a /api/push?accion=lead). El endpoint
+	   POST a /api/lead (rewrite a /api/push?accion=lead). El endpoint
 	   inserta en la tabla contactos con el service role: la landing
 	   nunca ve una clave de Supabase.
+
+	   La URL va ABSOLUTA y apuntando siempre al proyecto del CRM,
+	   porque esta página se sirve desde varios lados: su propio
+	   dominio, /business del CRM, y el día de mañana WordPress. El
+	   endpoint responde con Access-Control-Allow-Origin: *, así que
+	   el pedido cruzado funciona desde cualquiera de los tres.
 	   ────────────────────────────────────────────────────────── */
+	var ENDPOINT_LEAD = "https://ninit-crm.vercel.app/api/lead";
+
 	var form = $("lead-form");
 	if (!form) return;
 
@@ -285,7 +293,7 @@
 			url: window.location.href
 		};
 
-		fetch("/api/lead", {
+		fetch(ENDPOINT_LEAD, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(cuerpo)

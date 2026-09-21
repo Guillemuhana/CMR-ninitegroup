@@ -155,3 +155,30 @@ Lo que está afuera a propósito, para poder salir a vender ya:
   hero y FAQ distintos; la estructura ya lo permite.
 - **Dashboard real del dueño.** Lo que se muestra es una maqueta estática y la
   página lo aclara. El dashboard de verdad es desarrollo aparte.
+
+## Dónde está publicada
+
+| URL | Proyecto Vercel | Para qué |
+|---|---|---|
+| **https://ntg-business.vercel.app** | `ntg-business` | **La que se reparte a clientes.** |
+| https://ninit-crm.vercel.app/business | `ninit-crm` | Copia, mismo contenido |
+
+**Se reparte la primera.** Dos razones:
+
+1. Un cliente no debería recibir un link que diga "crm".
+2. El CRM es una PWA y su service worker se comía la navegación a
+   `/business`: a cualquiera que hubiera abierto el CRM alguna vez —o sea,
+   nosotros— le mostraba el CRM en vez de la landing. Está arreglado en
+   `src/sw.js` (denylist `/^\/business(\/|$)/`), pero un dominio aparte hace
+   que el problema no pueda volver: otro origen, otro service worker.
+
+La página es **autónoma**: sus imágenes viven en `public/business/img/` y todas
+las rutas son relativas. Por eso el mismo directorio se puede publicar en
+cualquier lado sin tocar una línea. El deploy del proyecto aparte se hace
+copiando `public/business/` a una carpeta llamada `ntg-business` y corriendo
+`vercel --prod` adentro.
+
+El formulario apunta a `https://ninit-crm.vercel.app/api/lead` por URL
+absoluta, no relativa: la página se sirve desde varios dominios y el endpoint
+vive en el proyecto del CRM. El endpoint responde con
+`Access-Control-Allow-Origin: *`, así que el pedido cruzado funciona.
