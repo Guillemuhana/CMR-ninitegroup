@@ -182,3 +182,18 @@ El formulario apunta a `https://ninit-crm.vercel.app/api/lead` por URL
 absoluta, no relativa: la página se sirve desde varios dominios y el endpoint
 vive en el proyecto del CRM. El endpoint responde con
 `Access-Control-Allow-Origin: *`, así que el pedido cruzado funciona.
+
+### La barra final de `/business` no es un detalle
+
+En el proyecto del CRM, `/business` **redirige** (307) a `/business/`; no es un
+rewrite. Tiene que ser así porque la página usa rutas relativas.
+
+Sin la barra final el navegador toma `/` como directorio base y busca el CSS en
+`/business.css`. Esa dirección **no** coincide con la exclusión `business/` del
+catch-all del SPA, así que la regla se la lleva y devuelve el `index.html` del
+CRM: el navegador recibe HTML donde esperaba CSS, lo descarta, y la landing se
+ve sin un solo estilo.
+
+Con el redirect, el directorio base pasa a ser `/business/` y todo resuelve
+dentro de la carpeta. En el dominio propio el problema no existe, porque ahí la
+página vive en la raíz.

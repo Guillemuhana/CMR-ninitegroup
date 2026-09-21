@@ -2,12 +2,14 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "redirects": [
+    { "source": "/business", "destination": "/business/", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/api/push-subscribe", "destination": "/api/push?accion=subscribe" },
     { "source": "/api/push-send", "destination": "/api/push?accion=send" },
     { "source": "/api/meta-evento", "destination": "/api/push?accion=meta" },
     { "source": "/api/lead", "destination": "/api/push?accion=lead" },
-    { "source": "/business", "destination": "/business/index.html" },
     { "source": "/business/", "destination": "/business/index.html" },
     { "source": "/((?!api/|cotizacion/|business/).*)", "destination": "/index.html" }
   ],
