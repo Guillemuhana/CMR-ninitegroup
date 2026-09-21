@@ -17,8 +17,8 @@
 // Este archivo solo conversa — así el chat nunca puede romper el flujo de
 // leads que ya funciona.
 
-import { cuerpoGroq, vaOtroModelo } from "./_groq.js";
-import { FICHA_NTG, FICHA_BUSINESS } from "./_ntg.js";
+import { cuerpoGroq, vaOtroModelo } from "../_groq.js";
+import { FICHA_NTG, FICHA_BUSINESS } from "../_ntg.js";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -70,12 +70,50 @@ End your reply with the exact tag ${TAG_FORM} on its own, as the very last thing
 Do not offer it on a first "hi" or a single vague question, and do not offer it twice in the same conversation unless the visitor explicitly asks again later. Never mention this tag or explain it — it is invisible machinery, the widget reads it and shows a short contact form.`;
 }
 
+// ── Freno de abuso ────────────────────────────────────────────────────────
+//
+// Este endpoint es PÚBLICO y gasta plata: cada llamada es un pedido a Groq.
+// Sin ningún límite, cualquiera puede scriptear la URL y consumir la cuota
+// —que es la MISMA que usan las cuatro funciones de IA del CRM, así que
+// vaciarla acá deja sin asistente a los vendedores.
+//
+// El contador vive en memoria del proceso. Es un freno parcial y conviene
+// saberlo: Vercel levanta varias instancias, cada una con su propio Map, y
+// una instancia fría arranca en cero. Frena el abuso ingenuo (un bucle desde
+// una IP), no un ataque repartido. Un límite de verdad necesita un
+// almacenamiento compartido —Supabase o Upstash— y es trabajo aparte.
+const VENTANA_MS = 60 * 1000;
+const TOPE_POR_VENTANA = 12;
+const visitas = new Map();
+
+function demasiadosPedidos(ip) {
+  const ahora = Date.now();
+  const previas = (visitas.get(ip) || []).filter((t) => ahora - t < VENTANA_MS);
+  previas.push(ahora);
+  visitas.set(ip, previas);
+
+  // Limpieza oportunista: sin esto el Map crece para siempre en una
+  // instancia de larga vida.
+  if (visitas.size > 500) {
+    for (const [k, v] of visitas) {
+      if (!v.length || ahora - v[v.length - 1] > VENTANA_MS) visitas.delete(k);
+    }
+  }
+  return previas.length > TOPE_POR_VENTANA;
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "sin-ip";
+  if (demasiadosPedidos(ip)) {
+    res.setHeader("Retry-After", "60");
+    return res.status(429).json({ error: "Demasiados mensajes seguidos. Esperá un minuto." });
+  }
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "Falta configurar GROQ_API_KEY en el servidor." });

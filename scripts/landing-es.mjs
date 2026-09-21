@@ -125,7 +125,7 @@ conAtributos = conAtributos
   // Idioma del documento.
   .replace('<html lang="en">', '<html lang="es">')
   // Rutas relativas -> un nivel arriba.
-  .replace(/(src|href)="(img\/|business\.css|business\.js)/g, '$1="../$2')
+  .replace(/(src|href)="(img\/|business\.css|business\.js|assistant-widget\.js)/g, '$1="../$2')
   .replace(/url\('img\//g, "url('../img/")
   // Canónica y alternas: acá la canónica es la española.
   .replace(`<link rel="canonical" href="${BASE}/">`, `<link rel="canonical" href="${BASE}/es/">`)
@@ -137,10 +137,10 @@ conAtributos = conAtributos
     '<a class="on" href="/" hreflang="en" aria-current="page">EN</a>\n\t\t\t<a href="/es/" hreflang="es">ES</a>',
     '<a href="/" hreflang="en">EN</a>\n\t\t\t<a class="on" href="/es/" hreflang="es" aria-current="page">ES</a>'
   )
-  // El idioma declarado en los datos estructurados.
-  .replace('"inLanguage": "en-US"', '"inLanguage": "es-US"')
-  .replace(`"url": "${BASE}/",\n      "name": "Restroom Trailer Rental Business in Miami — NINI T-GROUP"`,
-           `"url": "${BASE}/es/",\n      "name": "Negocio de Alquiler de Baños Móviles en Miami — NINI T-GROUP"`);
+  // El idioma declarado en los datos estructurados. El resto del JSON-LD
+  // (incluido el nombre de la página) lo traduce el paso 4b con el
+  // diccionario; acá sólo van los campos que no son copia.
+  .replace('"inLanguage": "en-US"', '"inLanguage": "es-US"');
 
 /* ── 4b. Los datos estructurados ─────────────────────────────────────────
    El bloque JSON-LD queda fuera del reemplazo de texto porque está dentro de
@@ -168,8 +168,20 @@ conAtributos = conAtributos.replace(
   /(<script type="application\/ld\+json">)([\s\S]*?)(<\/script>)/,
   (todo, abre, json, cierra) => {
     try {
-      const datos = JSON.parse(json);
-      return abre + "\n" + JSON.stringify(traducirJsonLd(datos), null, 2) + "\n" + cierra;
+      const datos = traducirJsonLd(JSON.parse(json));
+      // El nodo WebPage describe ESTA página, así que su URL es la española.
+      // Se corrige acá, sobre el objeto ya parseado, y no con un reemplazo de
+      // texto: la re-serialización cambia el formato y un replace sobre el
+      // original fallaría en silencio.
+      const pagina = (datos["@graph"] || []).find((n) => n["@type"] === "WebPage");
+      if (pagina) {
+        pagina["@id"] = `${BASE}/es/#webpage`;
+        pagina.url = `${BASE}/es/`;
+      } else {
+        console.error("⚠ No se encontró el nodo WebPage en el JSON-LD.");
+        process.exitCode = 1;
+      }
+      return abre + "\n" + JSON.stringify(datos, null, 2) + "\n" + cierra;
     } catch (e) {
       console.error("⚠ El JSON-LD no parsea, queda sin traducir:", e.message);
       return todo;
@@ -185,6 +197,7 @@ const controles = [
   ['class="on" href="/es/"', "el selector de idioma"],
   ['href="../business.css', "la ruta de los estilos"],
   ['src="../business.js', "la ruta del script"],
+  ['src="../assistant-widget.js', "la ruta del asistente"],
 ];
 const rotos = controles.filter(([aguja]) => !conAtributos.includes(aguja));
 if (rotos.length) {

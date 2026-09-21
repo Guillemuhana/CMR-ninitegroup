@@ -1,15 +1,12 @@
 {
   "_comentario": "Diccionario inglés -> castellano de la landing. Lo consume scripts/landing-es.mjs, que genera public/business/es/index.html. La clave es la frase EXACTA en inglés, normalizada a un espacio. Si se cambia una frase en index.html hay que actualizar la clave acá y volver a correr el script. Las entidades HTML (&mdash;, &amp;, &ndash;) se dejan tal cual. El castellano es neutro, apuntado a Miami y el sur de Florida.",
-
   "Restroom Trailer Rental Business in Miami — Own the Trailer, Launch the Business | NINI T-GROUP": "Negocio de Alquiler de Baños Móviles en Miami — Compre la Unidad, Lance el Negocio | NINI T-GROUP",
   "Start a restroom trailer rental business in Miami and South Florida. Factory-built luxury restroom trailers from US$21,500 plus the brand, website, CRM, lead generation and support. Three packages, from owner-operated to fully managed.": "Arranque un negocio de alquiler de baños móviles en Miami y el sur de Florida. Tráilers de baños de lujo fabricados en planta desde US$21.500, más la marca, el sitio web, el CRM, la captación de clientes y el soporte. Tres paquetes: desde operarlo usted mismo hasta que lo administremos nosotros.",
   "Own the trailer. Launch the business. — Restroom trailer rentals, Miami": "Compre la unidad. Lance el negocio. — Alquiler de baños móviles, Miami",
   "Don't just buy a restroom trailer. Start a rental business with the technology, leads and support already built in.": "No compre solamente un tráiler de baños. Arranque un negocio de alquiler con la tecnología, los clientes y el soporte ya incluidos.",
-
   "EN": "EN",
   "ES": "ES",
   "Language / Idioma": "Idioma / Language",
-
   "_datos_estructurados": "Lo de abajo es el bloque JSON-LD (schema.org). No se ve en la página, pero es lo que Google usa para armar el resultado enriquecido: si queda en inglés, el desplegable de preguntas de la página española sale en inglés. Los textos son parecidos a los de la página pero no idénticos, porque están redactados para el buscador.",
   "NINI T-GROUP": "NINI T-GROUP",
   "U.S.-based company specializing in restroom trailers, working with selected manufacturing partners. NTG coordinates manufacturing, documentation, logistics, preparation, inspection, delivery and support.": "Empresa radicada en Estados Unidos especializada en tráilers de baños, que trabaja con plantas fabricantes asociadas seleccionadas. NTG coordina la fabricación, la documentación, la logística, la preparación, la inspección, la entrega y el soporte.",
@@ -18,7 +15,6 @@
   "South Florida": "Sur de Florida",
   "United States": "Estados Unidos",
   "Own the trailer. Launch the business.": "Compre la unidad. Lance el negocio.",
-  "Negocio de Alquiler de Baños Móviles en Miami — NINI T-GROUP": "Negocio de Alquiler de Baños Móviles en Miami — NINI T-GROUP",
   "Starting a restroom trailer rental business with a factory-built unit plus brand, website, CRM, lead generation and operational support.": "Cómo arrancar un negocio de alquiler de baños móviles con una unidad fabricada en planta más la marca, el sitio web, el CRM, la captación de clientes y el soporte operativo.",
   "Restroom trailer models": "Modelos de tráilers de baños",
   "2-Stall Restroom Trailer": "Tráiler de Baños de 2 Cubículos",
@@ -44,7 +40,6 @@
   "Yes. Everything is modular on purpose. Many owners start owner-operated, learn their market for a season, and switch on automation, campaigns or full management once the calendar starts filling.": "Sí. Todo es modular a propósito. Muchos dueños arrancan operando ellos mismos, aprenden su mercado durante una temporada y después activan la automatización, las campañas o la administración completa cuando el calendario empieza a llenarse.",
   "Can I come see a restroom trailer in Miami?": "¿Puedo ir a ver un tráiler de baños en Miami?",
   "Most units are built to order, so there is no traditional showroom. Visits in Miami are by appointment and subject to availability; Texas and California are logistics and preparation points, not showrooms. When a unit is on the ground, a video walkthrough is often possible.": "La mayoría de las unidades se fabrica a pedido, así que no hay un showroom tradicional. Las visitas en Miami son con cita y sujetas a disponibilidad; Texas y California son puntos de logística y preparación, no salas de exhibición. Cuando hay una unidad en piso, muchas veces se puede hacer una recorrida por videollamada.",
-
   "Miami &amp; South Florida": "Miami y el sur de Florida",
   "Starting in South Florida? You're at our front door.": "¿Arranca en el sur de Florida? Está en la puerta de casa.",
   "Miami is one of our three U.S. logistics points. Units headed to South Florida are received, prepared and inspected here before delivery, which means a shorter final leg, a transport quote that doesn't cross the country, and the option to pick up locally instead of paying for long-haul.": "Miami es uno de nuestros tres puntos logísticos en Estados Unidos. Las unidades destinadas al sur de Florida se reciben, preparan e inspeccionan acá antes de la entrega: eso significa un tramo final más corto, un flete que no cruza el país y la opción de retirarla localmente en lugar de pagar larga distancia.",
@@ -68,11 +63,9 @@
   "Restroom overflow during building renovations": "Refuerzo de baños durante refacciones de edificios",
   "Storm recovery and emergency response": "Recuperación tras tormentas y respuesta a emergencias",
   "Which of these you win depends on your pricing, your service and how you market &mdash; this is the demand to go after, not demand we hand you.": "Cuál de estas consigue depende de sus precios, su servicio y cómo se promocione: esta es la demanda que hay que salir a buscar, no demanda que le entreguemos.",
-
   "NINIT GROUP": "NINIT GROUP",
   "Restroom trailer rentals": "Alquiler de baños móviles",
   "ninitgroup.com": "ninitgroup.com",
-
   "The system": "El sistema",
   "Who it's for": "Para quién es",
   "Packages": "Paquetes",
@@ -80,7 +73,6 @@
   "The trailers": "Las unidades",
   "FAQ": "Preguntas",
   "Talk to us": "Hablemos",
-
   "Restroom trailer rentals · Business packages": "Alquiler de baños móviles · Paquetes de negocio",
   "Own the trailer.": "Compre la unidad.",
   "Launch the business.": "Lance el negocio.",
@@ -88,7 +80,6 @@
   "Explore business packages": "Ver los paquetes",
   "Run the numbers": "Hacer números",
   "Three levels of involvement — from owner-operated to fully managed. You choose how much of the work stays on your plate.": "Tres niveles de participación: desde operarlo usted mismo hasta que lo administremos nosotros. Usted elige cuánto trabajo se queda de su lado.",
-
   "12-month factory warranty": "12 meses de garantía de fábrica",
   "Every unit, standard.": "En todas las unidades.",
   "Miami · Houston · Long Beach": "Miami · Houston · Long Beach",
@@ -97,7 +88,6 @@
   "Pre-qualify in ~2 minutes.": "Precalifique en unos 2 minutos.",
   "USA-based support": "Soporte desde Estados Unidos",
   "Before and after the purchase.": "Antes y después de la compra.",
-
   "More than a trailer": "Más que un tráiler",
   "A business system, not a purchase.": "Un sistema de negocio, no una compra.",
   "A competitor hands you a trailer and a bill of sale. We hand you the trailer and everything that has to happen around it before it earns a single dollar.": "Un competidor le entrega un tráiler y una factura. Nosotros le entregamos el tráiler y todo lo que tiene que pasar alrededor antes de que genere un solo dólar.",
@@ -109,7 +99,6 @@
   "Booking": "Reserva",
   "Delivery": "Entrega",
   "Revenue": "Ingresos",
-
   "Buying a trailer": "Comprar un tráiler",
   "You get a unit": "Recibe una unidad",
   "You build the brand": "Usted arma la marca",
@@ -124,7 +113,6 @@
   "The demand — campaigns, forms, local presence": "La demanda: campañas, formularios, presencia local",
   "The operation — quotes, contracts, e-signature, payments": "La operación: cotizaciones, contratos, firma digital, cobros",
   "The support — a team that has done this before": "El soporte: un equipo que ya hizo esto antes",
-
   "Who this is for": "Para quién es",
   "You don't have to be a tech person to own a modern rental business.": "No hace falta ser experto en tecnología para tener un negocio de alquiler moderno.",
   "Most people who call us are not looking for software. They are looking for something real to own, that works without them having to build it from zero.": "La mayoría de quienes nos llaman no buscan software. Buscan algo real para tener, que funcione sin tener que construirlo desde cero.",
@@ -146,7 +134,6 @@
   "Own a pickup?": "¿Tiene camioneta?",
   "Owner-operators": "Dueño que opera",
   "If you can tow, you can run the lightest version of this: you handle delivery and setup, keep the largest share of the margin, and let the system handle the calls, quotes and follow-ups.": "Si puede remolcar, puede llevar la versión más liviana: usted hace la entrega y la instalación, se queda con la mayor parte del margen, y el sistema se ocupa de las llamadas, las cotizaciones y el seguimiento.",
-
   "What comes with it": "Qué incluye",
   "One operation. One dashboard. No stack to assemble.": "Una operación. Un panel. Sin herramientas que armar.",
   "Everything below is a module. Which ones are switched on depends on the package you choose — and modules can be added later as the operation grows.": "Todo lo de abajo es un módulo. Cuáles quedan activos depende del paquete que elija, y se pueden sumar después a medida que la operación crece.",
@@ -192,7 +179,6 @@
   "Review generation": "Generación de reseñas",
   "Partner network by ZIP": "Red de socios por código postal",
   "Post-sale support and training": "Soporte y capacitación posventa",
-
   "Three ways in": "Tres formas de entrar",
   "Pick how involved you want to be.": "Elija cuánto quiere participar.",
   "The trailer is the same in all three. What changes is how much of the business runs by itself — and how much of it runs through you.": "El tráiler es el mismo en los tres. Lo que cambia es cuánto del negocio funciona solo y cuánto pasa por usted.",
@@ -242,7 +228,6 @@
   "Ongoing account support": "Soporte permanente de la cuenta",
   "Get Managed pricing": "Pedir precio de Managed",
   "Package pricing depends on the unit, the configuration and the market you operate in. Tell us which level fits and we send the full breakdown — no obligation.": "El precio del paquete depende de la unidad, la configuración y el mercado donde opere. Díganos qué nivel le sirve y le mandamos el detalle completo, sin compromiso.",
-
   "What's included": "Qué incluye",
   "Launch": "Launch",
   "Brand identity &amp; landing page": "Identidad de marca y página de aterrizaje",
@@ -262,7 +247,6 @@
   "Booking &amp; service coordination": "Coordinación de reservas y servicios",
   "Ongoing reporting &amp; account support": "Reportes y soporte permanentes",
   "Self-serve": "Autogestión",
-
   "The owner dashboard": "El panel del dueño",
   "Open one app and see the whole business.": "Abra una aplicación y vea todo el negocio.",
   "Leads, quotes, bookings, calendar, units, revenue, costs, utilization, campaigns and pending tasks. Not ten tools — one screen.": "Consultas, cotizaciones, reservas, calendario, unidades, ingresos, costos, uso, campañas y tareas pendientes. No diez herramientas: una sola pantalla.",
@@ -291,7 +275,6 @@
   "Referral": "Referido",
   "Booked days per month": "Días reservados por mes",
   "Illustrative interface. Figures shown are sample data, not a projection.": "Interfaz ilustrativa. Los números son datos de ejemplo, no una proyección.",
-
   "Business calculator": "Calculadora de negocio",
   "Run your own scenario.": "Arme su propio escenario.",
   "Move the numbers around and see how a month could look. Rental rates come loaded with market references for each unit — change them to whatever your market actually pays.": "Mueva los números y vea cómo podría ser un mes. Las tarifas vienen cargadas con referencias de mercado para cada unidad: cámbielas por lo que realmente se paga en su zona.",
@@ -338,7 +321,6 @@
   "These are estimates, not a projection or a promise.": "Esto son estimaciones, no una proyección ni una promesa.",
   "The figures depend entirely on your market, your pricing, your costs and how you operate. NINI T-GROUP does not guarantee bookings, revenue, profit or any rate of return. Rental rates shown as defaults are general market references that vary by location, season, included services and demand.": "Los números dependen enteramente de su mercado, sus precios, sus costos y cómo opere. NINI T-GROUP no garantiza reservas, ingresos, ganancias ni ningún retorno. Las tarifas que aparecen por defecto son referencias generales de mercado que varían según la ubicación, la temporada, los servicios incluidos y la demanda.",
   "Have us review these numbers": "Que revisemos estos números",
-
   "The asset": "El activo",
   "Factory-built restroom trailers.": "Tráilers de baños fabricados en planta.",
   "Private stalls, climate control, hot water, flush toilets, sinks, interior LED lighting, integrated fresh- and waste-water tanks, electric brakes, stabilizer jacks and foldable steps. Built by selected manufacturing partners, prepared and inspected before delivery, backed by USA-based support.": "Cubículos privados, climatización, agua caliente, inodoros con descarga, bachas, luces LED interiores, tanques de agua limpia y residual integrados, frenos eléctricos, patas estabilizadoras y escalones plegables. Fabricados por plantas asociadas seleccionadas, preparados e inspeccionados antes de la entrega, con soporte desde Estados Unidos.",
@@ -360,7 +342,6 @@
   "Rate varies by market": "La tarifa varía según el mercado",
   "US$30,500": "US$30.500",
   "Base price covers the unit with standard equipment, production, logistics to the corresponding NTG logistics point, assembly, inspection and ready-to-operate preparation. It does not include final transport to your address, registration, taxes or customizations, which are quoted separately. 5-Stall and 6-Stall configurations are available &mdash; ask us and we confirm current pricing. Market rental references vary by location, season and services included, and are not an NTG rate or an income guarantee.": "El precio base cubre la unidad con equipamiento estándar, la producción, la logística hasta el punto logístico de NTG correspondiente, el armado, la inspección y la preparación lista para operar. No incluye el transporte final hasta su dirección, la matriculación, los impuestos ni las personalizaciones, que se cotizan aparte. Hay configuraciones de 5 y 6 cubículos: consúltenos y le confirmamos el precio vigente. Las referencias de alquiler de mercado varían según la ubicación, la temporada y los servicios incluidos, y no son una tarifa de NTG ni una garantía de ingresos.",
-
   "Step inside": "Por dentro",
   "What your customers walk into.": "Con qué se encuentran sus clientes.",
   "This is what justifies the rate. A guest at a wedding or a crew on a job site opens the door and finds a real bathroom &mdash; not a plastic box.": "Esto es lo que justifica la tarifa. Un invitado en un casamiento o una cuadrilla en una obra abre la puerta y encuentra un baño de verdad, no una cabina de plástico.",
@@ -384,7 +365,6 @@
   "Steps &amp; handrails": "Escalones y barandas",
   "Safe entry": "Entrada segura",
   "Photos are of representative units. Exact dimensions, weight, tank capacity and electrical specs vary by model and configuration &mdash; ask us and we confirm them for the unit you are considering rather than estimating.": "Las fotos son de unidades representativas. Las medidas exactas, el peso, la capacidad de los tanques y las especificaciones eléctricas varían según el modelo y la configuración: consúltenos y se las confirmamos para la unidad que esté evaluando, en lugar de estimarlas.",
-
   "Make it yours": "Hágalo suyo",
   "Ten interior finishes.": "Diez terminaciones interiores.",
   "The countertop finish sets the tone of the whole unit. Pick the one that matches the market you want to win &mdash; weddings read differently than job sites.": "La terminación de la mesada marca el tono de toda la unidad. Elija la que vaya con el mercado que quiere ganar: un casamiento no se lee igual que una obra.",
@@ -408,7 +388,6 @@
   "White Jade finish": "Terminación Jade Blanco",
   "Pure Black": "Negro Puro",
   "Pure Black finish": "Terminación Negro Puro",
-
   "Operating network": "Red operativa",
   "You don't have to do every job yourself.": "No tiene que hacer todos los trabajos usted.",
   "The work around a rental &mdash; towing, pump-out, cleaning, storage, setup &mdash; can be handled by you, routed to a local partner, or coordinated for you. That choice is what separates the three packages.": "El trabajo que rodea a un alquiler —remolque, vaciado, limpieza, guardado, instalación— lo puede hacer usted, derivarlo a un socio local o dejar que lo coordinemos nosotros. Esa elección es lo que separa a los tres paquetes.",
@@ -429,7 +408,6 @@
   "Event partners": "Socios de eventos",
   "Planners and venues that book restrooms regularly.": "Organizadores y salones que contratan baños seguido.",
   "Partner coverage is built ZIP by ZIP and varies by market. Where a category has no partner in your area yet, the playbook shows how to source and vet one &mdash; and we help.": "La cobertura de socios se arma código postal por código postal y varía según el mercado. Donde todavía no haya un socio de alguna categoría en su zona, el manual explica cómo buscarlo y evaluarlo, y le damos una mano.",
-
   "From signature to first rental": "De la firma al primer alquiler",
   "How a launch actually goes.": "Cómo es un lanzamiento de verdad.",
   "1 &middot; Decide": "1 &middot; Decidir",
@@ -463,7 +441,6 @@
   "Utilization and revenue tracked": "Uso e ingresos medidos",
   "Add units when the calendar says so": "Sumar unidades cuando el calendario lo pida",
   "Reference lead time: production around 2&ndash;3 weeks, estimated total delivery around 45&ndash;60 days depending on destination, logistics and scheduling. Exact dates are confirmed for your order &mdash; we don't promise a delivery date we can't hold.": "Plazos de referencia: producción de unas 2&ndash;3 semanas y entrega total estimada en unos 45&ndash;60 días según el destino, la logística y la programación. Las fechas exactas se confirman para su pedido: no prometemos una fecha de entrega que no podamos cumplir.",
-
   "Straight answers": "Respuestas directas",
   "Questions we get before anyone signs.": "Lo que nos preguntan antes de firmar.",
   "Is this a franchise?": "¿Esto es una franquicia?",
@@ -492,7 +469,6 @@
   "Yes. Everything is modular on purpose. A lot of owners start owner-operated, learn their market for a season, and switch on automation, campaigns or full management once the calendar starts filling.": "Sí. Todo es modular a propósito. Muchos dueños arrancan operando ellos mismos, aprenden su mercado durante una temporada y después activan la automatización, las campañas o la administración completa cuando el calendario empieza a llenarse.",
   "Can I come see a unit?": "¿Puedo ir a ver una unidad?",
   "Most units are built to order, so there is no traditional showroom. Visits in Miami are by appointment and subject to availability; Texas and California are logistics and preparation points, not showrooms. When a unit is on the ground, a video walkthrough is often possible &mdash; ask and we'll tell you what's available.": "La mayoría de las unidades se fabrican a pedido, así que no hay un showroom tradicional. Las visitas en Miami son con cita y sujetas a disponibilidad; Texas y California son puntos de logística y preparación, no salas de exhibición. Cuando hay una unidad en piso, muchas veces se puede hacer una recorrida por videollamada: pregunte y le decimos qué hay disponible.",
-
   "Let's talk": "Hablemos",
   "Tell us what you're thinking about.": "Cuéntenos qué está pensando.",
   "No pressure and no obligation. We'll come back with the package that fits, a full written quote, and an honest read on whether your market supports it.": "Sin presión y sin compromiso. Le respondemos con el paquete que le sirve, una cotización completa por escrito y una lectura honesta de si su mercado lo sostiene.",
@@ -523,17 +499,14 @@
   "I agree to be contacted by NINI T-GROUP by phone, WhatsApp, SMS or email about this inquiry. Message rates may apply and I can opt out at any time.": "Acepto que NINI T-GROUP me contacte por teléfono, WhatsApp, SMS o email por esta consulta. Pueden aplicarse cargos por mensaje y puedo darme de baja cuando quiera.",
   "Company": "Empresa",
   "Send my request": "Enviar mi consulta",
-
   "From trailer ownership to business ownership": "De tener un tráiler a tener un negocio",
   "We don't just deliver the trailer. We help you launch the business behind it.": "No entregamos solamente el tráiler. Lo ayudamos a lanzar el negocio que hay detrás.",
   "Start with what we can deliver today, add the rest as your operation grows.": "Empiece con lo que podemos entregar hoy y sume el resto a medida que su operación crezca.",
-
   "Important.": "Importante.",
   "NINI T-GROUP is a U.S.-based company specializing in restroom trailers, working with selected manufacturing partners. NTG coordinates manufacturing, documentation, logistics, preparation, inspection, delivery and support.": "NINI T-GROUP es una empresa radicada en Estados Unidos especializada en tráilers de baños, que trabaja con plantas fabricantes asociadas seleccionadas. NTG coordina la fabricación, la documentación, la logística, la preparación, la inspección, la entrega y el soporte.",
   "This page describes products and optional services. It is not a franchise offering, a business opportunity offering, or an offer of securities, and no territory, exclusivity or protected market is granted. Any figures shown &mdash; including calculator outputs and market rental references &mdash; are illustrative estimates for planning only. NINI T-GROUP does not guarantee bookings, revenue, profit, utilization or any rate of return, and results depend on your market, pricing, costs and how you operate.": "Esta página describe productos y servicios opcionales. No constituye una oferta de franquicia, ni una oferta de oportunidad de negocio, ni una oferta de valores, y no otorga territorio, exclusividad ni mercado protegido. Cualquier número que aparezca —incluidos los resultados de la calculadora y las referencias de alquiler de mercado— son estimaciones ilustrativas, sólo para planificar. NINI T-GROUP no garantiza reservas, ingresos, ganancias, ocupación ni ningún retorno, y los resultados dependen de su mercado, sus precios, sus costos y cómo opere.",
   "Prices are in U.S. dollars and subject to change and confirmation. Base unit prices do not include final transport to your address, registration, taxes or customizations. Lead times are references, not commitments. Financing is provided by third parties; approval, rate, term and funding time are determined by the lender, not by NTG. Registration and tax requirements vary by state and are the buyer's responsibility.": "Los precios están en dólares estadounidenses y están sujetos a cambio y confirmación. Los precios base de las unidades no incluyen el transporte final hasta su dirección, la matriculación, los impuestos ni las personalizaciones. Los plazos son referencias, no compromisos. La financiación la otorgan terceros; la aprobación, la tasa, el plazo y el tiempo de acreditación los define el prestamista, no NTG. Los requisitos de matriculación e impositivos varían según el estado y son responsabilidad del comprador.",
   "NINI T-GROUP. All rights reserved.": "NINI T-GROUP. Todos los derechos reservados.",
-
   "2-Stall restroom trailer": "Tráiler de baños de 2 cubículos",
   "3-Stall restroom trailer": "Tráiler de baños de 3 cubículos",
   "4-Stall restroom trailer": "Tráiler de baños de 4 cubículos",
@@ -550,5 +523,6 @@
   "Interior LED lighting": "Iluminación LED interior",
   "Electrical panel": "Tablero eléctrico",
   "Fresh water inlet": "Toma de agua limpia",
-  "Handrails and foldable steps": "Barandas y escalones plegables"
+  "Handrails and foldable steps": "Barandas y escalones plegables",
+  "Restroom Trailer Rental Business in Miami — NINI T-GROUP": "Negocio de Alquiler de Baños Móviles en Miami — NINI T-GROUP"
 }

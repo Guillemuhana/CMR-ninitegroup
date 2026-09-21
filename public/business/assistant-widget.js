@@ -21,7 +21,70 @@
 	var ENDPOINT_CHAT = "https://ninit-crm.vercel.app/api/business-chat";
 	var ENDPOINT_LEAD = "https://ninit-crm.vercel.app/api/lead";
 
-	var SALUDO = "Hi! I can help you figure out which NTG package fits — Starter, Business Launch or Managed — or answer anything about the trailers, pricing or financing. What are you working on?";
+	/* ──────────────────────────────────────────────────────────
+	   Textos del widget, por idioma.
+
+	   La landing existe en dos idiomas (/ y /es/) y el widget es el
+	   mismo archivo en las dos, así que elige el juego de textos
+	   mirando el lang del documento, que el generador de la versión
+	   española ya deja en "es" (scripts/landing-es.mjs).
+
+	   Ojo: esto es sólo el marco del widget. Lo que RESPONDE la IA lo
+	   decide el servidor, que detecta el idioma de lo que escribe el
+	   visitante — así alguien puede abrir la página en inglés,
+	   escribir en castellano y que le contesten en castellano.
+	   ────────────────────────────────────────────────────────── */
+	var ES = (document.documentElement.lang || "en").toLowerCase().indexOf("es") === 0;
+
+	var T = ES ? {
+		saludo: "¡Hola! Puedo ayudarlo a ver qué paquete de NTG le sirve —Starter, Business Launch o Managed— o responderle lo que necesite sobre las unidades, los precios o la financiación. ¿En qué está?",
+		abrir: "Abrir el chat",
+		cerrar: "Cerrar el chat",
+		dialogo: "Asistente de NTG",
+		escribir: "Escriba su consulta…",
+		mensaje: "Mensaje",
+		enviar: "Enviar",
+		reformular: "Perdón, ¿me lo puede decir de otra manera?",
+		errorRed: "Perdón, algo falló de nuestro lado. También puede escribirnos a info@ninitgroup.com o usar el formulario de acá abajo.",
+		nombre: "Nombre y apellido",
+		telefono: "Teléfono / WhatsApp",
+		email: "Email (opcional)",
+		faltanDatos: "Por favor complete su nombre y teléfono para que podamos contactarlo.",
+		enviando: "Enviando…",
+		enviarDatos: "Enviar mis datos",
+		noSePudo: "No pudimos enviarlo",
+		errorEnvio: "No pudimos enviarlo (%s). También puede escribirnos a info@ninitgroup.com.",
+		visitante: "Visitante",
+		asistente: "Asistente",
+		conversacion: "Conversación del chat:",
+		titulo: "Asistente NTG",
+		bajada: "Paquetes de negocio y unidades",
+	} : {
+		saludo: "Hi! I can help you figure out which NTG package fits — Starter, Business Launch or Managed — or answer anything about the trailers, pricing or financing. What are you working on?",
+		abrir: "Open chat",
+		cerrar: "Close chat",
+		dialogo: "NTG assistant",
+		escribir: "Type your question…",
+		mensaje: "Message",
+		enviar: "Send",
+		reformular: "Sorry, could you rephrase that?",
+		errorRed: "Sorry, something went wrong on our end. You can also reach us directly at info@ninitgroup.com or use the form below.",
+		nombre: "Full name",
+		telefono: "Phone / WhatsApp",
+		email: "Email (optional)",
+		faltanDatos: "Please add your name and phone so we can reach you.",
+		enviando: "Sending…",
+		enviarDatos: "Send my info",
+		noSePudo: "Could not send it.",
+		errorEnvio: "We couldn't send that (%s). You can also email info@ninitgroup.com.",
+		visitante: "Visitor",
+		asistente: "Assistant",
+		conversacion: "Chat widget conversation:",
+		titulo: "NTG Assistant",
+		bajada: "Business packages &amp; trailers",
+	};
+
+	var SALUDO = T.saludo;
 
 	/* ──────────────────────────────────────────────────────────
 	   Estado en memoria de esta pestaña. sessionStorage nada más
@@ -63,15 +126,15 @@
 			'<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>' +
 			'<span class="ntgchat-bubble-x" aria-hidden="true">&times;</span>' +
 		'</button>' +
-		'<section class="ntgchat-panel" id="ntgchat-panel" role="dialog" aria-label="NTG assistant" hidden>' +
+		'<section class="ntgchat-panel" id="ntgchat-panel" role="dialog" aria-label="' + T.dialogo + '" hidden>' +
 			'<header class="ntgchat-head">' +
-				'<div><strong>NTG Assistant</strong><span>Business packages &amp; trailers</span></div>' +
-				'<button type="button" class="ntgchat-close" id="ntgchat-close" aria-label="Close chat">&times;</button>' +
+				'<div><strong>' + T.titulo + '</strong><span>' + T.bajada + '</span></div>' +
+				'<button type="button" class="ntgchat-close" id="ntgchat-close" aria-label="' + T.cerrar + '">&times;</button>' +
 			'</header>' +
 			'<div class="ntgchat-body" id="ntgchat-body"></div>' +
 			'<form class="ntgchat-form" id="ntgchat-form">' +
-				'<textarea id="ntgchat-input" rows="1" placeholder="Type your question…" aria-label="Message"></textarea>' +
-				'<button type="submit" id="ntgchat-send" aria-label="Send">' +
+				'<textarea id="ntgchat-input" rows="1" placeholder="' + T.escribir + '" aria-label="' + T.mensaje + '"></textarea>' +
+				'<button type="submit" id="ntgchat-send" aria-label="' + T.enviar + '">' +
 					'<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 20l18-8L3 4v6l12 2-12 2z"/></svg>' +
 				'</button>' +
 			'</form>' +
@@ -191,7 +254,7 @@
 			.then(function (res) {
 				typing.remove();
 				if (!res.ok) throw new Error((res.data && res.data.error) || "No pudimos responder.");
-				var burbuja = agregarMensaje("assistant", res.data.reply || "Sorry, could you rephrase that?");
+				var burbuja = agregarMensaje("assistant", res.data.reply || T.reformular);
 				if (res.data.mostrarFormulario && !formularioYaEnviado) {
 					historial[historial.length - 1].formShown = true;
 					formularioMostrado = true;
@@ -201,7 +264,7 @@
 			})
 			.catch(function (err) {
 				typing.remove();
-				agregarMensaje("assistant", "Sorry, something went wrong on our end. You can also reach us directly at info@ninitgroup.com or use the form below.", false);
+				agregarMensaje("assistant", T.errorRed, false);
 			})
 			.then(function () {
 				enviando = false;
@@ -225,9 +288,9 @@
 		wrap.className = "ntgchat-leadform";
 		wrap.innerHTML =
 			'<p class="ntgchat-leadform-hint">Want the full written quote? Leave your info and a real person will follow up, usually the same day.</p>' +
-			'<input type="text" placeholder="Full name" id="ntgchat-lf-name" autocomplete="name">' +
-			'<input type="tel" placeholder="Phone / WhatsApp" id="ntgchat-lf-phone" autocomplete="tel">' +
-			'<input type="email" placeholder="Email (optional)" id="ntgchat-lf-email" autocomplete="email">' +
+			'<input type="text" placeholder="' + T.nombre + '" id="ntgchat-lf-name" autocomplete="name">' +
+			'<input type="tel" placeholder="' + T.telefono + '" id="ntgchat-lf-phone" autocomplete="tel">' +
+			'<input type="email" placeholder="' + T.email + '" id="ntgchat-lf-email" autocomplete="email">' +
 			'<button type="button" id="ntgchat-lf-submit">Send my info</button>' +
 			'<p class="ntgchat-leadform-msg" id="ntgchat-lf-msg" role="status" aria-live="polite"></p>';
 		elBody.appendChild(wrap);
@@ -242,16 +305,16 @@
 			var email = wrap.querySelector("#ntgchat-lf-email").value.trim();
 
 			if (!nombre || !telefono) {
-				salida.textContent = "Please add your name and phone so we can reach you.";
+				salida.textContent = T.faltanDatos;
 				salida.className = "ntgchat-leadform-msg err";
 				return;
 			}
 
 			btn.disabled = true;
-			btn.textContent = "Sending…";
+			btn.textContent = T.enviando;
 
 			var transcript = historial.map(function (m) {
-				return (m.role === "user" ? "Visitor" : "Assistant") + ": " + m.content;
+				return (m.role === "user" ? T.visitante : T.asistente) + ": " + m.content;
 			}).join("\n");
 
 			fetch(ENDPOINT_LEAD, {
@@ -261,7 +324,7 @@
 					nombre: nombre,
 					telefono: telefono,
 					email: email,
-					mensaje: "Chat widget conversation:\n" + transcript.slice(0, 1200),
+					mensaje: T.conversacion + "\n" + transcript.slice(0, 1200),
 					origen: "landing /business — chat widget",
 					referrer: document.referrer || "",
 					url: window.location.href,
@@ -269,7 +332,7 @@
 			})
 				.then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
 				.then(function (res) {
-					if (!res.ok) throw new Error((res.data && res.data.error) || "Could not send it.");
+					if (!res.ok) throw new Error((res.data && res.data.error) || T.noSePudo);
 					formularioYaEnviado = true;
 					persistir();
 					wrap.innerHTML = '<p class="ntgchat-leadform-msg ok">Got it — thank you! Someone from our team will follow up shortly.</p>';
@@ -277,8 +340,8 @@
 				})
 				.catch(function (err) {
 					btn.disabled = false;
-					btn.textContent = "Send my info";
-					salida.textContent = "We couldn't send that (" + (err.message || "network error") + "). You can also email info@ninitgroup.com.";
+					btn.textContent = T.enviarDatos;
+					salida.textContent = T.errorEnvio.replace("%s", err.message || "network error");
 					salida.className = "ntgchat-leadform-msg err";
 				});
 		});

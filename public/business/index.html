@@ -5,19 +5,40 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#3a8dc2">
-<title>Own the Trailer. Launch the Business. — NINI T-GROUP</title>
-<meta name="description" content="Factory-built restroom trailers plus the brand, website, CRM, lead generation and support to run your own rental operation. Three packages, from owner-operated to fully managed.">
+<title>Restroom Trailer Rental Business in Miami — Own the Trailer, Launch the Business | NINI T-GROUP</title>
+<meta name="description" content="Start a restroom trailer rental business in Miami and South Florida. Factory-built luxury restroom trailers from US$21,500 plus the brand, website, CRM, lead generation and support. Three packages, from owner-operated to fully managed.">
 <link rel="icon" href="img/logo-ninit.jpg">
+<meta name="robots" content="index, follow, max-image-preview:large">
+
+<!-- SEO: una URL por idioma.
+     Un selector de idioma por JavaScript cambia lo que ve la persona pero no
+     lo que indexa Google, y Miami es mercado hispanohablante: la versión en
+     castellano tiene que ser su propia URL. /es/ se genera desde este mismo
+     archivo con scripts/landing-es.mjs. -->
+<link rel="canonical" href="https://ntg-business.vercel.app/">
+<link rel="alternate" hreflang="en" href="https://ntg-business.vercel.app/">
+<link rel="alternate" hreflang="es" href="https://ntg-business.vercel.app/es/">
+<link rel="alternate" hreflang="x-default" href="https://ntg-business.vercel.app/">
 
 <meta property="og:type" content="website">
-<meta property="og:title" content="Own the trailer. Launch the business. — NINI T-GROUP">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="NINI T-GROUP">
+<meta property="og:url" content="https://ntg-business.vercel.app/">
+<meta property="og:title" content="Own the trailer. Launch the business. — Restroom trailer rentals, Miami">
 <meta property="og:description" content="Don't just buy a restroom trailer. Start a rental business with the technology, leads and support already built in.">
-<meta property="og:image" content="img/3-stall.jpg">
+<meta property="og:image" content="https://ntg-business.vercel.app/img/hero-flota.jpg">
+<meta property="og:image:width" content="1536">
+<meta property="og:image:height" content="1024">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Own the trailer. Launch the business. — Restroom trailer rentals, Miami">
+<meta name="twitter:description" content="Don't just buy a restroom trailer. Start a rental business with the technology, leads and support already built in.">
+<meta name="twitter:image" content="https://ntg-business.vercel.app/img/hero-flota.jpg">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="image" href="img/hero-flota.jpg" fetchpriority="high">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="business.css?v=4">
+<link rel="stylesheet" href="business.css?v=8">
 </head>
 <body id="top">
 
@@ -47,13 +68,19 @@
 			<a href="#inside">The trailers</a>
 			<a href="#faq">FAQ</a>
 		</nav>
+		<!-- Selector de idioma: son dos URL de verdad, no un botón que
+		     traduce en el navegador. Ver el comentario del <head>. -->
+		<div class="lang" role="group" aria-label="Language / Idioma">
+			<a class="on" href="/" hreflang="en" aria-current="page">EN</a>
+			<a href="/es/" hreflang="es">ES</a>
+		</div>
 		<a class="bar-cta" href="#talk">Talk to us</a>
 	</div>
 </header>
 
 <!-- ═══════════════ HERO ═══════════════ -->
 <section class="hero">
-	<div class="hero-bg" style="background-image:url('img/3-stall.jpg')"></div>
+	<div class="hero-bg" style="background-image:url('img/hero-flota.jpg')"></div>
 	<div class="wrap">
 		<div class="hero-in">
 			<span class="eyebrow on-dark">Restroom trailer rentals · Business packages</span>
@@ -85,7 +112,22 @@
 </section>
 
 <!-- ═══════════════ EL SISTEMA ═══════════════ -->
-<section class="section dark" id="system">
+<!--
+  La sección con más trabajo de animación de la página. Tres piezas:
+
+    · El fondo (.aurora) son dos manchas de color que respiran. Es CSS puro
+      y decorativo: si el navegador no lo soporta, abajo está el azul noche.
+    · La cadena de 8 pasos tiene un hilo que se va llenando con el scroll y
+      va encendiendo cada paso a medida que lo cruza.
+    · Las dos tarjetas entran desde los costados y la de NTG tiene un
+      reflejo que sigue al mouse.
+
+  Todo lo maneja GSAP + ScrollTrigger desde business.js. Si el CDN no
+  responde, business.js cae al IntersectionObserver de siempre y la sección
+  se ve igual, sólo que sin movimiento: nada queda invisible.
+-->
+<section class="section dark has-aurora" id="system">
+	<div class="aurora" aria-hidden="true"><i></i><i></i></div>
 	<div class="wrap">
 		<div class="section-head center reveal">
 			<span class="eyebrow on-dark">More than a trailer</span>
@@ -96,18 +138,51 @@
 			</p>
 		</div>
 
-		<div class="chain reveal">
-			<div class="chain-step"><span class="n">01</span><span class="t">Trailer</span></div>
-			<div class="chain-step"><span class="n">02</span><span class="t">Brand &amp; website</span></div>
-			<div class="chain-step"><span class="n">03</span><span class="t">Leads</span></div>
-			<div class="chain-step"><span class="n">04</span><span class="t">CRM</span></div>
-			<div class="chain-step"><span class="n">05</span><span class="t">Quote</span></div>
-			<div class="chain-step"><span class="n">06</span><span class="t">Booking</span></div>
-			<div class="chain-step"><span class="n">07</span><span class="t">Delivery</span></div>
-			<div class="chain-step"><span class="n">08</span><span class="t">Revenue</span></div>
+		<div class="chain reveal" id="chain">
+			<div class="chain-track" aria-hidden="true"><i class="chain-fill"></i></div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="15" height="9" rx="2"/><path d="M17 10h3l2 3v3h-5z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg></span>
+				<span class="n">01</span><span class="t">Trailer</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20"/><circle cx="5.5" cy="6.5" r=".6" fill="currentColor"/><circle cx="8" cy="6.5" r=".6" fill="currentColor"/></svg></span>
+				<span class="n">02</span><span class="t">Brand &amp; website</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3.2"/><path d="M19 8v6M22 11h-6"/></svg></span>
+				<span class="n">03</span><span class="t">Leads</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M4 11.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></span>
+				<span class="n">04</span><span class="t">CRM</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>
+				<span class="n">05</span><span class="t">Quote</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2"/><path d="M3 10h18M8 2.5v4M16 2.5v4"/><path d="m9 15 2 2 4-4"/></svg></span>
+				<span class="n">06</span><span class="t">Booking</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h13v13H1z"/><path d="M14 8h4l3 3v5h-7z"/><circle cx="6" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg></span>
+				<span class="n">07</span><span class="t">Delivery</span>
+			</div>
+
+			<div class="chain-step">
+				<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>
+				<span class="n">08</span><span class="t">Revenue</span>
+			</div>
 		</div>
 
-		<div class="versus reveal" style="margin-top:clamp(40px,5vw,64px)">
+		<div class="versus" style="margin-top:clamp(40px,5vw,64px)">
 			<div class="vs-card vs-them">
 				<h3>Buying a trailer</h3>
 				<ul class="vs-list">
@@ -119,7 +194,8 @@
 					<li>You learn the tools on your own</li>
 				</ul>
 			</div>
-			<div class="vs-card vs-us">
+			<div class="vs-card vs-us" id="vs-us">
+				<span class="vs-glow" aria-hidden="true"></span>
 				<h3>Launching with NTG</h3>
 				<ul class="vs-list">
 					<li>The asset — a factory-built restroom trailer</li>
@@ -764,6 +840,62 @@
 	</div>
 </section>
 
+<!-- ═══════════════ MIAMI / SUR DE FLORIDA ═══════════════ -->
+<!--
+  Sección de posicionamiento local. Todo lo que dice es verificable contra
+  api/_ntg.js: Miami ES un punto logístico real y las visitas ahí son con
+  cita. Lo que NO se puede hacer —y por eso no está— es afirmar que NTG
+  tiene clientes en una ciudad, inventar cifras del mercado local o
+  prometer demanda. Las frases sobre el mercado son cualitativas a
+  propósito: un dato inventado acá es un problema legal, no de SEO.
+-->
+<section class="section" id="miami">
+	<div class="wrap">
+		<div class="local">
+			<div class="local-copy reveal">
+				<span class="eyebrow">Miami &amp; South Florida</span>
+				<h2>Starting in South Florida? You're at our front door.</h2>
+				<p class="lede">
+					Miami is one of our three U.S. logistics points. Units headed to South Florida
+					are received, prepared and inspected here before delivery, which means a
+					shorter final leg, a transport quote that doesn't cross the country, and the
+					option to pick up locally instead of paying for long-haul.
+				</p>
+				<ul class="local-list">
+					<li><strong>Pick up in Miami</strong> instead of paying for cross-country transport.</li>
+					<li><strong>Visits by appointment</strong>, subject to availability — most units are built to order, so there is no permanent showroom.</li>
+					<li><strong>We work in Spanish and English</strong>, which matters when half your customers do too.</li>
+					<li><strong>Campaigns targeted by ZIP</strong>, so you're bidding on the neighborhoods you can actually service.</li>
+				</ul>
+				<p class="fnote" style="margin-top:20px">
+					Houston TX and Long Beach CA are our other logistics points. Wherever you
+					operate, transport is quoted for your ZIP code &mdash; we don't estimate a
+					mileage cost without checking.
+				</p>
+			</div>
+
+			<aside class="local-card reveal">
+				<h3>Who rents restroom trailers here</h3>
+				<p>The demand a South Florida operator typically quotes for:</p>
+				<ul>
+					<li>Weddings and private events at venues without fixed restrooms</li>
+					<li>Beach, park and waterfront events</li>
+					<li>Construction and road crews on long jobs</li>
+					<li>Film and production shoots on location</li>
+					<li>Festivals, races and community events</li>
+					<li>Golf tournaments and corporate outings</li>
+					<li>Restroom overflow during building renovations</li>
+					<li>Storm recovery and emergency response</li>
+				</ul>
+				<p class="fnote">
+					Which of these you win depends on your pricing, your service and how you
+					market &mdash; this is the demand to go after, not demand we hand you.
+				</p>
+			</aside>
+		</div>
+	</div>
+</section>
+
 <!-- ═══════════════ RED OPERATIVA ═══════════════ -->
 <section class="section dark">
 	<div class="wrap">
@@ -1172,7 +1304,101 @@
 	</div>
 </footer>
 
-<script src="business.js?v=4" defer></script>
-<script src="assistant-widget.js?v=1" defer></script>
+<!--
+  GSAP + ScrollTrigger (scroll y parallax) y Lenis (scroll suave). ~80 KB
+  entre los tres, por CDN y sin build: la página sigue siendo un HTML suelto
+  que se puede mudar a WordPress copiando la carpeta.
+
+  Van con defer y ANTES de business.js, que corre después y pregunta si
+  window.gsap existe. Si el CDN falla o el visitante los bloquea, business.js
+  usa el IntersectionObserver de siempre: la página se ve igual, sin
+  animación. Nada del contenido depende de que estos archivos carguen.
+-->
+<!--
+  Datos estructurados (schema.org). No se ven en la página: se los lee Google
+  para entender de qué se trata y para armar los resultados enriquecidos.
+
+  Tres bloques:
+   · Organization  — quién es NTG, dónde opera, cómo contactarlo.
+   · ItemList      — las cuatro unidades con su precio, para que puedan
+                     aparecer con precio en el buscador.
+   · FAQPage       — las 11 preguntas. Es el que más rinde: Google las muestra
+                     desplegables debajo del resultado y ocupa más pantalla.
+
+  REGLA: cada dato de acá tiene que coincidir con lo que dice la página y con
+  api/_ntg.js. Marcar algo que la página no dice es motivo de penalización, y
+  peor todavía si es un precio.
+-->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://ninitgroup.com/#organization",
+      "name": "NINI T-GROUP",
+      "alternateName": "NTG",
+      "url": "https://ninitgroup.com/",
+      "logo": "https://ntg-business.vercel.app/img/logo-ninit.jpg",
+      "image": "https://ntg-business.vercel.app/img/hero-flota.jpg",
+      "description": "U.S.-based company specializing in restroom trailers, working with selected manufacturing partners. NTG coordinates manufacturing, documentation, logistics, preparation, inspection, delivery and support.",
+      "areaServed": [
+        { "@type": "City", "name": "Miami", "containedInPlace": { "@type": "State", "name": "Florida" } },
+        { "@type": "AdministrativeArea", "name": "South Florida" },
+        { "@type": "Country", "name": "United States" }
+      ],
+      "knowsLanguage": ["en", "es"],
+      "slogan": "Own the trailer. Launch the business."
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://ntg-business.vercel.app/#webpage",
+      "url": "https://ntg-business.vercel.app/",
+      "name": "Restroom Trailer Rental Business in Miami — NINI T-GROUP",
+      "inLanguage": "en-US",
+      "isPartOf": { "@id": "https://ninitgroup.com/#organization" },
+      "about": "Starting a restroom trailer rental business with a factory-built unit plus brand, website, CRM, lead generation and operational support."
+    },
+    {
+      "@type": "ItemList",
+      "name": "Restroom trailer models",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "item": { "@type": "Product", "name": "2-Stall Restroom Trailer", "image": "https://ntg-business.vercel.app/img/2-stall.jpg", "description": "Factory-built restroom trailer with two private stalls. Serves roughly 100-150 people.", "brand": { "@type": "Brand", "name": "NINI T-GROUP" }, "offers": { "@type": "Offer", "price": "21500", "priceCurrency": "USD", "availability": "https://schema.org/PreOrder", "url": "https://ntg-business.vercel.app/#packages" } } },
+        { "@type": "ListItem", "position": 2, "item": { "@type": "Product", "name": "3-Stall Restroom Trailer", "image": "https://ntg-business.vercel.app/img/3-stall.jpg", "description": "Factory-built restroom trailer with three private stalls. Serves roughly 150-250 people.", "brand": { "@type": "Brand", "name": "NINI T-GROUP" }, "offers": { "@type": "Offer", "price": "25500", "priceCurrency": "USD", "availability": "https://schema.org/PreOrder", "url": "https://ntg-business.vercel.app/#packages" } } },
+        { "@type": "ListItem", "position": 3, "item": { "@type": "Product", "name": "4-Stall Restroom Trailer", "image": "https://ntg-business.vercel.app/img/4-stall.jpg", "description": "Factory-built restroom trailer with four private stalls. Serves roughly 250-300 people.", "brand": { "@type": "Brand", "name": "NINI T-GROUP" }, "offers": { "@type": "Offer", "price": "31500", "priceCurrency": "USD", "availability": "https://schema.org/PreOrder", "url": "https://ntg-business.vercel.app/#packages" } } },
+        { "@type": "ListItem", "position": 4, "item": { "@type": "Product", "name": "ADA + 2 Restroom Trailer", "image": "https://ntg-business.vercel.app/img/ada-2.png", "description": "Factory-built restroom trailer with one accessible stall plus two standard stalls.", "brand": { "@type": "Brand", "name": "NINI T-GROUP" }, "offers": { "@type": "Offer", "price": "30500", "priceCurrency": "USD", "availability": "https://schema.org/PreOrder", "url": "https://ntg-business.vercel.app/#packages" } } }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Is this a franchise?", "acceptedAnswer": { "@type": "Answer", "text": "No. There is no franchise agreement, no territory grant, no royalty and no franchise fee. You buy a trailer and, optionally, the services and technology that help you run a rental business around it. The business is yours, under your own name, and you set your own prices." } },
+        { "@type": "Question", "name": "How much can I make with a restroom trailer rental business?", "acceptedAnswer": { "@type": "Answer", "text": "Nobody can honestly give you a number. Market references: a 2-Stall commonly rents around US$1,100/day, a 3-Stall around US$1,400-1,500/day and a 4-Stall around US$1,800/day. These vary by location, season, services included and demand generated. NTG does not guarantee bookings, revenue or profit." } },
+        { "@type": "Question", "name": "Do I need to be good with technology?", "acceptedAnswer": { "@type": "Answer", "text": "No. You don't configure the CRM, build the website, write the automations or set up the ad accounts — that arrives assembled. Day to day you look at one dashboard: who wrote in, what needs a quote, what's booked, what's due." } },
+        { "@type": "Question", "name": "Do I need a truck?", "acceptedAnswer": { "@type": "Answer", "text": "For the Starter package it helps a lot, since that version is built for someone who tows and delivers personally. If you don't have one, delivery can be routed to a partner or coordinated for you on the higher packages." } },
+        { "@type": "Question", "name": "Can I add restroom trailers to a business I already run?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, and it's one of the most common cases. If you already do event rentals, porta-potties, party rentals, construction services or septic work, you already have the customers and the logistics. Restroom trailers are a higher-ticket line you can sell to people who already call you." } },
+        { "@type": "Question", "name": "How does financing work?", "acceptedAnswer": { "@type": "Answer", "text": "Pre-qualification runs through Acorn Finance: about two minutes, no impact on your credit score, available up to US$100,000, and no VIN required upfront. Funds may be deposited 24-48 hours after approval. NTG cannot promise approval, a rate, a term or a monthly payment." } },
+        { "@type": "Question", "name": "Where is the restroom trailer delivered?", "acceptedAnswer": { "@type": "Answer", "text": "Units are received, prepared and inspected at our logistics points in Miami FL, Houston TX and Long Beach CA. You can pick up there, or we help coordinate transport to your location. Transport is quoted for your ZIP code." } },
+        { "@type": "Question", "name": "What paperwork comes with the unit?", "acceptedAnswer": { "@type": "Answer", "text": "The applicable commercial and origin documentation, including a Bill of Sale and MCO/MSO and VIN documentation where applicable. Registration requirements and taxes vary by state and are handled and paid by the buyer. The unit is not delivered already registered, plated or titled." } },
+        { "@type": "Question", "name": "What is the warranty on a restroom trailer?", "acceptedAnswer": { "@type": "Answer", "text": "12-month factory warranty on the unit." } },
+        { "@type": "Question", "name": "Can I start with the Starter package and add the rest later?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Everything is modular on purpose. Many owners start owner-operated, learn their market for a season, and switch on automation, campaigns or full management once the calendar starts filling." } },
+        { "@type": "Question", "name": "Can I come see a restroom trailer in Miami?", "acceptedAnswer": { "@type": "Answer", "text": "Most units are built to order, so there is no traditional showroom. Visits in Miami are by appointment and subject to availability; Texas and California are logistics and preparation points, not showrooms. When a unit is on the ground, a video walkthrough is often possible." } }
+      ]
+    }
+  ]
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js" defer></script>
+<script src="business.js?v=8" defer></script>
+<!--
+  Asistente de chat: burbuja flotante que conversa con Groq del lado del
+  servidor. Va aparte de business.js a propósito — si algún día se saca,
+  alcanza con borrar este <script>, assistant-widget.js y el bloque
+  "Asistente flotante" del final de business.css.
+-->
+<script src="assistant-widget.js?v=2" defer></script>
 </body>
 </html>
