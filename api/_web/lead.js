@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { normalizarTelefono } from "../_meta/capi.js";
+import { enviarAvisoLead } from "./aviso-mail.js";
 
 // Entrada de leads de la landing pública /business/ al CRM.
 //
@@ -154,6 +155,26 @@ export default async function handler(req, res) {
       .update({ ultimo_in_at: ultimoInPrevio })
       .eq("id", contactoId);
     if (errFix) throw errFix;
+
+    // ── 4. Aviso por mail a la casilla comercial ──────────────────────────
+    //
+    // Tercera vía, además del CRM y del push: que quede en la bandeja de
+    // quien no vive adentro del CRM.
+    //
+    // Va DESPUÉS de todo lo importante y con su propio try/catch: el lead ya
+    // está guardado y el push ya salió. Si el mail falla —SMTP caído,
+    // contraseña de aplicación vencida— se registra y se sigue. Perder el
+    // aviso es molesto; perder el lead por un problema de mail, no se puede.
+    try {
+      await enviarAvisoLead({
+        datos: { nombre, telefono, email, zip: b.zip, paquete: b.paquete,
+                 perfil: b.perfil, mensaje: b.mensaje, escenario: b.escenario,
+                 origen: b.origen },
+        contactoNuevo: !existente,
+      });
+    } catch (e) {
+      console.error("[lead] no se pudo mandar el aviso por mail:", e?.message || e);
+    }
 
     return res.status(200).json({ success: true });
   } catch (e) {

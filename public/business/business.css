@@ -826,101 +826,260 @@ textarea { resize: vertical; min-height: 92px; }
 /* ============================================================
    Asistente flotante (assistant-widget.js)
 
-   Widget aparte, cargado y estilado independiente del resto de
-   la página: si algún día se saca, alcanza con borrar este
-   bloque + el <script> en index.html. Misma paleta que el resto
-   (--navy / --gold / --sky) para que se sienta parte del mismo
-   documento.
+   Widget aparte, estilado independiente del resto: si algún día se saca,
+   alcanza con borrar este bloque + el <script> de index.html.
+
+   Dos decisiones que se notan:
+
+   · El panel entra con una animación desde abajo y con origen en la
+     burbuja, no aparece de golpe. Un panel que se materializa se lee
+     como un pop-up de publicidad; uno que crece desde el botón que
+     apretaste se lee como una respuesta a tu clic.
+
+   · Al abrirlo por primera vez hay fichas sugeridas. No es decoración:
+     un chat vacío con "escribí tu consulta" es el problema clásico de
+     la página en blanco, y la mayoría no escribe nada. Las fichas le
+     dan tres puertas de entrada y, de paso, encaminan la conversación
+     hacia donde sabemos responder bien.
    ============================================================ */
-.ntgchat { position: fixed; z-index: 60; right: 18px; bottom: 18px; }
 
+.ntgchat {
+	position: fixed; right: 24px; bottom: 24px; z-index: 95;
+	font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+/* ── La burbuja ─────────────────────────────────────────────── */
 .ntgchat-bubble {
-	width: 58px; height: 58px; border-radius: 50%; border: none; cursor: pointer;
-	background: var(--navy); color: #fff; box-shadow: var(--sh-3);
-	display: flex; align-items: center; justify-content: center;
-	transition: transform var(--fast), background var(--fast);
+	position: relative;
+	width: 60px; height: 60px; padding: 0;
+	display: grid; place-items: center;
+	border: 0; border-radius: 50%;
+	background: linear-gradient(145deg, var(--sky), var(--navy));
+	color: #fff; cursor: pointer;
+	box-shadow: 0 8px 26px rgba(7,23,41,.34), 0 2px 6px rgba(7,23,41,.2);
+	transition: transform .25s var(--ease), box-shadow .25s var(--ease);
 }
-.ntgchat-bubble:hover { transform: translateY(-2px); background: var(--navy-d); }
-.ntgchat-bubble-x { display: none; font-size: 26px; line-height: 1; font-weight: 300; }
-.ntgchat.open .ntgchat-bubble svg { display: none; }
-.ntgchat.open .ntgchat-bubble-x { display: block; }
+.ntgchat-bubble:hover { transform: translateY(-3px) scale(1.04); box-shadow: 0 14px 34px rgba(7,23,41,.4); }
+.ntgchat-bubble:active { transform: translateY(0) scale(.98); }
+.ntgchat-bubble svg, .ntgchat-bubble-x { transition: opacity .2s var(--ease), transform .25s var(--ease); }
+.ntgchat-bubble-x {
+	position: absolute; font-size: 30px; line-height: 1; font-weight: 200;
+	opacity: 0; transform: rotate(-90deg) scale(.6);
+}
+.ntgchat.open .ntgchat-bubble svg { opacity: 0; transform: rotate(90deg) scale(.6); }
+.ntgchat.open .ntgchat-bubble-x  { opacity: 1; transform: rotate(0) scale(1); }
 
+/* Halo que late hasta que lo abren por primera vez: llama la atención sin
+   taparle nada al visitante. Se apaga solo al abrir el chat. */
+.ntgchat-bubble::after {
+	content: ""; position: absolute; inset: 0; border-radius: 50%;
+	border: 2px solid var(--sky);
+	animation: ntgchat-halo 2.6s ease-out infinite;
+}
+.ntgchat.open .ntgchat-bubble::after,
+.ntgchat.visto .ntgchat-bubble::after { display: none; }
+@keyframes ntgchat-halo {
+	0%   { opacity: .7; transform: scale(1); }
+	70%  { opacity: 0;  transform: scale(1.5); }
+	100% { opacity: 0;  transform: scale(1.5); }
+}
+
+/* ── El panel ───────────────────────────────────────────────── */
 .ntgchat-panel {
-	position: absolute; right: 0; bottom: 74px;
-	width: min(370px, calc(100vw - 36px)); max-height: min(560px, calc(100vh - 120px));
-	background: var(--paper); border-radius: var(--r-l); box-shadow: var(--sh-3);
+	position: absolute; right: 0; bottom: 78px;
+	width: 396px; max-height: min(620px, calc(100vh - 140px));
 	display: flex; flex-direction: column; overflow: hidden;
-	border: 1px solid var(--line);
+	background: var(--paper);
+	border: 1px solid rgba(13,36,68,.1);
+	border-radius: 20px;
+	box-shadow: 0 30px 70px rgba(7,23,41,.3), 0 6px 18px rgba(7,23,41,.14);
+	transform-origin: bottom right;
+	animation: ntgchat-entra .34s var(--ease);
+}
+@keyframes ntgchat-entra {
+	from { opacity: 0; transform: translateY(16px) scale(.94); }
+	to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.ntgchat-panel { animation: none; }
+	.ntgchat-bubble::after { animation: none; }
+	.ntgchat-bubble:hover { transform: none; }
 }
 
+/* ── Encabezado ─────────────────────────────────────────────── */
 .ntgchat-head {
-	background: var(--navy); color: #fff; padding: 16px 18px;
-	display: flex; align-items: center; justify-content: space-between; gap: 10px;
+	position: relative;
+	display: flex; align-items: center; gap: 12px;
+	padding: 16px 18px;
+	background: linear-gradient(135deg, var(--navy) 0%, var(--navy-d) 55%, var(--navy-x) 100%);
+	color: #fff;
 }
-.ntgchat-head strong { display: block; font-size: 15px; }
-.ntgchat-head span { display: block; font-size: 12px; color: rgba(255,255,255,.6); margin-top: 2px; }
+/* Un brillo diagonal tenue: le saca el aspecto de bloque de color plano. */
+.ntgchat-head::after {
+	content: ""; position: absolute; inset: 0; pointer-events: none;
+	background: radial-gradient(120% 90% at 85% -20%, rgba(58,141,194,.5), transparent 60%);
+}
+.ntgchat-head > * { position: relative; z-index: 1; }
+.ntgchat-av {
+	width: 40px; height: 40px; flex-shrink: 0;
+	border-radius: 12px; object-fit: cover;
+	box-shadow: 0 0 0 2px rgba(255,255,255,.22);
+}
+.ntgchat-head-txt { flex: 1; min-width: 0; line-height: 1.25; }
+.ntgchat-head strong { display: block; font-size: 15.5px; font-weight: 700; }
+.ntgchat-head span {
+	display: flex; align-items: center; gap: 6px;
+	font-size: 12.5px; color: rgba(255,255,255,.66); margin-top: 3px;
+}
+/* Punto verde: dice "hay alguien" sin prometer que sea una persona. */
+.ntgchat-head span::before {
+	content: ""; width: 7px; height: 7px; border-radius: 50%;
+	background: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,.22);
+	flex-shrink: 0;
+}
 .ntgchat-close {
-	background: none; border: none; color: rgba(255,255,255,.7); font-size: 22px;
-	line-height: 1; cursor: pointer; padding: 4px 6px;
+	background: rgba(255,255,255,.1); border: 0; color: rgba(255,255,255,.8);
+	width: 32px; height: 32px; flex-shrink: 0;
+	border-radius: 9px; font-size: 20px; line-height: 1; cursor: pointer;
+	display: grid; place-items: center;
+	transition: background var(--fast), color var(--fast);
 }
-.ntgchat-close:hover { color: #fff; }
+.ntgchat-close:hover { background: rgba(255,255,255,.2); color: #fff; }
 
+/* ── Cuerpo ─────────────────────────────────────────────────── */
 .ntgchat-body {
-	flex: 1; min-height: 220px; overflow-y: auto; padding: 16px;
-	display: flex; flex-direction: column; gap: 10px; background: var(--soft);
+	flex: 1; min-height: 220px; overflow-y: auto;
+	padding: 18px; display: flex; flex-direction: column; gap: 12px;
+	background: var(--soft);
+	scrollbar-width: thin; scrollbar-color: rgba(107,119,137,.35) transparent;
 }
+.ntgchat-body::-webkit-scrollbar { width: 7px; }
+.ntgchat-body::-webkit-scrollbar-thumb { background: rgba(107,119,137,.3); border-radius: 99px; }
 
 .ntgchat-msg {
-	max-width: 86%; padding: 10px 13px; border-radius: 14px; font-size: 14.5px; line-height: 1.5;
+	max-width: 85%; padding: 11px 15px;
+	font-size: 14.8px; line-height: 1.5;
+	border-radius: 16px;
+	animation: ntgchat-burbuja .3s var(--ease);
 	white-space: pre-wrap; word-break: break-word;
 }
-.ntgchat-msg.a { align-self: flex-start; background: #fff; color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
-.ntgchat-msg.u { align-self: flex-end; background: var(--navy); color: #fff; border-bottom-right-radius: 4px; }
+@keyframes ntgchat-burbuja {
+	from { opacity: 0; transform: translateY(8px); }
+	to   { opacity: 1; transform: none; }
+}
+.ntgchat-msg.a {
+	align-self: flex-start; background: #fff; color: var(--ink);
+	border: 1px solid var(--line); border-bottom-left-radius: 5px;
+	box-shadow: var(--sh-1);
+}
+.ntgchat-msg.u {
+	align-self: flex-end; border-bottom-right-radius: 5px;
+	background: linear-gradient(145deg, var(--sky), var(--navy));
+	color: #fff; box-shadow: 0 3px 10px rgba(22,54,92,.22);
+}
+@media (prefers-reduced-motion: reduce) { .ntgchat-msg { animation: none; } }
 
-.ntgchat-typing { display: flex; gap: 4px; align-items: center; padding: 12px 14px; }
-.ntgchat-typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); display: inline-block; animation: ntgchat-blink 1.2s infinite ease-in-out; }
-.ntgchat-typing i:nth-child(2) { animation-delay: .15s; }
-.ntgchat-typing i:nth-child(3) { animation-delay: .3s; }
-@keyframes ntgchat-blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+/* Puntitos de "está escribiendo" */
+.ntgchat-typing { display: flex; gap: 5px; align-items: center; padding: 14px 16px; }
+.ntgchat-typing i {
+	width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
+	display: inline-block; animation: ntgchat-blink 1.3s infinite ease-in-out;
+}
+.ntgchat-typing i:nth-child(2) { animation-delay: .16s; }
+.ntgchat-typing i:nth-child(3) { animation-delay: .32s; }
+@keyframes ntgchat-blink {
+	0%, 60%, 100% { opacity: .28; transform: translateY(0); }
+	30%           { opacity: 1;   transform: translateY(-3px); }
+}
 
+/* ── Fichas sugeridas ───────────────────────────────────────── */
+.ntgchat-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
+.ntgchat-chip {
+	background: #fff; border: 1px solid #cfd9e6; color: var(--navy);
+	border-radius: 999px; padding: 8px 14px;
+	font: inherit; font-size: 13.2px; font-weight: 600;
+	cursor: pointer; text-align: left;
+	transition: background var(--fast), border-color var(--fast), transform var(--fast);
+}
+.ntgchat-chip:hover { background: var(--navy); border-color: var(--navy); color: #fff; transform: translateY(-1px); }
+
+/* ── Barra de escritura ─────────────────────────────────────── */
 .ntgchat-form {
-	display: flex; align-items: flex-end; gap: 8px; padding: 12px; border-top: 1px solid var(--line); background: #fff;
+	display: flex; align-items: flex-end; gap: 9px;
+	padding: 12px 14px;
+	background: var(--paper); border-top: 1px solid var(--line);
 }
 .ntgchat-form textarea {
-	flex: 1; resize: none; border: 1px solid var(--line); border-radius: var(--r-m);
-	padding: 9px 12px; font: inherit; font-size: 14.5px; max-height: 110px; min-height: 40px;
+	flex: 1; resize: none; max-height: 110px;
+	border: 1px solid var(--line); border-radius: 18px;
+	padding: 11px 15px; font: inherit; font-size: 14.8px; line-height: 1.45;
+	background: var(--soft); color: var(--ink);
+	transition: border-color var(--fast), box-shadow var(--fast), background var(--fast);
 }
-.ntgchat-form textarea:focus { outline: none; border-color: var(--sky); }
-.ntgchat-form button {
-	flex: none; width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
-	background: var(--gold); color: var(--navy-x); display: flex; align-items: center; justify-content: center;
-	transition: background var(--fast);
+.ntgchat-form textarea:focus {
+	outline: none; background: #fff;
+	border-color: var(--sky); box-shadow: 0 0 0 3px rgba(58,141,194,.16);
 }
-.ntgchat-form button:hover { background: var(--gold-l); }
-.ntgchat-form button:disabled { opacity: .5; cursor: default; }
+.ntgchat-form textarea::placeholder { color: var(--muted); }
+#ntgchat-send {
+	flex-shrink: 0; width: 42px; height: 42px; padding: 0;
+	display: grid; place-items: center;
+	border: 0; border-radius: 50%; cursor: pointer; color: #fff;
+	background: linear-gradient(145deg, var(--sky), var(--navy));
+	box-shadow: 0 3px 10px rgba(22,54,92,.28);
+	transition: transform var(--fast), opacity var(--fast), box-shadow var(--fast);
+}
+#ntgchat-send:hover:not(:disabled) { transform: translateY(-1px) scale(1.05); }
+#ntgchat-send:disabled { opacity: .4; cursor: default; box-shadow: none; }
 
+.ntgchat-pie {
+	padding: 0 14px 10px; margin: 0;
+	font-size: 11px; color: var(--muted); text-align: center;
+}
+
+/* ── Mini-formulario de contacto ────────────────────────────── */
 .ntgchat-leadform {
-	align-self: stretch; background: #fff; border: 1px solid var(--line); border-radius: var(--r-m);
-	padding: 12px; display: flex; flex-direction: column; gap: 8px;
+	align-self: stretch; background: #fff;
+	border: 1px solid var(--line); border-left: 3px solid var(--gold);
+	border-radius: var(--r-m);
+	padding: 15px; display: flex; flex-direction: column; gap: 9px;
+	box-shadow: var(--sh-1);
+	animation: ntgchat-burbuja .3s var(--ease);
 }
-.ntgchat-leadform-hint { font-size: 13px; color: var(--muted); margin: 0 0 2px; }
+.ntgchat-leadform-hint {
+	font-size: 13.5px; color: var(--ink-2); margin: 0 0 3px; line-height: 1.45; font-weight: 600;
+}
 .ntgchat-leadform input {
-	border: 1px solid var(--line); border-radius: var(--r-s); padding: 8px 10px; font: inherit; font-size: 14px;
+	border: 1px solid var(--line); border-radius: 10px;
+	padding: 10px 12px; font: inherit; font-size: 14.2px; background: var(--soft);
+	transition: border-color var(--fast), box-shadow var(--fast), background var(--fast);
 }
-.ntgchat-leadform input:focus { outline: none; border-color: var(--sky); }
+.ntgchat-leadform input:focus {
+	outline: none; background: #fff; border-color: var(--sky);
+	box-shadow: 0 0 0 3px rgba(58,141,194,.14);
+}
 .ntgchat-leadform button {
-	background: var(--navy); color: #fff; border: none; border-radius: var(--r-s); padding: 9px 12px;
-	font-weight: 700; font-size: 14px; cursor: pointer; transition: background var(--fast);
+	background: var(--navy); color: #fff; border: none; border-radius: 10px;
+	padding: 11px 12px; font: inherit; font-weight: 700; font-size: 14.2px;
+	cursor: pointer; transition: background var(--fast);
 }
 .ntgchat-leadform button:hover { background: var(--navy-d); }
 .ntgchat-leadform button:disabled { opacity: .6; cursor: default; }
-.ntgchat-leadform-msg { font-size: 13px; margin: 0; }
+.ntgchat-leadform-msg { font-size: 13px; margin: 0; line-height: 1.45; }
 .ntgchat-leadform-msg.ok  { color: var(--ok); font-weight: 600; }
 .ntgchat-leadform-msg.err { color: #c0392b; font-weight: 600; }
 
+/* ── Celular: el panel ocupa la pantalla ────────────────────── */
 @media (max-width: 480px) {
-	.ntgchat { right: 12px; bottom: 12px; }
-	.ntgchat-panel { position: fixed; right: 10px; left: 10px; bottom: 82px; width: auto; }
+	.ntgchat { right: 14px; bottom: 14px; }
+	.ntgchat-bubble { width: 54px; height: 54px; }
+	.ntgchat-panel {
+		position: fixed; right: 10px; left: 10px; bottom: 78px;
+		width: auto; max-height: calc(100vh - 110px);
+		border-radius: 18px;
+	}
+	.ntgchat-msg { max-width: 90%; font-size: 14.5px; }
+	.ntgchat-body { padding: 14px; }
 }
 
 /* ============================================================

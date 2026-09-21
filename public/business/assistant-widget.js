@@ -21,6 +21,11 @@
 	var ENDPOINT_CHAT = "https://ninit-crm.vercel.app/api/business-chat";
 	var ENDPOINT_LEAD = "https://ninit-crm.vercel.app/api/lead";
 
+	// El avatar sale del mismo logo que la barra. La ruta se deduce de dónde
+	// está el propio script, así funciona igual en / y en /es/.
+	var RUTA_LOGO = (document.currentScript && document.currentScript.src || "")
+		.replace(/assistant-widget\.js.*$/, "") + "img/logo-ninit.jpg";
+
 	/* ──────────────────────────────────────────────────────────
 	   Textos del widget, por idioma.
 
@@ -59,6 +64,13 @@
 		conversacion: "Conversación del chat:",
 		titulo: "Asistente NTG",
 		bajada: "Paquetes de negocio y unidades",
+		enLinea: "Respondemos al instante",
+		pie: "Asistente con IA. Un asesor confirma todo dato importante.",
+		fichas: [
+			"¿Qué paquete me conviene?",
+			"¿Cuánto sale un 3 cubículos?",
+			"¿Cómo funciona la financiación?",
+		],
 	} : {
 		saludo: "Hi! I can help you figure out which NTG package fits — Starter, Business Launch or Managed — or answer anything about the trailers, pricing or financing. What are you working on?",
 		abrir: "Open chat",
@@ -82,6 +94,13 @@
 		conversacion: "Chat widget conversation:",
 		titulo: "NTG Assistant",
 		bajada: "Business packages &amp; trailers",
+		enLinea: "Replies instantly",
+		pie: "AI assistant. An advisor confirms anything that matters.",
+		fichas: [
+			"Which package fits me?",
+			"What does a 3-Stall cost?",
+			"How does financing work?",
+		],
 	};
 
 	var SALUDO = T.saludo;
@@ -128,16 +147,18 @@
 		'</button>' +
 		'<section class="ntgchat-panel" id="ntgchat-panel" role="dialog" aria-label="' + T.dialogo + '" hidden>' +
 			'<header class="ntgchat-head">' +
-				'<div><strong>' + T.titulo + '</strong><span>' + T.bajada + '</span></div>' +
+				'<img class="ntgchat-av" src="' + RUTA_LOGO + '" alt="" aria-hidden="true">' +
+				'<div class="ntgchat-head-txt"><strong>' + T.titulo + '</strong><span>' + T.enLinea + '</span></div>' +
 				'<button type="button" class="ntgchat-close" id="ntgchat-close" aria-label="' + T.cerrar + '">&times;</button>' +
 			'</header>' +
 			'<div class="ntgchat-body" id="ntgchat-body"></div>' +
 			'<form class="ntgchat-form" id="ntgchat-form">' +
 				'<textarea id="ntgchat-input" rows="1" placeholder="' + T.escribir + '" aria-label="' + T.mensaje + '"></textarea>' +
-				'<button type="submit" id="ntgchat-send" aria-label="' + T.enviar + '">' +
+				'<button type="submit" id="ntgchat-send" aria-label="' + T.enviar + '" disabled>' +
 					'<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 20l18-8L3 4v6l12 2-12 2z"/></svg>' +
 				'</button>' +
 			'</form>' +
+			'<p class="ntgchat-pie">' + T.pie + '</p>' +
 		'</section>';
 	document.body.appendChild(root);
 
@@ -149,14 +170,53 @@
 	var elInput  = root.querySelector("#ntgchat-input");
 	var elSend   = root.querySelector("#ntgchat-send");
 
+	// El cuerpo se dibuja una sola vez, la primera que se abre el panel.
+	var dibujado = false;
+
 	function abrir() {
 		elPanel.hidden = false;
-		root.classList.add("open");
+		root.classList.add("open", "visto");
 		elToggle.setAttribute("aria-expanded", "true");
-		if (!historial.length) {
-			agregarMensaje("assistant", SALUDO, false);
+
+		if (!dibujado) {
+			dibujado = true;
+			if (historial.length) {
+				// BUG QUE ESTO ARREGLA: el historial se restauraba de
+				// sessionStorage pero nadie lo volvía a dibujar. Al recargar la
+				// página y reabrir el chat, el panel quedaba en blanco — ni el
+				// saludo, porque historial.length ya no era 0.
+				historial.forEach(function (m) { agregarMensaje(m.role, m.content, false); });
+			} else {
+				agregarMensaje("assistant", SALUDO, false);
+				mostrarFichas();
+			}
 		}
-		setTimeout(function () { elInput.focus(); }, 50);
+		setTimeout(function () { elInput.focus(); }, 60);
+	}
+
+	/* Fichas sugeridas: tres puertas de entrada para que el visitante no se
+	   quede mirando un chat vacío. Desaparecen apenas escribe o toca una. */
+	function mostrarFichas() {
+		if (!T.fichas || !T.fichas.length) return;
+		var cont = document.createElement("div");
+		cont.className = "ntgchat-chips";
+		T.fichas.forEach(function (texto) {
+			var b = document.createElement("button");
+			b.type = "button";
+			b.className = "ntgchat-chip";
+			b.textContent = texto;
+			b.addEventListener("click", function () {
+				quitarFichas();
+				enviarMensaje(texto);
+			});
+			cont.appendChild(b);
+		});
+		elBody.appendChild(cont);
+		elBody.scrollTop = elBody.scrollHeight;
+	}
+	function quitarFichas() {
+		var c = elBody.querySelector(".ntgchat-chips");
+		if (c) c.remove();
 	}
 	function cerrar() {
 		elPanel.hidden = true;
@@ -213,6 +273,9 @@
 	function autoAltura() {
 		elInput.style.height = "auto";
 		elInput.style.height = Math.min(elInput.scrollHeight, 110) + "px";
+		// El botón sólo se enciende si hay algo que mandar: apretar "enviar"
+		// con el campo vacío y que no pase nada es una respuesta muerta.
+		elSend.disabled = enviando || !elInput.value.trim();
 	}
 	elInput.addEventListener("input", autoAltura);
 	elInput.addEventListener("keydown", function (ev) {
@@ -231,11 +294,18 @@
 
 	function enviar() {
 		var texto = elInput.value.trim();
-		if (!texto || enviando) return;
-
-		agregarMensaje("user", texto);
+		if (!texto) return;
 		elInput.value = "";
 		autoAltura();
+		enviarMensaje(texto);
+	}
+
+	/* El envío de verdad. Recibe el texto en vez de leerlo del campo, para
+	   que las fichas sugeridas puedan usar exactamente el mismo camino. */
+	function enviarMensaje(texto) {
+		if (!texto || enviando) return;
+		quitarFichas();
+		agregarMensaje("user", texto);
 
 		enviando = true;
 		elSend.disabled = true;
@@ -268,7 +338,7 @@
 			})
 			.then(function () {
 				enviando = false;
-				elSend.disabled = false;
+				elSend.disabled = !elInput.value.trim();
 			});
 	}
 
