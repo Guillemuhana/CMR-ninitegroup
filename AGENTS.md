@@ -45,7 +45,7 @@ covered. There is no linter and no type-checker configured in this repository.
 - Serverless API endpoints use standard Node env vars such as `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
 - Do not move `SUPABASE_SERVICE_ROLE_KEY` to the client-side code.
 - `.env.example` lists every variable with fictitious values. Meta Conversions API vars (`META_*`) are documented in `META-CAPI.md`.
-- Vercel Hobby caps the project at **12 serverless functions** and `api/` is exactly at 12. Files and folders starting with `_` inside `api/` do not count: that is the mechanism for shared code (`_meta/`, `_push/`, `_reporte/`, `_fin/`, `_cotizacion/`). New endpoints hang off an existing dispatcher plus a rewrite in `vercel.json`.
+- Vercel Hobby caps the project at **12 serverless functions** and `api/` is exactly at 12. Files and folders starting with `_` inside `api/` do not count: that is the mechanism for shared code (`_meta/`, `_push/`, `_reporte/`, `_fin/`, `_cotizacion/`, `_web/`). New endpoints hang off an existing dispatcher plus a rewrite in `vercel.json` — `api/push.js` already dispatches four actions this way (`subscribe`, `send`, `meta`, `lead`).
 
 ## Key conventions and patterns
 - The app uses ES modules (`type: module` in `package.json`).
@@ -60,6 +60,17 @@ covered. There is no linter and no type-checker configured in this repository.
   customer-service window applies**: free-form text only reaches contacts who
   wrote within the last 24 h; anyone older needs an approved template. See
   `PROMOCIONES.md` before touching anything that sends messages.
+- **Public pages live in `public/`, outside the SPA.** `public/cotizacion/` (the
+  signable Purchase Agreement) and `public/business/` (the business-packages
+  landing) are plain HTML/CSS/JS served straight from disk, excluded from the
+  SPA catch-all in `vercel.json` and from the service-worker precache in
+  `vite.config.js`. They are customer-facing marketing/legal documents, not CRM
+  screens: no React, no build step, portable to WordPress. See
+  `LANDING-BUSINESS.md`.
+- Anything shown to a customer — landing, quote, or a message the AI writes —
+  must comply with `api/_ntg.js`, the authoritative commercial fact sheet
+  (prices, what may never be claimed). A price change touches `api/_ntg.js`,
+  `public/nini_master_prompt.md` **and** `public/business/index.html`.
 
 ## What the AI agent should do
 - Prefer small, targeted changes over large rewrites.

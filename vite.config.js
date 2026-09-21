@@ -19,10 +19,10 @@ export default defineConfig({
       includeAssets: ["logo.png", "apple-touch-icon-v2.png"],
       injectManifest: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        // Las cotizaciones no son parte del CRM: son páginas sueltas que se le
-        // mandan a un cliente. Sin esto, el service worker las precacheaba en
-        // el dispositivo de cada vendedor.
-        globIgnores: ["**/cotizacion/**"],
+        // Las cotizaciones y la landing pública no son parte del CRM: son
+        // páginas sueltas para un cliente o un visitante. Sin esto, el service
+        // worker las precacheaba en el dispositivo de cada vendedor.
+        globIgnores: ["**/cotizacion/**", "**/business/**"],
       },
       manifest: {
         name: "NINIT Group · CRM",
