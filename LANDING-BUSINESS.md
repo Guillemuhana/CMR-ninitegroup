@@ -333,3 +333,36 @@ almacenamiento compartido (Supabase o Upstash) y es trabajo aparte.
 Borrar el `<script>` de `index.html`, `assistant-widget.js`, el bloque
 "Asistente flotante" de `business.css`, `api/_web/chat.js`, la línea de
 `api/push.js` y la de `vercel.json`. Nada más depende de él.
+
+## El cliente NUNCA toca el CRM
+
+El CRM lo usa sólo el equipo de NINI. Un visitante de la landing no tiene que
+verlo, ni entrar, ni enterarse de que existe como aplicación. Aparece en la
+página únicamente como **algo incluido en el paquete que compraría** — una
+herramienta para su futuro negocio—, jamás como un lugar adonde ir ahora.
+
+Tres cosas lo sostienen, y conviene no romper ninguna:
+
+1. **`/business` en el dominio del CRM redirige afuera.** Antes la landing se
+   servía también en `ninit-crm.vercel.app/business/`: si ese link circulaba,
+   el cliente quedaba parado en el dominio del CRM, a un clic del login. Ahora
+   todas esas rutas devuelven 307 hacia `ntg-business.vercel.app`.
+
+   Ojo con el comodín: `/business/:ruta*` **no** matchea `/business/es/`,
+   porque la barra final deja un segmento vacío. Por eso hay entradas
+   explícitas para ese caso y para las rutas terminadas en barra.
+
+2. **La landing llama a `/api/*` por ruta relativa**, nunca con el dominio del
+   CRM. En su propio dominio, `public/business/vercel.json` reenvía `/api/*`
+   al proyecto del CRM. El cliente no ve `ninit-crm` ni en la barra de
+   direcciones ni en las llamadas de red.
+
+3. **El prompt del asistente lo prohíbe explícitamente** (`api/_web/chat.js`).
+   Si le piden el link o cómo entrar al sistema, responde que un asesor lo
+   contacta por teléfono, WhatsApp o email, y ofrece el formulario. El único
+   lugar al que manda es el formulario de la página. Está probado en los dos
+   idiomas.
+
+El asistente además está escrito como **captador**, no como mesa de ayuda:
+cada respuesta tiene que dejar la conversación un paso más cerca de que deje
+nombre y teléfono.

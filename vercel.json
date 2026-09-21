@@ -3,7 +3,11 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "redirects": [
-    { "source": "/business", "destination": "/business/", "permanent": false }
+    { "source": "/business", "destination": "https://ntg-business.vercel.app/", "permanent": false },
+    { "source": "/business/", "destination": "https://ntg-business.vercel.app/", "permanent": false },
+    { "source": "/business/es/", "destination": "https://ntg-business.vercel.app/es/", "permanent": false },
+    { "source": "/business/:ruta*/", "destination": "https://ntg-business.vercel.app/:ruta*/", "permanent": false },
+    { "source": "/business/:ruta*", "destination": "https://ntg-business.vercel.app/:ruta*", "permanent": false }
   ],
   "rewrites": [
     { "source": "/api/push-subscribe", "destination": "/api/push?accion=subscribe" },
@@ -11,7 +15,6 @@
     { "source": "/api/meta-evento", "destination": "/api/push?accion=meta" },
     { "source": "/api/lead", "destination": "/api/push?accion=lead" },
     { "source": "/api/business-chat", "destination": "/api/push?accion=chat" },
-    { "source": "/business/", "destination": "/business/index.html" },
     { "source": "/((?!api/|cotizacion/|business/).*)", "destination": "/index.html" }
   ],
   "functions": {

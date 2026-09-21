@@ -360,13 +360,16 @@
 	   inserta en la tabla contactos con el service role: la landing
 	   nunca ve una clave de Supabase.
 
-	   La URL va ABSOLUTA y apuntando siempre al proyecto del CRM,
-	   porque esta página se sirve desde varios lados: su propio
-	   dominio, /business del CRM, y el día de mañana WordPress. El
-	   endpoint responde con Access-Control-Allow-Origin: *, así que
-	   el pedido cruzado funciona desde cualquiera de los tres.
+	   La ruta va RELATIVA, nunca con el dominio del CRM. El cliente no
+	   tiene que ver ni enterarse de que existe una app interna: el CRM
+	   lo usa sólo el equipo de NINI.
+
+	   En el dominio de la landing, /api/* lo reenvía Vercel al proyecto
+	   del CRM (ver public/business/vercel.json). En
+	   ninit-crm.vercel.app/business resuelve solo, porque el endpoint
+	   vive ahí mismo.
 	   ────────────────────────────────────────────────────────── */
-	var ENDPOINT_LEAD = "https://ninit-crm.vercel.app/api/lead";
+	var ENDPOINT_LEAD = "/api/lead";
 
 	var form = $("lead-form");
 	if (!form) return;
@@ -445,7 +448,7 @@
 				boton.disabled = false;
 				boton.textContent = textoOriginal;
 				avisar(
-					"We couldn't send that. Please try again, or write to us directly at info@ninitgroup.com. (" +
+					"We couldn't send that. Please try again, or write to us directly at ninitgroup@gmail.com. (" +
 					(err.message || "network error") + ")",
 					"err"
 				);

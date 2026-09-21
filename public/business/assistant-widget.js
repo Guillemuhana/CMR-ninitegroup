@@ -13,13 +13,15 @@
 (function () {
 	"use strict";
 
-	// La landing se sirve desde varios dominios (ntg-business.vercel.app,
-	// ninit-crm.vercel.app/business, y algún día ninitgroup.com/business).
-	// Los dos endpoints viven siempre en el proyecto del CRM, con
-	// Access-Control-Allow-Origin: * — mismo criterio que ENDPOINT_LEAD
-	// en business.js.
-	var ENDPOINT_CHAT = "https://ninit-crm.vercel.app/api/business-chat";
-	var ENDPOINT_LEAD = "https://ninit-crm.vercel.app/api/lead";
+	// Los endpoints se llaman por ruta RELATIVA, nunca con el dominio del
+	// CRM. El cliente no tiene que ver ni enterarse de que existe una app
+	// interna: el CRM lo usa sólo el equipo de NINI.
+	//
+	// En el dominio de la landing, /api/* lo reenvía Vercel al proyecto del
+	// CRM (ver public/business/vercel.json). En ninit-crm.vercel.app/business
+	// resuelven solos porque los endpoints viven ahí mismo.
+	var ENDPOINT_CHAT = "/api/business-chat";
+	var ENDPOINT_LEAD = "/api/lead";
 
 	// El avatar sale del mismo logo que la barra. La ruta se deduce de dónde
 	// está el propio script, así funciona igual en / y en /es/.
@@ -50,7 +52,7 @@
 		mensaje: "Mensaje",
 		enviar: "Enviar",
 		reformular: "Perdón, ¿me lo puede decir de otra manera?",
-		errorRed: "Perdón, algo falló de nuestro lado. También puede escribirnos a info@ninitgroup.com o usar el formulario de acá abajo.",
+		errorRed: "Perdón, algo falló de nuestro lado. También puede escribirnos a ninitgroup@gmail.com o usar el formulario de acá abajo.",
 		nombre: "Nombre y apellido",
 		telefono: "Teléfono / WhatsApp",
 		email: "Email (opcional)",
@@ -58,7 +60,7 @@
 		enviando: "Enviando…",
 		enviarDatos: "Enviar mis datos",
 		noSePudo: "No pudimos enviarlo",
-		errorEnvio: "No pudimos enviarlo (%s). También puede escribirnos a info@ninitgroup.com.",
+		errorEnvio: "No pudimos enviarlo (%s). También puede escribirnos a ninitgroup@gmail.com.",
 		visitante: "Visitante",
 		asistente: "Asistente",
 		conversacion: "Conversación del chat:",
@@ -83,7 +85,7 @@
 		mensaje: "Message",
 		enviar: "Send",
 		reformular: "Sorry, could you rephrase that?",
-		errorRed: "Sorry, something went wrong on our end. You can also reach us directly at info@ninitgroup.com or use the form below.",
+		errorRed: "Sorry, something went wrong on our end. You can also reach us directly at ninitgroup@gmail.com or use the form below.",
 		nombre: "Full name",
 		telefono: "Phone / WhatsApp",
 		email: "Email (optional)",
@@ -91,7 +93,7 @@
 		enviando: "Sending…",
 		enviarDatos: "Send my info",
 		noSePudo: "Could not send it.",
-		errorEnvio: "We couldn't send that (%s). You can also email info@ninitgroup.com.",
+		errorEnvio: "We couldn't send that (%s). You can also email ninitgroup@gmail.com.",
 		visitante: "Visitor",
 		asistente: "Assistant",
 		conversacion: "Chat widget conversation:",
