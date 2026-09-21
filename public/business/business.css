@@ -175,12 +175,11 @@ p:last-child { margin-bottom: 0; }
 	font-size: 10.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase;
 	color: rgba(255,255,255,.72); margin-top: 3px; white-space: nowrap;
 }
-/* En pantallas chicas el subtítulo sobra: gana el nombre. */
-@media (max-width: 420px) {
-	.brand-mark { height: 38px; width: 38px; border-radius: 9px; }
-	.brand-txt strong { font-size: 17px; }
-	.brand-txt small { display: none; }
-}
+/* El subtítulo se va antes que el nombre: "RESTROOM TRAILER RENTALS"
+   espaciado mide MÁS que "NINIT GROUP", así que es lo primero que hace
+   reventar la fila. El resto del ajuste de la barra en celular está en la
+   pasada del final del archivo. */
+@media (max-width: 760px) { .brand-txt small { display: none; } }
 
 .bar-nav { display: flex; gap: 30px; margin-left: auto; }
 .bar-nav a {
@@ -564,6 +563,11 @@ table.matrix td:first-child { font-weight: 600; color: var(--ink); }
 	color: var(--ink-2); margin-bottom: 7px;
 }
 .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+/* Dos campos por fila sólo si hay ancho de verdad. Abajo de 560px cada
+   columna quedaba en ~130px: un campo numérico con una etiqueta como
+   "Storage & insurance / month (US$)" no entra, y el visitante no puede
+   leer qué está cargando. */
+@media (max-width: 560px) { .frow { grid-template-columns: 1fr; gap: 0; } }
 .fnote { font-size: 12.5px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
 
 input[type="text"], input[type="tel"], input[type="email"], input[type="number"], select, textarea {
@@ -917,4 +921,101 @@ textarea { resize: vertical; min-height: 92px; }
 @media (max-width: 480px) {
 	.ntgchat { right: 12px; bottom: 12px; }
 	.ntgchat-panel { position: fixed; right: 10px; left: 10px; bottom: 82px; width: auto; }
+}
+
+/* ============================================================
+   PASADA DE CELULAR
+
+   Los puntos de quiebre de arriba son de cada componente: cuándo una
+   grilla de 4 pasa a 2, cuándo dos columnas pasan a una. Eso está bien
+   y se queda donde está.
+
+   Lo que va acá es lo transversal, que sólo se ve cuando se mira la
+   página entera en un teléfono: el aire de las tarjetas, la escala
+   tipográfica y —sobre todo— la barra, que era el problema real.
+
+   LA BARRA. Sumando logo (46) + "NINIT GROUP" (~110) + selector de
+   idioma (~92) + botón (~123) + tres separaciones de 34, la barra
+   necesitaba ~438px. Un teléfono de 360px tiene 328 útiles: se
+   desbordaba y empujaba toda la página a lo ancho. Acá se achican las
+   separaciones y los tamaños en dos escalones, y en pantallas
+   realmente chicas (<380px) el nombre se esconde y queda sólo el
+   logo, que sigue identificando la marca.
+   ============================================================ */
+
+/* ── Tablet y abajo ─────────────────────────────────────────── */
+@media (max-width: 760px) {
+	.vs-card    { padding: 26px 22px; }
+	.profile    { padding: 24px 22px; }
+	.pack       { padding: 28px 22px 24px; }
+	.calc-panel { padding: 22px 20px; }
+	.calc-out   { padding: 24px 22px; }
+	.lead-form  { padding: 24px 20px; }
+	.local-card { padding: 24px 22px; }
+	.module     { padding: 20px 18px; }
+
+	/* El total puede ser un número largo: que baje de renglón antes de
+	   pisarse con su propia etiqueta. */
+	.out-total { flex-wrap: wrap; }
+	.out-total b { font-size: 26px; }
+}
+
+/* ── Teléfono ───────────────────────────────────────────────── */
+@media (max-width: 560px) {
+	:root { --gutter: 16px; }
+
+	/* El mínimo de 38px no entraba: "Launch the business." a ese cuerpo
+	   se pasa del ancho de un teléfono. */
+	h1 { font-size: clamp(30px, 7.5vw, 68px); }
+	h2 { font-size: clamp(25px, 6vw, 44px); }
+
+	.bar-in { height: 64px; gap: 10px; }
+	.brand  { gap: 9px; }
+	.brand-mark { height: 36px; width: 36px; border-radius: 9px; }
+	.brand-txt strong { font-size: 15px; }
+	.lang a   { padding: 5px 9px; font-size: 11.5px; }
+	.bar-cta  { padding: 9px 14px; font-size: 13.5px; }
+
+	.hero-cta .btn { flex: 1 1 100%; }   /* botones a lo ancho, no partidos */
+	.btn-lg { padding: 15px 24px; font-size: 16px; }
+
+	/* La tabla comparativa scrollea sola (.matrix-wrap tiene overflow-x),
+	   pero en un teléfono no se ve que se puede arrastrar. El borde
+	   cortado de la derecha lo insinúa. */
+	.matrix-wrap { border-right: 3px solid var(--gold-l); }
+
+	.dash-body { padding: 16px; }
+	.kpi { padding: 14px; }
+	.kpi .val { font-size: 23px; }
+}
+
+/* ── Las dos grillas que aguantaban de más ──────────────────────
+   .trust y .network seguían en dos columnas hasta el final. A 320px
+   eso deja ~104px por celda: "12-month factory warranty" y "Towing &
+   delivery" se parten en cuatro renglones y quedan ilegibles. */
+@media (max-width: 460px) {
+	.trust   { grid-template-columns: 1fr; gap: 14px; }
+	.network { grid-template-columns: 1fr; }
+}
+
+/* ── Franja apretada (390-430px: iPhone 12/13/14 y similares) ──
+   Acá el nombre todavía entra, pero raspando. Se recorta el relleno de los
+   botones antes que sacar texto: 15px de holgura es demasiado poco margen
+   para las diferencias de render entre navegadores. */
+@media (max-width: 430px) {
+	.bar-in   { gap: 8px; }
+	.brand-txt strong { font-size: 14.5px; }
+	.lang a   { padding: 5px 8px; font-size: 11px; }
+	.bar-cta  { padding: 8px 12px; font-size: 13px; }
+}
+
+/* ── Teléfono chico ─────────────────────────────────────────── */
+@media (max-width: 380px) {
+	/* A este ancho el nombre ya no entra junto al selector de idioma y
+	   el botón. Se deja el logo, que alcanza para identificar la marca,
+	   y no se rompe la fila. */
+	.brand-txt { display: none; }
+	.bar-in    { gap: 8px; }
+	.bar-cta   { padding: 8px 12px; font-size: 13px; }
+	.range-val { min-width: 64px; font-size: 17px; }
 }
