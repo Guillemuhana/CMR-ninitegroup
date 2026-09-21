@@ -992,6 +992,62 @@ textarea { resize: vertical; min-height: 92px; }
 	30%           { opacity: 1;   transform: translateY(-3px); }
 }
 
+/* ── Tarjeta de bienvenida ──────────────────────────────────── */
+/* Lo primero que ve el visitante al abrir. Antes era un globo gris suelto
+   y el panel se sentía vacío; esto ocupa el ancho, tiene jerarquía y dice
+   de entrada qué se le puede preguntar. */
+.ntgchat-welcome {
+	align-self: stretch;
+	background: linear-gradient(150deg, #fff 0%, #f2f7fc 100%);
+	border: 1px solid #d7e3ef;
+	border-radius: 16px; border-top-left-radius: 5px;
+	padding: 16px 18px;
+	box-shadow: var(--sh-1);
+	animation: ntgchat-burbuja .34s var(--ease);
+}
+.ntgchat-welcome-tit {
+	font-size: 16px; font-weight: 800; color: var(--navy);
+	letter-spacing: -.01em; margin-bottom: 6px;
+}
+.ntgchat-welcome p {
+	margin: 0; font-size: 14.3px; line-height: 1.55; color: var(--ink-2);
+}
+
+/* ── Globo de cebo (antes de abrir) ─────────────────────────── */
+/* Una burbuja sola en un rincón no se mira. Esto la hace hablar primero,
+   a los 6 segundos, y se puede cerrar. */
+.ntgchat-cebo {
+	position: absolute; right: 0; bottom: 74px;
+	width: 262px; padding: 14px 32px 14px 16px;
+	background: #fff; color: var(--ink);
+	border: 1px solid var(--line);
+	border-radius: 16px; border-bottom-right-radius: 5px;
+	font-size: 14px; line-height: 1.45; text-align: left;
+	cursor: pointer;
+	box-shadow: 0 16px 40px rgba(7,23,41,.22), 0 3px 10px rgba(7,23,41,.12);
+	animation: ntgchat-cebo-entra .45s var(--ease);
+}
+.ntgchat-cebo:hover { border-color: #cfd9e6; }
+@keyframes ntgchat-cebo-entra {
+	from { opacity: 0; transform: translateY(12px) scale(.94); }
+	to   { opacity: 1; transform: none; }
+}
+.ntgchat-cebo-x {
+	position: absolute; top: 7px; right: 8px;
+	width: 22px; height: 22px; padding: 0;
+	display: grid; place-items: center;
+	background: transparent; border: 0; cursor: pointer;
+	color: var(--muted); font-size: 17px; line-height: 1; border-radius: 6px;
+	transition: background var(--fast), color var(--fast);
+}
+.ntgchat-cebo-x:hover { background: var(--line-2); color: var(--ink); }
+@media (prefers-reduced-motion: reduce) {
+	.ntgchat-cebo, .ntgchat-welcome { animation: none; }
+}
+@media (max-width: 480px) {
+	.ntgchat-cebo { width: min(250px, calc(100vw - 90px)); bottom: 68px; font-size: 13.5px; }
+}
+
 /* ── Fichas sugeridas ───────────────────────────────────────── */
 .ntgchat-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 2px; }
 .ntgchat-chip {

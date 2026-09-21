@@ -65,6 +65,9 @@
 		titulo: "Asistente NTG",
 		bajada: "Paquetes de negocio y unidades",
 		enLinea: "Respondemos al instante",
+		bienvenidaTitulo: "👋 ¡Hola! Bienvenido a NINIT GROUP",
+		bienvenidaTexto: "Estoy para ayudarlo a armar su negocio de alquiler de baños móviles. Pregúnteme por los precios, qué incluye cada paquete, la financiación o cómo arrancar en su zona.",
+		cebo: "👋 ¿Pensando en arrancar su propio negocio de alquiler? Pregúnteme lo que quiera.",
 		pie: "Asistente con IA. Un asesor confirma todo dato importante.",
 		fichas: [
 			"¿Qué paquete me conviene?",
@@ -95,6 +98,9 @@
 		titulo: "NTG Assistant",
 		bajada: "Business packages &amp; trailers",
 		enLinea: "Replies instantly",
+		bienvenidaTitulo: "👋 Hi there — welcome to NINIT GROUP",
+		bienvenidaTexto: "I'm here to help you put together your restroom trailer rental business. Ask me about pricing, what each package includes, financing, or how to get started in your area.",
+		cebo: "👋 Thinking about starting your own rental business? Ask me anything.",
 		pie: "AI assistant. An advisor confirms anything that matters.",
 		fichas: [
 			"Which package fits me?",
@@ -141,6 +147,10 @@
 	var root = document.createElement("div");
 	root.className = "ntgchat";
 	root.innerHTML =
+		'<div class="ntgchat-cebo" id="ntgchat-cebo" hidden>' +
+			'<button type="button" class="ntgchat-cebo-x" id="ntgchat-cebo-x" aria-label="' + T.cerrar + '">&times;</button>' +
+			'<span>' + T.cebo + '</span>' +
+		'</div>' +
 		'<button type="button" class="ntgchat-bubble" id="ntgchat-toggle" aria-expanded="false" aria-controls="ntgchat-panel">' +
 			'<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>' +
 			'<span class="ntgchat-bubble-x" aria-hidden="true">&times;</span>' +
@@ -169,6 +179,48 @@
 	var elForm   = root.querySelector("#ntgchat-form");
 	var elInput  = root.querySelector("#ntgchat-input");
 	var elSend   = root.querySelector("#ntgchat-send");
+	var elCebo   = root.querySelector("#ntgchat-cebo");
+	var elCeboX  = root.querySelector("#ntgchat-cebo-x");
+
+	/* ──────────────────────────────────────────────────────────
+	   El globo de cebo.
+
+	   Una burbuja sola en un rincón no se mira: el visitante no sabe
+	   que hay alguien del otro lado. Esto la hace hablar primero.
+
+	   Aparece a los 6 segundos, no de entrada: si salta apenas carga
+	   la página tapa el titular y molesta. Y si ya hablaron antes en
+	   esta pestaña, no aparece — ya sabe que el chat existe.
+	   Se puede cerrar, y cerrarlo se recuerda para no insistir.
+	   ────────────────────────────────────────────────────────── */
+	var CEBO_KEY = "ntg_business_cebo_visto";
+	var ceboDescartado = false;
+	try { ceboDescartado = sessionStorage.getItem(CEBO_KEY) === "1"; } catch (e) {}
+
+	function ocultarCebo(recordar) {
+		if (!elCebo || elCebo.hidden) return;
+		elCebo.hidden = true;
+		if (recordar) {
+			ceboDescartado = true;
+			try { sessionStorage.setItem(CEBO_KEY, "1"); } catch (e) {}
+		}
+	}
+
+	if (elCebo && !ceboDescartado && !historial.length) {
+		setTimeout(function () {
+			if (!root.classList.contains("open")) elCebo.hidden = false;
+		}, 6000);
+	}
+	if (elCeboX) {
+		elCeboX.addEventListener("click", function (ev) {
+			ev.stopPropagation();
+			ocultarCebo(true);
+		});
+	}
+	if (elCebo) {
+		// Tocar el globo abre el chat: es lo que la gente intenta hacer.
+		elCebo.addEventListener("click", function () { ocultarCebo(true); abrir(); });
+	}
 
 	// El cuerpo se dibuja una sola vez, la primera que se abre el panel.
 	var dibujado = false;
@@ -176,6 +228,7 @@
 	function abrir() {
 		elPanel.hidden = false;
 		root.classList.add("open", "visto");
+		ocultarCebo(true);
 		elToggle.setAttribute("aria-expanded", "true");
 
 		if (!dibujado) {
@@ -187,11 +240,25 @@
 				// saludo, porque historial.length ya no era 0.
 				historial.forEach(function (m) { agregarMensaje(m.role, m.content, false); });
 			} else {
-				agregarMensaje("assistant", SALUDO, false);
+				mostrarBienvenida();
 				mostrarFichas();
 			}
 		}
 		setTimeout(function () { elInput.focus(); }, 60);
+	}
+
+	/* Tarjeta de bienvenida.
+	   Antes el saludo era un globo gris suelto y el panel se sentía vacío.
+	   Esto es lo primero que ve el visitante, así que dice en una línea qué
+	   puede pedirle al asistente en vez de un "hola" genérico. */
+	function mostrarBienvenida() {
+		var card = document.createElement("div");
+		card.className = "ntgchat-welcome";
+		card.innerHTML =
+			'<div class="ntgchat-welcome-tit">' + escapar(T.bienvenidaTitulo) + '</div>' +
+			'<p>' + escapar(T.bienvenidaTexto) + '</p>';
+		elBody.appendChild(card);
+		elBody.scrollTop = elBody.scrollHeight;
 	}
 
 	/* Fichas sugeridas: tres puertas de entrada para que el visitante no se
