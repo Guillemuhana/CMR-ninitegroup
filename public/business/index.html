@@ -17,19 +17,42 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="business.css?v=2">
+<link rel="stylesheet" href="business.css?v=3">
 </head>
-<body>
+<body id="top">
 
 <!-- ═══════════════ BARRA ═══════════════ -->
+<!--
+  El logo va en SVG y no como PNG: los dos archivos de logo que existen
+  (logo.png y logo-blanco.png) son SÓLO el ícono del trailer, sin el nombre,
+  y el blanco encima de la barra oscura casi no se veía. Este es el mismo
+  trazo que dibuja src/LogoNinit.jsx en el CRM, así que la marca es la misma
+  en los dos lados, escala sin pixelarse y el nombre se puede leer.
+-->
 <header class="bar">
 	<div class="bar-in">
-		<img src="img/logo-blanco.png" alt="NINI T-GROUP" class="bar-logo">
+		<a class="brand" href="#top" aria-label="NINIT GROUP">
+			<svg class="brand-mark" viewBox="0 0 100 88" fill="none" aria-hidden="true">
+				<line x1="4" y1="82" x2="96" y2="82" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".35"/>
+				<g stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+					<circle cx="22" cy="74" r="8"/>
+					<circle cx="72" cy="74" r="8"/>
+					<rect x="5" y="18" width="88" height="48" rx="7"/>
+					<path d="M24 18 Q24 7 36 7 Q48 7 48 18"/>
+				</g>
+				<line x1="80" y1="22" x2="80" y2="62" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
+			</svg>
+			<span class="brand-txt">
+				<strong>NINIT GROUP</strong>
+				<small>Restroom trailer rentals</small>
+			</span>
+		</a>
 		<nav class="bar-nav">
 			<a href="#system">The system</a>
 			<a href="#who">Who it's for</a>
 			<a href="#packages">Packages</a>
 			<a href="#calculator">Calculator</a>
+			<a href="#inside">The trailers</a>
 			<a href="#faq">FAQ</a>
 		</nav>
 		<a class="bar-cta" href="#talk">Talk to us</a>
@@ -668,6 +691,87 @@
 	</div>
 </section>
 
+<!-- ═══════════════ INTERIORES ═══════════════ -->
+<section class="section soft" id="inside">
+	<div class="wrap">
+		<div class="section-head reveal">
+			<span class="eyebrow">Step inside</span>
+			<h2>What your customers walk into.</h2>
+			<p class="lede">
+				This is what justifies the rate. A guest at a wedding or a crew on a job site
+				opens the door and finds a real bathroom &mdash; not a plastic box.
+			</p>
+		</div>
+
+		<div class="gallery reveal">
+			<figure class="shot tall"><img src="img/int/1.jpg" alt="Restroom trailer interior with vanity and mirror" loading="lazy"></figure>
+			<figure class="shot"><img src="img/int/2.jpg" alt="Interior stall with flush toilet" loading="lazy"></figure>
+			<figure class="shot"><img src="img/int/3.jpg" alt="Sink area with running hot water" loading="lazy"></figure>
+			<figure class="shot"><img src="img/int/4.jpg" alt="4-Stall trailer interior" loading="lazy"></figure>
+			<figure class="shot"><img src="img/int/5.jpg" alt="2-Stall trailer interior" loading="lazy"></figure>
+			<figure class="shot wide"><img src="img/int/6.jpg" alt="Interior corridor of a multi-stall restroom trailer" loading="lazy"></figure>
+		</div>
+	</div>
+</section>
+
+<!-- ═══════════════ EQUIPAMIENTO ═══════════════ -->
+<section class="section">
+	<div class="wrap">
+		<div class="section-head reveal">
+			<span class="eyebrow">Standard equipment</span>
+			<h2>Everything already on board.</h2>
+			<p class="lede">
+				None of this is an upsell. It ships on the unit, and it is what lets you take
+				bookings the week the trailer arrives.
+			</p>
+		</div>
+
+		<div class="feats reveal">
+			<figure class="feat"><img src="img/feat/acheating.jpg" alt="Air conditioning and heating unit" loading="lazy"><figcaption>Climate control<span>A/C and heating</span></figcaption></figure>
+			<figure class="feat"><img src="img/feat/toilet.jpg" alt="Flush toilet" loading="lazy"><figcaption>Flush toilets<span>Private stalls</span></figcaption></figure>
+			<figure class="feat"><img src="img/feat/sinks.jpg" alt="Sink with mirror" loading="lazy"><figcaption>Sinks &amp; mirrors<span>Hot running water</span></figcaption></figure>
+			<figure class="feat"><img src="img/feat/lighting.jpg" alt="Interior LED lighting" loading="lazy"><figcaption>LED lighting<span>Inside and out</span></figcaption></figure>
+			<figure class="feat"><img src="img/feat/electrical.jpg" alt="Electrical panel" loading="lazy"><figcaption>Electrical system<span>Panel and outlets</span></figcaption></figure>
+			<figure class="feat"><img src="img/feat/waterinlet.jpg" alt="Fresh water inlet" loading="lazy"><figcaption>Water system<span>Fresh and waste tanks</span></figcaption></figure>
+			<figure class="feat"><img src="img/feat/jacks.jpg" alt="Stabilizer jacks" loading="lazy"><figcaption>Stabilizer jacks<span>Level on any site</span></figcaption></figure>
+			<figure class="feat"><img src="img/feat/handrails.jpg" alt="Handrails and foldable steps" loading="lazy"><figcaption>Steps &amp; handrails<span>Safe entry</span></figcaption></figure>
+		</div>
+
+		<p class="fnote reveal" style="margin-top:20px;font-size:13.5px;max-width:860px">
+			Photos are of representative units. Exact dimensions, weight, tank capacity and
+			electrical specs vary by model and configuration &mdash; ask us and we confirm them for
+			the unit you are considering rather than estimating.
+		</p>
+	</div>
+</section>
+
+<!-- ═══════════════ TERMINACIONES ═══════════════ -->
+<section class="section soft">
+	<div class="wrap">
+		<div class="section-head reveal">
+			<span class="eyebrow">Make it yours</span>
+			<h2>Ten interior finishes.</h2>
+			<p class="lede">
+				The countertop finish sets the tone of the whole unit. Pick the one that matches
+				the market you want to win &mdash; weddings read differently than job sites.
+			</p>
+		</div>
+
+		<div class="finishes reveal">
+			<figure class="fin"><img src="img/fin/01-pure-white.jpg" alt="Pure White finish" loading="lazy"><figcaption>Pure White</figcaption></figure>
+			<figure class="fin"><img src="img/fin/02-snow-mountain-stone.jpg" alt="Snow Mountain Stone finish" loading="lazy"><figcaption>Snow Mountain</figcaption></figure>
+			<figure class="fin"><img src="img/fin/03-florence-black-gold.jpg" alt="Florence Black Gold finish" loading="lazy"><figcaption>Florence Black Gold</figcaption></figure>
+			<figure class="fin"><img src="img/fin/04-florence-white-gold.jpg" alt="Florence White Gold finish" loading="lazy"><figcaption>Florence White Gold</figcaption></figure>
+			<figure class="fin"><img src="img/fin/05-armani-gray.jpg" alt="Armani Gray finish" loading="lazy"><figcaption>Armani Gray</figcaption></figure>
+			<figure class="fin"><img src="img/fin/06-pandora.jpg" alt="Pandora finish" loading="lazy"><figcaption>Pandora</figcaption></figure>
+			<figure class="fin"><img src="img/fin/07-italian-gray.jpg" alt="Italian Gray finish" loading="lazy"><figcaption>Italian Gray</figcaption></figure>
+			<figure class="fin"><img src="img/fin/08-fish-belly-white.jpg" alt="Fish Belly White finish" loading="lazy"><figcaption>Fish Belly White</figcaption></figure>
+			<figure class="fin"><img src="img/fin/09-white-jade.jpg" alt="White Jade finish" loading="lazy"><figcaption>White Jade</figcaption></figure>
+			<figure class="fin"><img src="img/fin/10-pure-black.jpg" alt="Pure Black finish" loading="lazy"><figcaption>Pure Black</figcaption></figure>
+		</div>
+	</div>
+</section>
+
 <!-- ═══════════════ RED OPERATIVA ═══════════════ -->
 <section class="section dark">
 	<div class="wrap">
@@ -1032,7 +1136,22 @@
 <footer class="foot">
 	<div class="wrap">
 		<div class="foot-top">
-			<img src="img/logo-blanco.png" alt="NINI T-GROUP" class="foot-logo">
+			<a class="brand foot-brand" href="#top" aria-label="NINIT GROUP">
+				<svg class="brand-mark" viewBox="0 0 100 88" fill="none" aria-hidden="true">
+					<line x1="4" y1="82" x2="96" y2="82" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".35"/>
+					<g stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+						<circle cx="22" cy="74" r="8"/>
+						<circle cx="72" cy="74" r="8"/>
+						<rect x="5" y="18" width="88" height="48" rx="7"/>
+						<path d="M24 18 Q24 7 36 7 Q48 7 48 18"/>
+					</g>
+					<line x1="80" y1="22" x2="80" y2="62" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
+				</svg>
+				<span class="brand-txt">
+					<strong>NINIT GROUP</strong>
+					<small>ninitgroup.com</small>
+				</span>
+			</a>
 			<nav class="foot-links">
 				<a href="#system">The system</a>
 				<a href="#packages">Packages</a>
@@ -1070,6 +1189,6 @@
 	</div>
 </footer>
 
-<script src="business.js?v=2" defer></script>
+<script src="business.js?v=3" defer></script>
 </body>
 </html>

@@ -142,7 +142,30 @@ p:last-child { margin-bottom: 0; }
 	max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter);
 	height: 66px; display: flex; align-items: center; gap: 26px;
 }
-.bar-logo { height: 30px; width: auto; flex-shrink: 0; }
+/* Marca: ícono del trailer + nombre.
+   Los PNG de logo que existen son sólo el ícono, sin el nombre, así que el
+   trazo va en SVG (hereda currentColor) y el nombre en texto al lado. */
+.brand {
+	display: flex; align-items: center; gap: 12px;
+	flex-shrink: 0; text-decoration: none; color: #fff;
+}
+.brand-mark { height: 42px; width: auto; color: var(--gold-l); flex-shrink: 0; }
+.brand-txt { display: flex; flex-direction: column; line-height: 1.1; }
+.brand-txt strong {
+	font-size: 19px; font-weight: 800; letter-spacing: .04em;
+	color: #fff; white-space: nowrap;
+}
+.brand-txt small {
+	font-size: 10.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase;
+	color: rgba(255,255,255,.5); margin-top: 3px; white-space: nowrap;
+}
+/* En pantallas chicas el subtítulo sobra: gana el nombre. */
+@media (max-width: 420px) {
+	.brand-mark { height: 34px; }
+	.brand-txt strong { font-size: 16px; }
+	.brand-txt small { display: none; }
+}
+
 .bar-nav { display: flex; gap: 26px; margin-left: auto; }
 .bar-nav a {
 	color: rgba(255,255,255,.76); text-decoration: none;
@@ -417,6 +440,73 @@ textarea { resize: vertical; min-height: 92px; }
 @media (max-width: 1000px) { .units { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px)  { .units { grid-template-columns: 1fr; } }
 
+/* Galería de interiores --------------------------------------
+   Mosaico: la primera foto ocupa dos filas y la última dos columnas, así la
+   grilla no parece una planilla. En celular se aplana a una sola columna. */
+.gallery {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	grid-auto-rows: 200px;
+	gap: 12px;
+}
+.shot {
+	margin: 0; overflow: hidden; border-radius: var(--r-m);
+	background: var(--line-2); box-shadow: var(--sh-1);
+}
+.shot.tall { grid-row: span 2; }
+.shot.wide { grid-column: span 2; }
+.shot img {
+	width: 100%; height: 100%; object-fit: cover;
+	transition: transform .5s var(--ease);
+}
+.shot:hover img { transform: scale(1.05); }
+@media (max-width: 900px) {
+	.gallery { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 180px; }
+	.shot.tall { grid-row: span 2; }
+	.shot.wide { grid-column: span 2; }
+}
+@media (max-width: 520px) {
+	.gallery { grid-template-columns: 1fr; grid-auto-rows: 220px; }
+	.shot.tall { grid-row: span 1; }
+	.shot.wide { grid-column: span 1; }
+}
+
+/* Equipamiento con foto --------------------------------------- */
+.feats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.feat {
+	margin: 0; background: #fff; border: 1px solid var(--line);
+	border-radius: var(--r-m); overflow: hidden; box-shadow: var(--sh-1);
+	transition: transform var(--fast), box-shadow var(--fast);
+}
+.feat:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
+.feat img { width: 100%; height: 158px; object-fit: cover; background: var(--line-2); }
+.feat figcaption {
+	padding: 14px 16px 16px;
+	font-size: 15.5px; font-weight: 700; color: var(--navy); line-height: 1.25;
+}
+.feat figcaption span {
+	display: block; margin-top: 3px;
+	font-size: 13px; font-weight: 500; color: var(--muted);
+}
+@media (max-width: 900px) { .feats { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 460px) { .feats { grid-template-columns: 1fr; } }
+
+/* Terminaciones ------------------------------------------------ */
+.finishes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.fin { margin: 0; text-align: center; }
+.fin img {
+	width: 100%; aspect-ratio: 1 / 1; object-fit: cover;
+	border-radius: var(--r-m); border: 1px solid var(--line);
+	box-shadow: var(--sh-1);
+	transition: transform var(--fast), box-shadow var(--fast), border-color var(--fast);
+}
+.fin:hover img { transform: translateY(-3px); box-shadow: var(--sh-2); border-color: var(--gold); }
+.fin figcaption {
+	margin-top: 9px; font-size: 13px; font-weight: 600; color: var(--ink-2); line-height: 1.3;
+}
+@media (max-width: 860px) { .finishes { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 460px) { .finishes { grid-template-columns: repeat(2, 1fr); } }
+
 /* Dashboard mock --------------------------------------------- */
 .dash {
 	background: #fff; border: 1px solid var(--line); border-radius: var(--r-l);
@@ -520,7 +610,9 @@ textarea { resize: vertical; min-height: 92px; }
 
 .foot { background: var(--navy-x); color: rgba(255,255,255,.55); padding: 48px 0 40px; font-size: 14px; }
 .foot-top { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 24px; }
-.foot-logo { height: 34px; width: auto; }
+.foot-brand .brand-mark { height: 46px; color: var(--gold); }
+.foot-brand .brand-txt strong { font-size: 20px; }
+.foot-brand .brand-txt small { color: rgba(255,255,255,.42); text-transform: none; letter-spacing: .04em; font-size: 12px; }
 .foot-links { display: flex; flex-wrap: wrap; gap: 22px; }
 .foot-links a { color: rgba(255,255,255,.66); text-decoration: none; font-weight: 600; transition: color var(--fast); }
 .foot-links a:hover { color: #fff; }
@@ -532,5 +624,7 @@ textarea { resize: vertical; min-height: 92px; }
 .reveal.in { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
 	.reveal { opacity: 1; transform: none; transition: none; }
-	.btn:hover, .profile:hover, .unit:hover, .chain-step:hover { transform: none; }
+	.btn:hover, .profile:hover, .unit:hover, .chain-step:hover,
+	.feat:hover, .fin:hover img { transform: none; }
+	.shot:hover img { transform: none; }
 }
