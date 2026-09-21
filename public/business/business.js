@@ -73,7 +73,10 @@
 					var destino = document.querySelector(a.getAttribute("href"));
 					if (!destino) return;
 					ev.preventDefault();
-					lenis.scrollTo(destino, { offset: -76 });
+					// El desplazamiento es el alto de la barra fija (76px) más
+					// un poco de aire, para que el título de la sección no
+					// quede pegado abajo de ella.
+					lenis.scrollTo(destino, { offset: -92 });
 				});
 			});
 		}
