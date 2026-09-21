@@ -848,6 +848,16 @@ textarea { resize: vertical; min-height: 92px; }
 	font-family: Inter, system-ui, -apple-system, sans-serif;
 }
 
+/* NO SACAR.
+   El atributo hidden de HTML esconde un elemento poniéndole display:none
+   desde la hoja del navegador, pero CUALQUIER display declarado acá le
+   gana — y el panel necesita display:flex para su layout.
+   Sin esta regla el panel nace visible y vacío: abrir() nunca corre, así
+   que nadie dibuja el saludo, y la burbuja sigue mostrando el ícono de
+   chat en vez de la cruz. Exactamente el síntoma de "sale todo en blanco".
+   Vale para el panel y para el globo de cebo. */
+.ntgchat [hidden] { display: none !important; }
+
 /* ── La burbuja ─────────────────────────────────────────────── */
 .ntgchat-bubble {
 	position: relative;
