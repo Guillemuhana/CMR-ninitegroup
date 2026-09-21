@@ -54,7 +54,6 @@
 	--fast: .18s var(--ease);
 
 	--maxw: 1140px;
-	--maxw-bar: 1360px;   /* la barra respira más que el cuerpo: ver .bar-in */
 	--gutter: 20px;
 }
 
@@ -146,13 +145,9 @@ p:last-child { margin-bottom: 0; }
 	border-bottom: 1px solid rgba(255,255,255,.16);
 	box-shadow: 0 2px 14px rgba(7,23,41,.18);
 }
-/* La barra es más ancha que el contenido (--maxw-bar vs --maxw) a propósito.
-   Adentro entran la marca, seis links, el selector de idioma y el botón: con
-   los 1140px del cuerpo quedaba todo pegoteado. El contenido de las secciones
-   sigue en 1140 porque un párrafo más ancho que eso se lee peor. */
 .bar-in {
-	max-width: var(--maxw-bar); margin: 0 auto; padding: 0 var(--gutter);
-	height: 76px; display: flex; align-items: center; gap: 34px;
+	max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter);
+	height: 66px; display: flex; align-items: center; gap: 26px;
 }
 /* Marca: el logo del CRM + el nombre al lado.
    El archivo trae su propio fondo celeste; como la barra usa ese mismo
@@ -182,92 +177,27 @@ p:last-child { margin-bottom: 0; }
 	.brand-txt small { display: none; }
 }
 
-.bar-nav { display: flex; gap: 30px; margin-left: auto; }
+.bar-nav { display: flex; gap: 26px; margin-left: auto; }
 .bar-nav a {
-	position: relative;
 	color: rgba(255,255,255,.88); text-decoration: none;
-	font-size: 15px; font-weight: 600; letter-spacing: .01em;
-	white-space: nowrap;
-	padding: 6px 0;
+	font-size: 14.5px; font-weight: 600; letter-spacing: .01em;
 	transition: color var(--fast);
 }
 .bar-nav a:hover { color: #fff; }
-/* Subrayado que crece desde el centro al pasar el mouse. */
-.bar-nav a::after {
-	content: ""; position: absolute; left: 50%; right: 50%; bottom: 0;
-	height: 2px; border-radius: 2px; background: #fff;
-	transition: left var(--fast), right var(--fast);
-}
-.bar-nav a:hover::after { left: 0; right: 0; }
-@media (prefers-reduced-motion: reduce) { .bar-nav a::after { transition: none; } }
 /* Sobre el celeste el dorado pierde contraste: el botón va en blanco. */
 .bar-cta {
 	flex-shrink: 0;
-	padding: 12px 24px; font-size: 15px;
+	padding: 10px 20px; font-size: 14.5px;
 	background: #fff; color: var(--navy);
 	border-radius: var(--r-s); text-decoration: none; font-weight: 700;
 	box-shadow: 0 2px 10px rgba(7,23,41,.18);
 	transition: background var(--fast), color var(--fast);
 }
 .bar-cta:hover { background: var(--navy); color: #fff; }
-/* El menú se esconde antes que antes (1100 y no 860): con seis links más el
-   selector de idioma y el botón, abajo de ese ancho ya se empezaban a pisar.
-   Las secciones siguen alcanzables scrolleando. */
-@media (max-width: 1100px) {
+@media (max-width: 860px) {
 	.bar-nav { display: none; }
 	.bar-cta { margin-left: auto; }
 }
-
-/* Selector de idioma ------------------------------------------ */
-.lang {
-	display: flex; flex-shrink: 0; gap: 3px;
-	padding: 4px; border-radius: 10px;
-	background: rgba(255,255,255,.16);
-}
-.lang a {
-	padding: 6px 13px; border-radius: 7px;
-	font-size: 13px; font-weight: 800; letter-spacing: .06em;
-	color: rgba(255,255,255,.8); text-decoration: none;
-	transition: background var(--fast), color var(--fast);
-}
-.lang a:hover { color: #fff; background: rgba(255,255,255,.14); }
-.lang a.on { background: #fff; color: var(--sky); }
-@media (max-width: 1100px) { .lang { margin-left: auto; } }
-@media (max-width: 400px) { .lang a { padding: 5px 9px; font-size: 11.5px; } }
-
-/* Sección local (Miami) --------------------------------------- */
-.local { display: grid; grid-template-columns: 1.15fr .85fr; gap: 34px; align-items: start; }
-.local-copy h2 { margin-bottom: 18px; }
-.local-list { list-style: none; margin: 26px 0 0; padding: 0; }
-.local-list li {
-	position: relative; padding: 9px 0 9px 28px;
-	font-size: 16px; color: var(--ink-2); line-height: 1.5;
-	border-bottom: 1px solid var(--line-2);
-}
-.local-list li:last-child { border-bottom: 0; }
-.local-list li strong { color: var(--navy); }
-.local-list li::before {
-	content: ""; position: absolute; left: 2px; top: 18px;
-	width: 11px; height: 6px;
-	border-left: 2px solid var(--sky); border-bottom: 2px solid var(--sky);
-	transform: rotate(-45deg);
-}
-.local-card {
-	background: var(--soft); border: 1px solid var(--line);
-	border-radius: var(--r-l); padding: 28px 26px;
-}
-.local-card h3 { color: var(--navy); margin-bottom: 10px; }
-.local-card > p { font-size: 15px; color: var(--muted); margin-bottom: 16px; }
-.local-card ul { list-style: none; margin: 0 0 16px; padding: 0; }
-.local-card li {
-	position: relative; padding: 7px 0 7px 20px;
-	font-size: 15.5px; color: var(--ink-2); line-height: 1.45;
-}
-.local-card li::before {
-	content: ""; position: absolute; left: 0; top: 15px;
-	width: 6px; height: 6px; border-radius: 50%; background: var(--sky);
-}
-@media (max-width: 900px) { .local { grid-template-columns: 1fr; gap: 26px; } }
 
 /* Hero ------------------------------------------------------ */
 .hero {
@@ -277,31 +207,17 @@ p:last-child { margin-bottom: 0; }
 	overflow: hidden;
 	padding: clamp(70px, 10vw, 128px) 0 clamp(60px, 8vw, 96px);
 }
-/* La foto del hero es un galpón con la flota: clara, con mucho detalle y el
-   pasillo al centro. Va con más opacidad que una foto oscura (si no se lava
-   y no se entiende qué es) y el degradado hace el trabajo de legibilidad:
-   casi opaco donde está el texto, y se abre hacia la derecha para que se
-   vean los trailers. */
 .hero-bg {
 	position: absolute; inset: 0;
-	background-size: cover; background-position: center center;
-	opacity: .5;
+	background-size: cover; background-position: center 62%;
+	opacity: .34;
 	transform: scale(1.04);
 }
 .hero::after {
 	content: ""; position: absolute; inset: 0;
 	background:
-		linear-gradient(100deg, rgba(7,23,41,.97) 0%, rgba(7,23,41,.9) 38%, rgba(7,23,41,.55) 68%, rgba(7,23,41,.3) 100%),
-		linear-gradient(to top, rgba(7,23,41,.95) 0%, transparent 45%);
-}
-/* En celular el texto ocupa todo el ancho: el degradado tiene que tapar
-   parejo, no abrirse a la derecha. */
-@media (max-width: 760px) {
-	.hero-bg { opacity: .4; }
-	.hero::after {
-		background:
-			linear-gradient(180deg, rgba(7,23,41,.9) 0%, rgba(7,23,41,.82) 55%, rgba(7,23,41,.95) 100%);
-	}
+		linear-gradient(105deg, rgba(7,23,41,.96) 0%, rgba(7,23,41,.82) 42%, rgba(7,23,41,.42) 100%),
+		linear-gradient(to top, rgba(7,23,41,.95) 0%, transparent 42%);
 }
 .hero-in { position: relative; z-index: 2; max-width: 780px; }
 .hero h1 { color: #fff; margin-bottom: 22px; }
@@ -321,134 +237,41 @@ p:last-child { margin-bottom: 0; }
 .trust strong { display: block; color: #fff; font-size: 15.5px; font-weight: 700; margin-bottom: 3px; }
 @media (max-width: 760px) { .trust { grid-template-columns: repeat(2, 1fr); gap: 18px; } }
 
-/* Aurora de fondo --------------------------------------------
-   Dos manchas de color que respiran despacio detrás de la sección oscura.
-   Es decoración pura: van en un div aparte con aria-hidden y por debajo
-   queda el azul noche, así que si el navegador no las dibuja no se pierde
-   nada. blur() grande + animación de transform = barato para la GPU. */
-.has-aurora { position: relative; overflow: hidden; isolation: isolate; }
-.aurora { position: absolute; inset: -10% -5%; z-index: 0; pointer-events: none; }
-.aurora i {
-	position: absolute; display: block; border-radius: 50%;
-	filter: blur(90px); opacity: .5;
-	will-change: transform;
-}
-.aurora i:nth-child(1) {
-	width: 46vw; height: 46vw; max-width: 620px; max-height: 620px;
-	top: -12%; left: -6%;
-	background: radial-gradient(circle, rgba(58,141,194,.55), transparent 68%);
-	animation: auroraA 19s ease-in-out infinite alternate;
-}
-.aurora i:nth-child(2) {
-	width: 40vw; height: 40vw; max-width: 540px; max-height: 540px;
-	bottom: -16%; right: -8%;
-	background: radial-gradient(circle, rgba(181,141,66,.45), transparent 68%);
-	animation: auroraB 23s ease-in-out infinite alternate;
-}
-@keyframes auroraA {
-	from { transform: translate3d(0, 0, 0) scale(1); }
-	to   { transform: translate3d(14%, 18%, 0) scale(1.18); }
-}
-@keyframes auroraB {
-	from { transform: translate3d(0, 0, 0) scale(1.1); }
-	to   { transform: translate3d(-16%, -12%, 0) scale(.92); }
-}
-.has-aurora > .wrap { position: relative; z-index: 1; }
-@media (prefers-reduced-motion: reduce) { .aurora i { animation: none; } }
-
-/* Cadena del sistema (Trailer -> ... -> Revenue) --------------
-   El hilo de atrás (.chain-track) se llena con el scroll y va encendiendo
-   cada paso cuando lo cruza. Sólo existe en escritorio: abajo de 1000px la
-   cadena se parte en varias filas y una línea horizontal no tendría sentido. */
+/* Cadena del sistema (Trailer -> ... -> Revenue) -------------- */
 .chain {
-	position: relative;
 	display: grid;
 	grid-template-columns: repeat(8, 1fr);
 	gap: 10px;
 }
-.chain-track {
-	position: absolute; left: 4%; right: 4%; top: 50%;
-	height: 2px; transform: translateY(-50%);
-	background: rgba(255,255,255,.1);
-	border-radius: 2px; overflow: hidden; z-index: 0;
-}
-.chain-fill {
-	display: block; height: 100%; width: 0;
-	background: linear-gradient(90deg, var(--sky), var(--gold-l));
-	box-shadow: 0 0 12px rgba(217,185,120,.55);
-}
-@media (max-width: 1000px) { .chain-track { display: none; } }
-
 .chain-step {
-	position: relative; z-index: 1;
-	background: rgba(255,255,255,.04);
+	position: relative;
+	background: rgba(255,255,255,.05);
 	border: 1px solid rgba(255,255,255,.12);
 	border-radius: var(--r-m);
-	padding: 20px 12px 18px;
+	padding: 20px 14px 18px;
 	text-align: center;
-	backdrop-filter: blur(6px);
-	-webkit-backdrop-filter: blur(6px);
-	transition: background var(--fast), border-color var(--fast),
-	            transform var(--fast), box-shadow var(--fast);
+	transition: background var(--fast), border-color var(--fast), transform var(--fast);
 }
-.chain-step .ico {
-	display: grid; place-items: center;
-	width: 42px; height: 42px; margin: 0 auto 12px;
-	border-radius: 12px;
-	background: rgba(255,255,255,.06);
-	border: 1px solid rgba(255,255,255,.1);
-	color: rgba(255,255,255,.55);
-	transition: color var(--fast), background var(--fast), border-color var(--fast), transform var(--fast);
-}
-.chain-step .ico svg { width: 21px; height: 21px; display: block; }
+.chain-step:hover { background: rgba(255,255,255,.1); border-color: rgba(217,185,120,.5); transform: translateY(-3px); }
 .chain-step .n {
-	display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .13em;
-	color: rgba(255,255,255,.4); margin-bottom: 5px;
-	transition: color var(--fast);
+	display: block; font-size: 11.5px; font-weight: 700; letter-spacing: .1em;
+	color: var(--gold-l); margin-bottom: 8px;
 }
-.chain-step .t { display: block; font-size: 14px; font-weight: 700; color: #fff; line-height: 1.3; }
-
-/* "Encendido": lo pone el scroll (clase .on) y también el hover. */
-.chain-step.on, .chain-step:hover {
-	background: rgba(255,255,255,.09);
-	border-color: rgba(217,185,120,.45);
-	transform: translateY(-4px);
-	box-shadow: 0 10px 28px rgba(0,0,0,.28);
+.chain-step .t { display: block; font-size: 14.5px; font-weight: 700; color: #fff; line-height: 1.3; }
+.chain-step::after {
+	content: ""; position: absolute; top: 50%; right: -8px; width: 6px; height: 6px;
+	border-top: 1.5px solid rgba(217,185,120,.6); border-right: 1.5px solid rgba(217,185,120,.6);
+	transform: translateY(-50%) rotate(45deg);
 }
-.chain-step.on .ico, .chain-step:hover .ico {
-	color: var(--navy-x);
-	background: var(--gold-l);
-	border-color: var(--gold-l);
-	transform: scale(1.06);
-}
-.chain-step.on .n, .chain-step:hover .n { color: var(--gold-l); }
-
-@media (max-width: 1000px) { .chain { grid-template-columns: repeat(4, 1fr); } }
-@media (max-width: 560px)  {
-	.chain { grid-template-columns: repeat(2, 1fr); }
-	.chain-step .ico { width: 36px; height: 36px; margin-bottom: 9px; }
-	.chain-step .ico svg { width: 18px; height: 18px; }
-}
+.chain-step:last-child::after { display: none; }
+@media (max-width: 1000px) { .chain { grid-template-columns: repeat(4, 1fr); } .chain-step:nth-child(4)::after { display: none; } }
+@media (max-width: 560px)  { .chain { grid-template-columns: repeat(2, 1fr); } .chain-step::after { display: none; } }
 
 /* Contraste "un competidor / NTG" ---------------------------- */
 .versus { display: grid; grid-template-columns: 1fr 1.25fr; gap: 24px; align-items: stretch; }
-.vs-card { position: relative; border-radius: var(--r-l); padding: 34px 32px; overflow: hidden; }
+.vs-card { border-radius: var(--r-l); padding: 34px 32px; }
 .vs-them { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); }
 .vs-us   { background: linear-gradient(160deg, rgba(181,141,66,.18), rgba(181,141,66,.05)); border: 1px solid rgba(217,185,120,.4); }
-.vs-us > * { position: relative; z-index: 1; }
-
-/* Reflejo que sigue al mouse dentro de la tarjeta de NTG.
-   Las coordenadas las escribe business.js en --mx/--my; mientras no haya
-   mouse encima la opacidad es 0, así que en celular sencillamente no existe. */
-.vs-glow {
-	position: absolute; inset: 0; z-index: 0; pointer-events: none;
-	opacity: 0; transition: opacity .35s var(--ease);
-	background: radial-gradient(
-		420px circle at var(--mx, 50%) var(--my, 50%),
-		rgba(217,185,120,.22), transparent 62%
-	);
-}
-.vs-us:hover .vs-glow { opacity: 1; }
 .vs-card h3 { font-size: 15px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 18px; }
 .vs-them h3 { color: rgba(255,255,255,.5) !important; }
 .vs-us h3   { color: var(--gold-l) !important; }
@@ -586,7 +409,7 @@ textarea { resize: vertical; min-height: 92px; }
 }
 
 .calc-out {
-	position: sticky; top: 96px;
+	position: sticky; top: 88px;
 	background: var(--navy-d); color: #fff;
 	border-radius: var(--r-l); padding: 30px 28px; box-shadow: var(--sh-3);
 }
@@ -817,4 +640,104 @@ textarea { resize: vertical; min-height: 92px; }
 	.btn:hover, .profile:hover, .unit:hover, .chain-step:hover,
 	.feat:hover, .fin:hover img { transform: none; }
 	.shot:hover img { transform: none; }
+}
+
+/* ============================================================
+   Asistente flotante (assistant-widget.js)
+
+   Widget aparte, cargado y estilado independiente del resto de
+   la página: si algún día se saca, alcanza con borrar este
+   bloque + el <script> en index.html. Misma paleta que el resto
+   (--navy / --gold / --sky) para que se sienta parte del mismo
+   documento.
+   ============================================================ */
+.ntgchat { position: fixed; z-index: 60; right: 18px; bottom: 18px; }
+
+.ntgchat-bubble {
+	width: 58px; height: 58px; border-radius: 50%; border: none; cursor: pointer;
+	background: var(--navy); color: #fff; box-shadow: var(--sh-3);
+	display: flex; align-items: center; justify-content: center;
+	transition: transform var(--fast), background var(--fast);
+}
+.ntgchat-bubble:hover { transform: translateY(-2px); background: var(--navy-d); }
+.ntgchat-bubble-x { display: none; font-size: 26px; line-height: 1; font-weight: 300; }
+.ntgchat.open .ntgchat-bubble svg { display: none; }
+.ntgchat.open .ntgchat-bubble-x { display: block; }
+
+.ntgchat-panel {
+	position: absolute; right: 0; bottom: 74px;
+	width: min(370px, calc(100vw - 36px)); max-height: min(560px, calc(100vh - 120px));
+	background: var(--paper); border-radius: var(--r-l); box-shadow: var(--sh-3);
+	display: flex; flex-direction: column; overflow: hidden;
+	border: 1px solid var(--line);
+}
+
+.ntgchat-head {
+	background: var(--navy); color: #fff; padding: 16px 18px;
+	display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.ntgchat-head strong { display: block; font-size: 15px; }
+.ntgchat-head span { display: block; font-size: 12px; color: rgba(255,255,255,.6); margin-top: 2px; }
+.ntgchat-close {
+	background: none; border: none; color: rgba(255,255,255,.7); font-size: 22px;
+	line-height: 1; cursor: pointer; padding: 4px 6px;
+}
+.ntgchat-close:hover { color: #fff; }
+
+.ntgchat-body {
+	flex: 1; min-height: 220px; overflow-y: auto; padding: 16px;
+	display: flex; flex-direction: column; gap: 10px; background: var(--soft);
+}
+
+.ntgchat-msg {
+	max-width: 86%; padding: 10px 13px; border-radius: 14px; font-size: 14.5px; line-height: 1.5;
+	white-space: pre-wrap; word-break: break-word;
+}
+.ntgchat-msg.a { align-self: flex-start; background: #fff; color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.ntgchat-msg.u { align-self: flex-end; background: var(--navy); color: #fff; border-bottom-right-radius: 4px; }
+
+.ntgchat-typing { display: flex; gap: 4px; align-items: center; padding: 12px 14px; }
+.ntgchat-typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); display: inline-block; animation: ntgchat-blink 1.2s infinite ease-in-out; }
+.ntgchat-typing i:nth-child(2) { animation-delay: .15s; }
+.ntgchat-typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes ntgchat-blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+.ntgchat-form {
+	display: flex; align-items: flex-end; gap: 8px; padding: 12px; border-top: 1px solid var(--line); background: #fff;
+}
+.ntgchat-form textarea {
+	flex: 1; resize: none; border: 1px solid var(--line); border-radius: var(--r-m);
+	padding: 9px 12px; font: inherit; font-size: 14.5px; max-height: 110px; min-height: 40px;
+}
+.ntgchat-form textarea:focus { outline: none; border-color: var(--sky); }
+.ntgchat-form button {
+	flex: none; width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+	background: var(--gold); color: var(--navy-x); display: flex; align-items: center; justify-content: center;
+	transition: background var(--fast);
+}
+.ntgchat-form button:hover { background: var(--gold-l); }
+.ntgchat-form button:disabled { opacity: .5; cursor: default; }
+
+.ntgchat-leadform {
+	align-self: stretch; background: #fff; border: 1px solid var(--line); border-radius: var(--r-m);
+	padding: 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.ntgchat-leadform-hint { font-size: 13px; color: var(--muted); margin: 0 0 2px; }
+.ntgchat-leadform input {
+	border: 1px solid var(--line); border-radius: var(--r-s); padding: 8px 10px; font: inherit; font-size: 14px;
+}
+.ntgchat-leadform input:focus { outline: none; border-color: var(--sky); }
+.ntgchat-leadform button {
+	background: var(--navy); color: #fff; border: none; border-radius: var(--r-s); padding: 9px 12px;
+	font-weight: 700; font-size: 14px; cursor: pointer; transition: background var(--fast);
+}
+.ntgchat-leadform button:hover { background: var(--navy-d); }
+.ntgchat-leadform button:disabled { opacity: .6; cursor: default; }
+.ntgchat-leadform-msg { font-size: 13px; margin: 0; }
+.ntgchat-leadform-msg.ok  { color: var(--ok); font-weight: 600; }
+.ntgchat-leadform-msg.err { color: #c0392b; font-weight: 600; }
+
+@media (max-width: 480px) {
+	.ntgchat { right: 12px; bottom: 12px; }
+	.ntgchat-panel { position: fixed; right: 10px; left: 10px; bottom: 82px; width: auto; }
 }
