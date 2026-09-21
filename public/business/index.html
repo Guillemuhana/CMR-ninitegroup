@@ -4,10 +4,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#071729">
+<meta name="theme-color" content="#3a8dc2">
 <title>Own the Trailer. Launch the Business. — NINI T-GROUP</title>
 <meta name="description" content="Factory-built restroom trailers plus the brand, website, CRM, lead generation and support to run your own rental operation. Three packages, from owner-operated to fully managed.">
-<link rel="icon" href="img/logo.png">
+<link rel="icon" href="img/logo-ninit.jpg">
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="Own the trailer. Launch the business. — NINI T-GROUP">
@@ -17,31 +17,23 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="business.css?v=3">
+<link rel="stylesheet" href="business.css?v=4">
 </head>
 <body id="top">
 
 <!-- ═══════════════ BARRA ═══════════════ -->
 <!--
-  El logo va en SVG y no como PNG: los dos archivos de logo que existen
-  (logo.png y logo-blanco.png) son SÓLO el ícono del trailer, sin el nombre,
-  y el blanco encima de la barra oscura casi no se veía. Este es el mismo
-  trazo que dibuja src/LogoNinit.jsx en el CRM, así que la marca es la misma
-  en los dos lados, escala sin pixelarse y el nombre se puede leer.
+  El logo es el mismo archivo que usa el CRM (public/logo-ninit.png) y la
+  barra lleva su mismo celeste (#3a8dc2, el theme-color de la marca), así el
+  logo se apoya sobre su propio fondo y no se ve el recuadro recortado.
+
+  Ojo: el archivo original se llama .png pero por dentro es un JPEG. Acá se
+  copia como .jpg para que el servidor mande el content-type correcto.
 -->
 <header class="bar">
 	<div class="bar-in">
 		<a class="brand" href="#top" aria-label="NINIT GROUP">
-			<svg class="brand-mark" viewBox="0 0 100 88" fill="none" aria-hidden="true">
-				<line x1="4" y1="82" x2="96" y2="82" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".35"/>
-				<g stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
-					<circle cx="22" cy="74" r="8"/>
-					<circle cx="72" cy="74" r="8"/>
-					<rect x="5" y="18" width="88" height="48" rx="7"/>
-					<path d="M24 18 Q24 7 36 7 Q48 7 48 18"/>
-				</g>
-				<line x1="80" y1="22" x2="80" y2="62" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
-			</svg>
+			<img class="brand-mark" src="img/logo-ninit.jpg" alt="" aria-hidden="true">
 			<span class="brand-txt">
 				<strong>NINIT GROUP</strong>
 				<small>Restroom trailer rentals</small>
@@ -1137,16 +1129,7 @@
 	<div class="wrap">
 		<div class="foot-top">
 			<a class="brand foot-brand" href="#top" aria-label="NINIT GROUP">
-				<svg class="brand-mark" viewBox="0 0 100 88" fill="none" aria-hidden="true">
-					<line x1="4" y1="82" x2="96" y2="82" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".35"/>
-					<g stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
-						<circle cx="22" cy="74" r="8"/>
-						<circle cx="72" cy="74" r="8"/>
-						<rect x="5" y="18" width="88" height="48" rx="7"/>
-						<path d="M24 18 Q24 7 36 7 Q48 7 48 18"/>
-					</g>
-					<line x1="80" y1="22" x2="80" y2="62" stroke="currentColor" stroke-width="1.5" opacity=".45"/>
-				</svg>
+				<img class="brand-mark" src="img/logo-ninit.jpg" alt="" aria-hidden="true">
 				<span class="brand-txt">
 					<strong>NINIT GROUP</strong>
 					<small>ninitgroup.com</small>
@@ -1189,6 +1172,6 @@
 	</div>
 </footer>
 
-<script src="business.js?v=3" defer></script>
+<script src="business.js?v=4" defer></script>
 </body>
 </html>

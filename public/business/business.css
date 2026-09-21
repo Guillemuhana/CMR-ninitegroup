@@ -24,6 +24,11 @@
 	--gold:    #b58d42;
 	--gold-l:  #d9b978;
 
+	/* Celeste del logo y de la barra: es el theme-color de la marca, el mismo
+	   que declara el CRM en index.html y en el manifest de la PWA. */
+	--sky:     #3a8dc2;
+	--sky-d:   #2f76a6;
+
 	/* Neutros */
 	--ink:     #131a24;
 	--ink-2:   #3b4757;
@@ -131,56 +136,64 @@ p:last-child { margin-bottom: 0; }
 .btn-block { width: 100%; }
 
 /* Barra superior -------------------------------------------- */
+/* Va en el celeste de la marca (#3a8dc2, el mismo theme-color que el CRM y
+   el mismo fondo del logo): así el recuadro del logo se funde con la barra
+   y se ve el trailer blanco flotando, en vez de un cuadradito pegoteado. */
 .bar {
 	position: sticky; top: 0; z-index: 90;
-	background: rgba(7,23,41,.86);
-	backdrop-filter: saturate(150%) blur(14px);
-	-webkit-backdrop-filter: saturate(150%) blur(14px);
-	border-bottom: 1px solid rgba(255,255,255,.1);
+	background: var(--sky);
+	border-bottom: 1px solid rgba(255,255,255,.16);
+	box-shadow: 0 2px 14px rgba(7,23,41,.18);
 }
 .bar-in {
 	max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter);
 	height: 66px; display: flex; align-items: center; gap: 26px;
 }
-/* Marca: ícono del trailer + nombre.
-   Los PNG de logo que existen son sólo el ícono, sin el nombre, así que el
-   trazo va en SVG (hereda currentColor) y el nombre en texto al lado. */
+/* Marca: el logo del CRM + el nombre al lado.
+   El archivo trae su propio fondo celeste; como la barra usa ese mismo
+   celeste, el recuadro no se nota. El radio suaviza el borde por si el
+   JPEG comprime el color un pelo distinto. */
 .brand {
 	display: flex; align-items: center; gap: 12px;
 	flex-shrink: 0; text-decoration: none; color: #fff;
 }
-.brand-mark { height: 42px; width: auto; color: var(--gold-l); flex-shrink: 0; }
+.brand-mark {
+	height: 46px; width: 46px; flex-shrink: 0;
+	border-radius: 11px; object-fit: cover; display: block;
+}
 .brand-txt { display: flex; flex-direction: column; line-height: 1.1; }
 .brand-txt strong {
-	font-size: 19px; font-weight: 800; letter-spacing: .04em;
+	font-size: 20px; font-weight: 800; letter-spacing: .04em;
 	color: #fff; white-space: nowrap;
 }
 .brand-txt small {
 	font-size: 10.5px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase;
-	color: rgba(255,255,255,.5); margin-top: 3px; white-space: nowrap;
+	color: rgba(255,255,255,.72); margin-top: 3px; white-space: nowrap;
 }
 /* En pantallas chicas el subtítulo sobra: gana el nombre. */
 @media (max-width: 420px) {
-	.brand-mark { height: 34px; }
-	.brand-txt strong { font-size: 16px; }
+	.brand-mark { height: 38px; width: 38px; border-radius: 9px; }
+	.brand-txt strong { font-size: 17px; }
 	.brand-txt small { display: none; }
 }
 
 .bar-nav { display: flex; gap: 26px; margin-left: auto; }
 .bar-nav a {
-	color: rgba(255,255,255,.76); text-decoration: none;
+	color: rgba(255,255,255,.88); text-decoration: none;
 	font-size: 14.5px; font-weight: 600; letter-spacing: .01em;
 	transition: color var(--fast);
 }
 .bar-nav a:hover { color: #fff; }
+/* Sobre el celeste el dorado pierde contraste: el botón va en blanco. */
 .bar-cta {
 	flex-shrink: 0;
 	padding: 10px 20px; font-size: 14.5px;
-	background: var(--gold); color: #1a1205;
+	background: #fff; color: var(--navy);
 	border-radius: var(--r-s); text-decoration: none; font-weight: 700;
-	transition: background var(--fast);
+	box-shadow: 0 2px 10px rgba(7,23,41,.18);
+	transition: background var(--fast), color var(--fast);
 }
-.bar-cta:hover { background: var(--gold-l); }
+.bar-cta:hover { background: var(--navy); color: #fff; }
 @media (max-width: 860px) {
 	.bar-nav { display: none; }
 	.bar-cta { margin-left: auto; }
@@ -610,9 +623,9 @@ textarea { resize: vertical; min-height: 92px; }
 
 .foot { background: var(--navy-x); color: rgba(255,255,255,.55); padding: 48px 0 40px; font-size: 14px; }
 .foot-top { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between; padding-bottom: 26px; border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 24px; }
-.foot-brand .brand-mark { height: 46px; color: var(--gold); }
-.foot-brand .brand-txt strong { font-size: 20px; }
-.foot-brand .brand-txt small { color: rgba(255,255,255,.42); text-transform: none; letter-spacing: .04em; font-size: 12px; }
+.foot-brand .brand-mark { height: 50px; width: 50px; border-radius: 12px; }
+.foot-brand .brand-txt strong { font-size: 21px; }
+.foot-brand .brand-txt small { color: rgba(255,255,255,.5); text-transform: none; letter-spacing: .04em; font-size: 12.5px; }
 .foot-links { display: flex; flex-wrap: wrap; gap: 22px; }
 .foot-links a { color: rgba(255,255,255,.66); text-decoration: none; font-weight: 600; transition: color var(--fast); }
 .foot-links a:hover { color: #fff; }
