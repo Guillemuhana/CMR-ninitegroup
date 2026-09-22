@@ -14,6 +14,7 @@ import assert from "node:assert/strict";
 import { bloqueCRM, _test } from "../api/_web/calificar.js";
 import { intentosIA, adaptarCuerpo } from "../api/_ia.js";
 import { extraerFotos } from "../api/_web/chat.js";
+import { MEDIA, mediaDe, tiposDe, modelosDisponibles } from "../api/_fotos.js";
 
 const { normalizar, entrada } = _test;
 
@@ -166,34 +167,68 @@ test("adaptarCuerpo: el resto del cuerpo pasa intacto", () => {
   assert.equal(cuerpo.messages.length, 1);
 });
 
-/* ── Fotos de las unidades en el chat ──────────────────────────────────────
+/* ── Fotos y videos de las unidades ────────────────────────────────────────
    Lo que más importa acá: que NINGUNA marca llegue nunca al visitante. Un
    "[FOTO:3-stall]" colgando en una burbuja de chat delata la maquinaria y
    hace que el asistente parezca roto. */
 
-test("extraerFotos: saca la marca y devuelve el modelo", () => {
+test("extraerFotos: saca la marca y resuelve el material", () => {
   const r = extraerFotos("Este es el 3-Stall, el que más se alquila. [FOTO:3-stall]");
-  assert.deepEqual(r.fotos, ["3-stall"]);
+  assert.equal(r.fotos.length, 1);
+  assert.equal(r.fotos[0].slug, "3-stall");
+  assert.equal(r.fotos[0].tipo, "exterior");
+  assert.ok(r.fotos[0].urls.length > 0);
   assert.equal(r.texto, "Este es el 3-Stall, el que más se alquila.");
   assert.ok(!r.texto.includes("FOTO"));
 });
 
+test("extraerFotos: el tipo pedido se respeta", () => {
+  conEnv({ MEDIA_REMOTA: "1" }, () => {
+    assert.equal(extraerFotos("[FOTO:3-stall:interior]").fotos[0].tipo, "interior");
+    assert.equal(extraerFotos("[FOTO:2-stall:video]").fotos[0].tipo, "video");
+    assert.equal(extraerFotos("[FOTO:3-stall:plano]").fotos[0].tipo, "plano");
+  });
+});
+
+test("extraerFotos: sinónimos del tipo, que es lo que el modelo escribe de verdad", () => {
+  conEnv({ MEDIA_REMOTA: "1" }, () => {
+    assert.equal(extraerFotos("[FOTO:3-stall:inside]").fotos[0].tipo, "interior");
+    assert.equal(extraerFotos("[FOTO:3-stall:adentro]").fotos[0].tipo, "interior");
+    assert.equal(extraerFotos("[FOTO:3-stall:colores]").fotos[0].tipo, "paleta");
+  });
+});
+
+test("extraerFotos: un tipo que ese modelo no tiene cae a exterior, no a nada", () => {
+  // El 4-Stall no tiene video. Mostrar la unidad y que el texto lo aclare es
+  // mucho mejor que contestar con las manos vacías.
+  const r = extraerFotos("[FOTO:4-stall:video]");
+  assert.equal(r.fotos[0].tipo, "exterior");
+  assert.ok(r.fotos[0].urls.length > 0);
+});
+
 test("extraerFotos: una marca mal escrita igual se entiende", () => {
-  assert.deepEqual(extraerFotos("mirá [FOTO: 3 stall]").fotos, ["3-stall"]);
-  assert.deepEqual(extraerFotos("[foto:ADA]").fotos, ["ada-2"]);
-  assert.deepEqual(extraerFotos("[FOTO:ada+2]").fotos, ["ada-2"]);
-  assert.deepEqual(extraerFotos("[FOTO:4stall]").fotos, ["4-stall"]);
+  assert.equal(extraerFotos("mirá [FOTO: 3 stall]").fotos[0].slug, "3-stall");
+  assert.equal(extraerFotos("[foto:ADA]").fotos[0].slug, "ada-2");
+  assert.equal(extraerFotos("[FOTO:4stall]").fotos[0].slug, "4-stall");
 });
 
 test("extraerFotos: un modelo que no existe no rompe NI deja la marca a la vista", () => {
-  const r = extraerFotos("Tenemos varias opciones. [FOTO:7-stall]");
+  const r = extraerFotos("Tenemos varias opciones. [FOTO:9-stall]");
   assert.deepEqual(r.fotos, []);
   assert.equal(r.texto, "Tenemos varias opciones.");
 });
 
-test("extraerFotos: no repite el mismo modelo y corta en dos", () => {
+test("extraerFotos: no repite modelo+tipo y corta en dos bloques", () => {
   const r = extraerFotos("a [FOTO:2-stall] b [FOTO:2-stall] c [FOTO:3-stall] d [FOTO:4-stall]");
-  assert.deepEqual(r.fotos, ["2-stall", "3-stall"]);
+  assert.equal(r.fotos.length, 2);
+  assert.deepEqual(r.fotos.map((f) => f.slug), ["2-stall", "3-stall"]);
+});
+
+test("extraerFotos: el mismo modelo con dos tipos distintos SÍ puede ir junto", () => {
+  conEnv({ MEDIA_REMOTA: "1" }, () => {
+    const r = extraerFotos("[FOTO:3-stall:exterior] [FOTO:3-stall:interior]");
+    assert.deepEqual(r.fotos.map((f) => f.tipo), ["exterior", "interior"]);
+  });
 });
 
 test("extraerFotos: sin marcas devuelve el texto igual", () => {
@@ -202,6 +237,61 @@ test("extraerFotos: sin marcas devuelve el texto igual", () => {
   assert.equal(r.texto, "El financiamiento lo resuelve Acorn Finance.");
   assert.deepEqual(extraerFotos("").fotos, []);
   assert.equal(extraerFotos(null).texto, "");
+});
+
+test("mediaDe: nunca devuelve más de lo que entra en un chat", () => {
+  // El 4-Stall tiene seis fotos de interior. Seis seguidas no es respuesta.
+  assert.ok(mediaDe("4-stall", "interior").urls.length <= 3);
+  assert.equal(mediaDe("no-existe", "exterior"), null);
+});
+
+test("el catálogo no tiene URLs inventadas", () => {
+  conEnv({ MEDIA_REMOTA: "1" }, () => {
+    for (const slug of Object.keys(MEDIA)) {
+      assert.ok(tiposDe(slug).includes("exterior"), slug + " tiene que tener exterior");
+      for (const tipo of tiposDe(slug)) {
+        for (const url of MEDIA[slug][tipo]) {
+          // O es un archivo de la propia landing, o es un link oficial.
+          assert.match(url, /^(img\/|https:\/\/ninitgroup\.com\/wp-content\/uploads\/)/, slug + "/" + tipo);
+        }
+      }
+    }
+  });
+});
+
+/* ── El interruptor del material remoto ────────────────────────────────────
+   ninitgroup.com se queda sin cuota de transferencia y devuelve 509: el
+   22/09/2026 los 37 archivos estaban caídos. Una landing pública no puede
+   mostrarle un recuadro roto a un prospecto, así que por defecto sólo se
+   sirve lo que está en el mismo hosting que la página. */
+
+test("con el material remoto apagado, sólo se sirven archivos de la landing", () => {
+  conEnv({ MEDIA_REMOTA: undefined }, () => {
+    const r = extraerFotos("[FOTO:3-stall]");
+    assert.equal(r.fotos.length, 1);
+    assert.ok(r.fotos[0].urls.every((u) => u.startsWith("img/")),
+      "nada que dependa de WordPress");
+  });
+});
+
+test("apagado, pedir un video devuelve el exterior y NUNCA una lista vacía", () => {
+  conEnv({ MEDIA_REMOTA: undefined }, () => {
+    const r = extraerFotos("[FOTO:3-stall:video]");
+    assert.equal(r.fotos[0].tipo, "exterior");
+    assert.ok(r.fotos[0].urls.length > 0);
+  });
+});
+
+test("apagado, la IA no ve modelos que no puede mostrar", () => {
+  conEnv({ MEDIA_REMOTA: undefined }, () => {
+    // El 6-Stall sólo existe en WordPress: si no se puede servir, no se ofrece.
+    assert.ok(!modelosDisponibles().includes("6-stall"));
+    assert.deepEqual(tiposDe("3-stall"), ["exterior"]);
+  });
+  conEnv({ MEDIA_REMOTA: "1" }, () => {
+    assert.ok(modelosDisponibles().includes("6-stall"));
+    assert.ok(tiposDe("3-stall").includes("video"));
+  });
 });
 
 test("adaptarCuerpo: a Groq se le sigue mandando max_tokens y el freno de razonamiento", () => {

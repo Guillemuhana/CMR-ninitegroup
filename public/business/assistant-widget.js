@@ -488,42 +488,78 @@
 	   se dibuja nada: mejor una respuesta sin foto que un recuadro
 	   roto en la cara del prospecto.
 	   ────────────────────────────────────────────────────────── */
-	var MODELOS = {
-		"2-stall": { archivo: "img/2-stall.jpg", nombre: "2-Stall" },
-		"3-stall": { archivo: "img/3-stall.jpg", nombre: "3-Stall" },
-		"4-stall": { archivo: "img/4-stall.jpg", nombre: "4-Stall" },
-		"ada-2":   { archivo: "img/ada-2.png",   nombre: "ADA + 2" },
+	var TIPO_TXT = ES ? {
+		exterior: "Exterior", interior: "Interior", plano: "Plano",
+		video: "Video", paleta: "Paleta de colores",
+	} : {
+		exterior: "Exterior", interior: "Inside", plano: "Floor plan",
+		video: "Video walkthrough", paleta: "Colour palette",
 	};
 
 	var PIE_FOTO = ES
 		? "Unidad de fábrica. La terminación final puede variar."
 		: "Factory-built unit. Final finish may vary.";
 
-	function agregarFotos(slugs) {
-		if (!slugs || !slugs.length) return;
+	var esVideo = function (u) { return /\.(mp4|webm|mov)(\?.*)?$/i.test(String(u || "")); };
 
-		slugs.forEach(function (slug) {
-			var modelo = MODELOS[slug];
-			if (!modelo) return;
+	/* El catálogo mezcla links absolutos (ninitgroup.com) con archivos de la
+	   propia landing ("img/3-stall.jpg"). Los relativos NO se pueden dejar
+	   tal cual: el navegador los resolvería contra la página, y en /es/
+	   buscaría /es/img/3-stall.jpg, que no existe. Se resuelven contra la
+	   ubicación del script, igual que el logo. */
+	var urlMedia = function (u) {
+		var s = String(u || "");
+		return /^(https?:)?\/\//i.test(s) ? s : RUTA_BASE + s.replace(/^\.?\//, "");
+	};
+
+	function agregarFotos(medios) {
+		if (!medios || !medios.length) return;
+
+		medios.forEach(function (media) {
+			if (!media || !media.urls || !media.urls.length) return;
 
 			var card = document.createElement("figure");
 			card.className = "ntgchat-foto";
 
-			var img = document.createElement("img");
-			img.src = RUTA_BASE + modelo.archivo;
-			img.alt = modelo.nombre;
-			img.loading = "lazy";
-			// Si la imagen no carga —ruta mal, red cortada— la tarjeta entera
-			// se borra sola. Un recuadro roto en un chat de ventas es peor
-			// que no haber mandado nada.
-			img.addEventListener("error", function () { card.remove(); });
+			var galeria = document.createElement("div");
+			galeria.className = "ntgchat-foto-set" + (media.urls.length > 1 ? " multi" : "");
+
+			var vivos = 0;
+			media.urls.forEach(function (url) {
+				var el;
+				if (esVideo(url)) {
+					el = document.createElement("video");
+					el.src = urlMedia(url);
+					el.controls = true;
+					el.preload = "metadata";
+					el.playsInline = true;
+				} else {
+					el = document.createElement("img");
+					el.src = urlMedia(url);
+					el.alt = media.nombre || "";
+					el.loading = "lazy";
+				}
+				vivos++;
+				// Si un archivo no carga se saca ESE, no la tarjeta entera: un
+				// recuadro roto en un chat de ventas es peor que una foto
+				// menos. Cuando no queda ninguno, se va la tarjeta completa.
+				el.addEventListener("error", function () {
+					el.remove();
+					if (--vivos <= 0) card.remove();
+				});
+				galeria.appendChild(el);
+			});
 
 			var pie = document.createElement("figcaption");
-			pie.innerHTML = '<strong></strong><span></span>';
-			pie.querySelector("strong").textContent = modelo.nombre;
-			pie.querySelector("span").textContent = PIE_FOTO;
+			var titulo = document.createElement("strong");
+			titulo.textContent = (media.nombre || "") +
+				(TIPO_TXT[media.tipo] ? " · " + TIPO_TXT[media.tipo] : "");
+			var nota = document.createElement("span");
+			nota.textContent = PIE_FOTO;
+			pie.appendChild(titulo);
+			pie.appendChild(nota);
 
-			card.appendChild(img);
+			card.appendChild(galeria);
 			card.appendChild(pie);
 			elBody.appendChild(card);
 		});

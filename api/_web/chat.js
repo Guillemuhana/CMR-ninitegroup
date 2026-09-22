@@ -20,27 +20,28 @@
 import { vaOtroModelo } from "../_groq.js";
 import { intentosIA, adaptarCuerpo } from "../_ia.js";
 import { FICHA_NTG, FICHA_BUSINESS } from "../_ntg.js";
+import { MEDIA, mediaDe, tiposDe, modelosDisponibles } from "../_fotos.js";
 
 // Tag interno para pedirle al widget que muestre el mini-formulario de
 // contacto. Nunca debe llegar al visitante — se lee y se recorta acá mismo,
 // el mismo criterio que ya usa el bot de WhatsApp con [ENVIAR_PRODUCTO].
 const TAG_FORM = "[LEAD_FORM]";
 
-// Fotos de las unidades.
+// Fotos y videos de las unidades.
 //
 // Mismo mecanismo que TAG_FORM: el modelo escribe una marca, el servidor la
 // lee, la valida y la recorta antes de que el texto llegue al visitante.
 //
-// Acá SÓLO se valida el nombre del modelo. El archivo, la ruta y el texto que
-// va debajo de la foto los resuelve el widget: las imágenes son de la landing
-// y viven al lado de ella, así que el servidor no tiene por qué saber cómo se
-// llama un .jpg en otro proyecto. Además la landing existe en / y en /es/, y
-// la ruta correcta sólo la sabe el navegador.
+// El material sale de api/_fotos.js: los links oficiales de ninitgroup.com,
+// los MISMOS que el vendedor manda desde el botón "Fotos" del CRM. Que la web
+// pública y el vendedor muestren lo mismo no es un detalle — el cliente ve
+// las dos cosas y cualquier diferencia se nota.
 //
-// Tampoco va el precio: ya está en la ficha (FICHA_NTG) y el asistente lo dice
-// en el texto. Ponerlo también acá crearía un CUARTO lugar donde cambiarlo
-// cuando Nicolás toca un precio, y tarde o temprano uno queda viejo.
-const MODELOS_CON_FOTO = ["2-stall", "3-stall", "4-stall", "ada-2"];
+// Lo que NO va en la tarjeta es el precio: ya está en la ficha (FICHA_NTG) y
+// el asistente lo dice en el texto. Ponerlo también acá crearía un CUARTO
+// lugar donde cambiarlo cuando Nicolás toca un precio, y tarde o temprano uno
+// queda viejo y el cliente ve dos precios distintos en la misma pantalla.
+const MODELOS_CON_FOTO = Object.keys(MEDIA);
 
 // Lo que los modelos escriben cuando no siguen la instrucción al pie de la
 // letra. Más barato normalizar que perder la foto.
@@ -51,25 +52,48 @@ const ALIAS_MODELO = {
   "ada": "ada-2", "ada+2": "ada-2", "ada 2": "ada-2", "ada-plus-2": "ada-2", "ada2": "ada-2",
 };
 
+function slugDeModelo(crudo) {
+  const clave = String(crudo).trim().toLowerCase().replace(/[_\s]+/g, " ");
+  const guiones = clave.replace(/\s+/g, "-");
+  if (MODELOS_CON_FOTO.includes(guiones)) return guiones;
+  return ALIAS_MODELO[clave] || ALIAS_MODELO[clave.replace(/\s+/g, "")] || null;
+}
+
 /**
- * Saca las marcas [FOTO:x] del texto y devuelve qué modelos pidió mostrar.
- * Devuelve el texto ya limpio: ninguna marca puede llegar al visitante,
- * incluso si el modelo escribió una que no existe.
+ * Saca las marcas [FOTO:modelo] y [FOTO:modelo:tipo] del texto y devuelve qué
+ * material hay que mostrar, ya resuelto a URLs.
+ *
+ * El texto vuelve SIEMPRE limpio, incluso si el modelo escribió una marca que
+ * no existe: una marca colgando en una burbuja delata la maquinaria y hace
+ * que el asistente parezca roto.
  */
 export function extraerFotos(texto) {
-  const fotos = [];
+  const vistos = new Set();
+  const medios = [];
+
   const limpio = String(texto || "").replace(/\[\s*FOTO\s*:?\s*([^\]]*)\]/gi, (_, crudo) => {
-    const clave = String(crudo).trim().toLowerCase().replace(/[_\s]+/g, " ");
-    const slug = MODELOS_CON_FOTO.includes(clave.replace(/\s+/g, "-"))
-      ? clave.replace(/\s+/g, "-")
-      : ALIAS_MODELO[clave] || ALIAS_MODELO[clave.replace(/\s+/g, "")] || null;
-    if (slug && !fotos.includes(slug)) fotos.push(slug);
+    const partes = String(crudo).split(":");
+    const slug = slugDeModelo(partes[0]);
+    if (!slug) return "";
+
+    const item = mediaDe(slug, partes[1] || "exterior");
+    if (!item) return "";
+
+    // Una misma combinación modelo+tipo no se manda dos veces en la misma
+    // respuesta, aunque el modelo escriba la marca repetida.
+    const clave = `${item.slug}:${item.tipo}`;
+    if (vistos.has(clave)) return "";
+    vistos.add(clave);
+    medios.push(item);
     return "";
   });
 
-  // Tope de dos: tres fotos seguidas en una burbuja de chat es un catálogo,
-  // y un catálogo no conversa. Si quiere ver más, las pide.
-  return { texto: limpio.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim(), fotos: fotos.slice(0, 2) };
+  // Tope de dos bloques: más que eso deja de ser una conversación y pasa a
+  // ser una descarga de catálogo.
+  return {
+    texto: limpio.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim(),
+    fotos: medios.slice(0, 2),
+  };
 }
 
 function detectarIdioma(mensajesUsuario) {
@@ -109,19 +133,26 @@ STYLE
 - Never repeat something you already told them in this conversation.
 - No markdown, no bullet lists, no headers — this renders as plain chat bubbles.
 
-SHOWING A PHOTO OF A TRAILER
-When the visitor asks about a specific unit — what it looks like, how big it is, what's inside, how it compares to another one, or simply names it — add the tag [FOTO:slug] at the very end of your reply, using EXACTLY one of these slugs:
-- 2-stall   (2-Stall, two private stalls)
-- 3-stall   (3-Stall, three private stalls)
-- 4-stall   (4-Stall, four private stalls)
-- ada-2     (ADA + 2: one accessible stall plus two standard ones)
+SHOWING PHOTOS AND VIDEOS OF A TRAILER
+You can show the visitor real photos and video walkthroughs. Add the tag [FOTO:model:type] at the very end of your reply. These are the only models and the only types each one actually has:
+${modelosDisponibles().map((slug) => `- ${slug} (${MEDIA[slug].nombre}) → ${tiposDe(slug).join(", ")}`).join("\n")}
+
+If you leave the type out, [FOTO:3-stall] shows the exterior.
+
+Pick the type from what they asked:
+- "what does it look like", "show me the 3-Stall", or they just name a unit → exterior
+- "what's it like inside", "how are the bathrooms" → interior
+- "how big is it", "measurements", "layout" → plano
+- "do you have a video", "can I see it in motion" → video
+- "what colours", "what finish" → paleta
 
 Rules:
-- Only when a specific unit is actually on the table. A general "what do you sell" gets an answer, not a photo.
-- At most TWO tags in one reply, and only when they are genuinely comparing two units. One is almost always the right number.
-- Do not send the same photo twice in a conversation unless they ask to see it again.
-- Write your reply as if the photo were already there: "here it is" or "this is the 3-Stall", never "I can't show you photos" and never a URL. You cannot link to images — the tag is the only way, and the widget turns it into a real picture.
-- Never mention the tag, never explain it, never write it in the middle of a sentence. It goes last, after the text.
+- Only when a specific unit is on the table. A general "what do you sell" gets an answer, not a gallery.
+- At most TWO tags in one reply, and only when they are genuinely comparing two units or you are showing outside and inside together. One is usually right.
+- Only ask for a type the model actually has in the list above. The 4-Stall has no video; the ADA + 2 has no floor plan. If they ask for something that is not there, say so plainly and offer what you do have.
+- Do not repeat material they were already shown unless they ask for it again.
+- Write your reply as if the photo were already attached: "here it is", "this is the 3-Stall inside". NEVER say you cannot show photos, and NEVER paste a URL — you cannot write links, the tag is the only way and the page turns it into a real picture or video player.
+- Never mention the tag, never explain it, never put it mid-sentence. It goes last, after the text.
 
 WHEN TO OFFER THE CONTACT FORM
 End your reply with the exact tag ${TAG_FORM} on its own, as the very last thing, when ANY of these is true:
@@ -225,7 +256,9 @@ export default async function handler(req, res) {
   // 3-Stall tres veces y parece que no está escuchando.
   const fotosYaVistas = [...new Set(
     entrada.flatMap((m) => (Array.isArray(m.fotos) ? m.fotos : []))
-  )].filter((s) => MODELOS_CON_FOTO.includes(s));
+      .map((f) => (f && f.slug ? `${f.slug} ${f.tipo || "exterior"}` : null))
+      .filter(Boolean)
+  )];
 
   // Señales de navegación que manda el widget (secciones que miró, si usó la
   // calculadora y con qué números, cuánto hace que está, si ya había entrado

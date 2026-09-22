@@ -1042,19 +1042,40 @@ textarea { resize: vertical; min-height: 92px; }
    Se alinea a la izquierda como una burbuja del asistente y comparte su
    ancho: es parte de lo que "dijo", no un adjunto aparte. */
 .ntgchat-foto {
+	/* OJO: `width`, NO `max-width`.
+	   El cuerpo del chat es un flex en columna y la tarjeta va con
+	   align-self:flex-start, así que con max-width su ancho lo decide el
+	   contenido. Y el contenido es una imagen que todavía no cargó: mide
+	   cero. Resultado, la tarjeta nacía colapsada y la foto no aparecía
+	   nunca, aunque el servidor la hubiera mandado bien. Con un ancho
+	   explícito se resuelve antes de que exista la imagen. */
 	align-self: flex-start;
-	max-width: 85%; margin: 0;
+	width: 85%; max-width: 300px; margin: 0;
 	background: #fff; border: 1px solid var(--line);
 	border-radius: 16px; border-bottom-left-radius: 5px;
 	overflow: hidden; box-shadow: var(--sh-1);
 	animation: ntgchat-burbuja .3s var(--ease);
 }
-.ntgchat-foto img {
+.ntgchat-foto-set { display: block; }
+.ntgchat-foto img,
+.ntgchat-foto video {
 	display: block; width: 100%; height: auto;
-	/* Relación fija: las cuatro fotos no vienen del mismo recorte y sin esto
+	/* Relación fija: las fotos no vienen todas del mismo recorte y sin esto
 	   el chat pega un salto de alto cada vez que carga una. */
 	aspect-ratio: 4 / 3; object-fit: cover;
 	background: var(--line-2);
+}
+/* Varias tomas del mismo modelo: se arrastran de costado en vez de apilarse
+   y empujar la conversación diez pantallas para abajo. */
+.ntgchat-foto-set.multi {
+	display: flex; gap: 3px;
+	overflow-x: auto; scroll-snap-type: x mandatory;
+	scrollbar-width: none;
+}
+.ntgchat-foto-set.multi::-webkit-scrollbar { display: none; }
+.ntgchat-foto-set.multi img,
+.ntgchat-foto-set.multi video {
+	flex: 0 0 100%; scroll-snap-align: start;
 }
 .ntgchat-foto figcaption {
 	padding: 9px 13px 11px;
