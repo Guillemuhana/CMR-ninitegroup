@@ -26,6 +26,52 @@ import { FICHA_NTG, FICHA_BUSINESS } from "../_ntg.js";
 // el mismo criterio que ya usa el bot de WhatsApp con [ENVIAR_PRODUCTO].
 const TAG_FORM = "[LEAD_FORM]";
 
+// Fotos de las unidades.
+//
+// Mismo mecanismo que TAG_FORM: el modelo escribe una marca, el servidor la
+// lee, la valida y la recorta antes de que el texto llegue al visitante.
+//
+// Acá SÓLO se valida el nombre del modelo. El archivo, la ruta y el texto que
+// va debajo de la foto los resuelve el widget: las imágenes son de la landing
+// y viven al lado de ella, así que el servidor no tiene por qué saber cómo se
+// llama un .jpg en otro proyecto. Además la landing existe en / y en /es/, y
+// la ruta correcta sólo la sabe el navegador.
+//
+// Tampoco va el precio: ya está en la ficha (FICHA_NTG) y el asistente lo dice
+// en el texto. Ponerlo también acá crearía un CUARTO lugar donde cambiarlo
+// cuando Nicolás toca un precio, y tarde o temprano uno queda viejo.
+const MODELOS_CON_FOTO = ["2-stall", "3-stall", "4-stall", "ada-2"];
+
+// Lo que los modelos escriben cuando no siguen la instrucción al pie de la
+// letra. Más barato normalizar que perder la foto.
+const ALIAS_MODELO = {
+  "2stall": "2-stall", "2 stall": "2-stall", "2-stalls": "2-stall", "dos": "2-stall",
+  "3stall": "3-stall", "3 stall": "3-stall", "3-stalls": "3-stall", "tres": "3-stall",
+  "4stall": "4-stall", "4 stall": "4-stall", "4-stalls": "4-stall", "cuatro": "4-stall",
+  "ada": "ada-2", "ada+2": "ada-2", "ada 2": "ada-2", "ada-plus-2": "ada-2", "ada2": "ada-2",
+};
+
+/**
+ * Saca las marcas [FOTO:x] del texto y devuelve qué modelos pidió mostrar.
+ * Devuelve el texto ya limpio: ninguna marca puede llegar al visitante,
+ * incluso si el modelo escribió una que no existe.
+ */
+export function extraerFotos(texto) {
+  const fotos = [];
+  const limpio = String(texto || "").replace(/\[\s*FOTO\s*:?\s*([^\]]*)\]/gi, (_, crudo) => {
+    const clave = String(crudo).trim().toLowerCase().replace(/[_\s]+/g, " ");
+    const slug = MODELOS_CON_FOTO.includes(clave.replace(/\s+/g, "-"))
+      ? clave.replace(/\s+/g, "-")
+      : ALIAS_MODELO[clave] || ALIAS_MODELO[clave.replace(/\s+/g, "")] || null;
+    if (slug && !fotos.includes(slug)) fotos.push(slug);
+    return "";
+  });
+
+  // Tope de dos: tres fotos seguidas en una burbuja de chat es un catálogo,
+  // y un catálogo no conversa. Si quiere ver más, las pide.
+  return { texto: limpio.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim(), fotos: fotos.slice(0, 2) };
+}
+
 function detectarIdioma(mensajesUsuario) {
   const texto = mensajesUsuario.join(" ").toLowerCase();
   if (!texto.trim()) return "en";
@@ -62,6 +108,20 @@ STYLE
 - Answer exactly what was asked first, then guide with at most one question or one next step.
 - Never repeat something you already told them in this conversation.
 - No markdown, no bullet lists, no headers — this renders as plain chat bubbles.
+
+SHOWING A PHOTO OF A TRAILER
+When the visitor asks about a specific unit — what it looks like, how big it is, what's inside, how it compares to another one, or simply names it — add the tag [FOTO:slug] at the very end of your reply, using EXACTLY one of these slugs:
+- 2-stall   (2-Stall, two private stalls)
+- 3-stall   (3-Stall, three private stalls)
+- 4-stall   (4-Stall, four private stalls)
+- ada-2     (ADA + 2: one accessible stall plus two standard ones)
+
+Rules:
+- Only when a specific unit is actually on the table. A general "what do you sell" gets an answer, not a photo.
+- At most TWO tags in one reply, and only when they are genuinely comparing two units. One is almost always the right number.
+- Do not send the same photo twice in a conversation unless they ask to see it again.
+- Write your reply as if the photo were already there: "here it is" or "this is the 3-Stall", never "I can't show you photos" and never a URL. You cannot link to images — the tag is the only way, and the widget turns it into a real picture.
+- Never mention the tag, never explain it, never write it in the middle of a sentence. It goes last, after the text.
 
 WHEN TO OFFER THE CONTACT FORM
 End your reply with the exact tag ${TAG_FORM} on its own, as the very last thing, when ANY of these is true:
@@ -160,6 +220,13 @@ export default async function handler(req, res) {
   const idioma = detectarIdioma(historial.filter((m) => m.role === "user").map((m) => m.content));
   const yaOfrecioFormulario = entrada.some((m) => m.role === "assistant" && m.formShown);
 
+  // Qué fotos ya vio. El widget las devuelve con cada mensaje del asistente,
+  // igual que formShown: sin esto, el modelo le manda la misma foto del
+  // 3-Stall tres veces y parece que no está escuchando.
+  const fotosYaVistas = [...new Set(
+    entrada.flatMap((m) => (Array.isArray(m.fotos) ? m.fotos : []))
+  )].filter((s) => MODELOS_CON_FOTO.includes(s));
+
   // Señales de navegación que manda el widget (secciones que miró, si usó la
   // calculadora y con qué números, cuánto hace que está, si ya había entrado
   // antes). No es algo que el visitante nos haya dicho: es contexto para que
@@ -172,6 +239,9 @@ export default async function handler(req, res) {
     ...(contexto ? [{ role: "system", content: contextoPrompt(contexto) }] : []),
     ...(yaOfrecioFormulario
       ? [{ role: "system", content: "The contact form was already offered earlier in this conversation. Do not add the tag again unless the visitor explicitly asks to talk to someone or for the form again." }]
+      : []),
+    ...(fotosYaVistas.length
+      ? [{ role: "system", content: `The visitor has already been shown photos of: ${fotosYaVistas.join(", ")}. Do not send those again unless they ask to see them once more.` }]
       : []),
     ...historial.map((m) => ({ role: m.role, content: m.content })),
   ];
@@ -195,7 +265,9 @@ export default async function handler(req, res) {
         let contenido = (data?.choices?.[0]?.message?.content || "").trim();
         const mostrarFormulario = contenido.includes(TAG_FORM);
         if (mostrarFormulario) contenido = contenido.replace(TAG_FORM, "").trim();
-        return res.status(200).json({ reply: contenido, mostrarFormulario });
+
+        const { texto, fotos } = extraerFotos(contenido);
+        return res.status(200).json({ reply: texto, mostrarFormulario, fotos });
       }
       ultimoError = data?.error?.message || `${proveedor} devolvió ${r.status}`;
       if (!vaOtroModelo(r.status, ultimoError)) quemados.add(proveedor);

@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 
 import { bloqueCRM, _test } from "../api/_web/calificar.js";
 import { intentosIA, adaptarCuerpo } from "../api/_ia.js";
+import { extraerFotos } from "../api/_web/chat.js";
 
 const { normalizar, entrada } = _test;
 
@@ -163,6 +164,44 @@ test("adaptarCuerpo: el resto del cuerpo pasa intacto", () => {
   const cuerpo = adaptarCuerpo("openai", { model: "m", max_tokens: 700, response_format: rf, messages: [{ role: "user", content: "x" }] });
   assert.deepEqual(cuerpo.response_format, rf);
   assert.equal(cuerpo.messages.length, 1);
+});
+
+/* ── Fotos de las unidades en el chat ──────────────────────────────────────
+   Lo que más importa acá: que NINGUNA marca llegue nunca al visitante. Un
+   "[FOTO:3-stall]" colgando en una burbuja de chat delata la maquinaria y
+   hace que el asistente parezca roto. */
+
+test("extraerFotos: saca la marca y devuelve el modelo", () => {
+  const r = extraerFotos("Este es el 3-Stall, el que más se alquila. [FOTO:3-stall]");
+  assert.deepEqual(r.fotos, ["3-stall"]);
+  assert.equal(r.texto, "Este es el 3-Stall, el que más se alquila.");
+  assert.ok(!r.texto.includes("FOTO"));
+});
+
+test("extraerFotos: una marca mal escrita igual se entiende", () => {
+  assert.deepEqual(extraerFotos("mirá [FOTO: 3 stall]").fotos, ["3-stall"]);
+  assert.deepEqual(extraerFotos("[foto:ADA]").fotos, ["ada-2"]);
+  assert.deepEqual(extraerFotos("[FOTO:ada+2]").fotos, ["ada-2"]);
+  assert.deepEqual(extraerFotos("[FOTO:4stall]").fotos, ["4-stall"]);
+});
+
+test("extraerFotos: un modelo que no existe no rompe NI deja la marca a la vista", () => {
+  const r = extraerFotos("Tenemos varias opciones. [FOTO:7-stall]");
+  assert.deepEqual(r.fotos, []);
+  assert.equal(r.texto, "Tenemos varias opciones.");
+});
+
+test("extraerFotos: no repite el mismo modelo y corta en dos", () => {
+  const r = extraerFotos("a [FOTO:2-stall] b [FOTO:2-stall] c [FOTO:3-stall] d [FOTO:4-stall]");
+  assert.deepEqual(r.fotos, ["2-stall", "3-stall"]);
+});
+
+test("extraerFotos: sin marcas devuelve el texto igual", () => {
+  const r = extraerFotos("El financiamiento lo resuelve Acorn Finance.");
+  assert.deepEqual(r.fotos, []);
+  assert.equal(r.texto, "El financiamiento lo resuelve Acorn Finance.");
+  assert.deepEqual(extraerFotos("").fotos, []);
+  assert.equal(extraerFotos(null).texto, "");
 });
 
 test("adaptarCuerpo: a Groq se le sigue mandando max_tokens y el freno de razonamiento", () => {

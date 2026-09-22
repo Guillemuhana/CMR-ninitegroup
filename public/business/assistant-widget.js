@@ -25,8 +25,9 @@
 
 	// El avatar sale del mismo logo que la barra. La ruta se deduce de dónde
 	// está el propio script, así funciona igual en / y en /es/.
-	var RUTA_LOGO = (document.currentScript && document.currentScript.src || "")
-		.replace(/assistant-widget\.js.*$/, "") + "img/logo-ninit.jpg";
+	var RUTA_BASE = (document.currentScript && document.currentScript.src || "")
+		.replace(/assistant-widget\.js.*$/, "");
+	var RUTA_LOGO = RUTA_BASE + "img/logo-ninit.jpg";
 
 	/* ──────────────────────────────────────────────────────────
 	   Textos del widget, por idioma.
@@ -394,7 +395,7 @@
 				// sessionStorage pero nadie lo volvía a dibujar. Al recargar la
 				// página y reabrir el chat, el panel quedaba en blanco — ni el
 				// saludo, porque historial.length ya no era 0.
-				historial.forEach(function (m) { agregarMensaje(m.role, m.content, false); });
+				historial.forEach(function (m) { agregarMensaje(m.role, m.content, false); agregarFotos(m.fotos); });
 			} else {
 				mostrarBienvenida();
 				mostrarFichas();
@@ -473,6 +474,62 @@
 		return burbuja;
 	}
 
+	/* ──────────────────────────────────────────────────────────
+	   FOTOS DE LAS UNIDADES
+
+	   Cuando el visitante pregunta por una unidad, el servidor
+	   devuelve qué modelo mostrar (ver el tag [FOTO:...] en
+	   api/_web/chat.js). El archivo lo resuelve ACÁ, no allá: las
+	   imágenes son de la landing y viven al lado de este script, y
+	   la página existe en / y en /es/, así que la ruta correcta sólo
+	   la sabe el navegador. Se arma con la misma base que el logo.
+
+	   Si el servidor manda un modelo que no está en esta tabla, no
+	   se dibuja nada: mejor una respuesta sin foto que un recuadro
+	   roto en la cara del prospecto.
+	   ────────────────────────────────────────────────────────── */
+	var MODELOS = {
+		"2-stall": { archivo: "img/2-stall.jpg", nombre: "2-Stall" },
+		"3-stall": { archivo: "img/3-stall.jpg", nombre: "3-Stall" },
+		"4-stall": { archivo: "img/4-stall.jpg", nombre: "4-Stall" },
+		"ada-2":   { archivo: "img/ada-2.png",   nombre: "ADA + 2" },
+	};
+
+	var PIE_FOTO = ES
+		? "Unidad de fábrica. La terminación final puede variar."
+		: "Factory-built unit. Final finish may vary.";
+
+	function agregarFotos(slugs) {
+		if (!slugs || !slugs.length) return;
+
+		slugs.forEach(function (slug) {
+			var modelo = MODELOS[slug];
+			if (!modelo) return;
+
+			var card = document.createElement("figure");
+			card.className = "ntgchat-foto";
+
+			var img = document.createElement("img");
+			img.src = RUTA_BASE + modelo.archivo;
+			img.alt = modelo.nombre;
+			img.loading = "lazy";
+			// Si la imagen no carga —ruta mal, red cortada— la tarjeta entera
+			// se borra sola. Un recuadro roto en un chat de ventas es peor
+			// que no haber mandado nada.
+			img.addEventListener("error", function () { card.remove(); });
+
+			var pie = document.createElement("figcaption");
+			pie.innerHTML = '<strong></strong><span></span>';
+			pie.querySelector("strong").textContent = modelo.nombre;
+			pie.querySelector("span").textContent = PIE_FOTO;
+
+			card.appendChild(img);
+			card.appendChild(pie);
+			elBody.appendChild(card);
+		});
+		elBody.scrollTop = elBody.scrollHeight;
+	}
+
 	function mostrarTyping() {
 		var t = document.createElement("div");
 		t.className = "ntgchat-msg a ntgchat-typing";
@@ -483,7 +540,7 @@
 	}
 
 	// Redibuja lo que ya había en sessionStorage al cargar la página.
-	(historial || []).forEach(function (m) { agregarMensaje(m.role, m.content, false); });
+	(historial || []).forEach(function (m) { agregarMensaje(m.role, m.content, false); agregarFotos(m.fotos); });
 	if (formularioMostrado && !formularioYaEnviado) {
 		// El visitante recargó justo cuando le estábamos por pedir el
 		// contacto: se lo mostramos de nuevo en vez de perderlo.
@@ -539,7 +596,7 @@
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
 				mensajes: historial.map(function (m) {
-					return { role: m.role, content: m.content, formShown: !!m.formShown };
+					return { role: m.role, content: m.content, formShown: !!m.formShown, fotos: m.fotos || [] };
 				}),
 				// Lo que la persona estuvo haciendo en la página. El servidor
 				// lo usa para elegir de qué hablar, NO para mencionarlo: ver
@@ -552,6 +609,17 @@
 				typing.remove();
 				if (!res.ok) throw new Error((res.data && res.data.error) || "No pudimos responder.");
 				var burbuja = agregarMensaje("assistant", res.data.reply || T.reformular);
+
+				// Las fotos quedan guardadas en el mensaje, no sueltas: así se
+				// vuelven a dibujar si la persona recarga, y el servidor sabe
+				// cuáles ya mostró para no repetirlas.
+				var fotos = Array.isArray(res.data.fotos) ? res.data.fotos : [];
+				if (fotos.length) {
+					historial[historial.length - 1].fotos = fotos;
+					persistir();
+					agregarFotos(fotos);
+				}
+
 				if (res.data.mostrarFormulario && !formularioYaEnviado) {
 					historial[historial.length - 1].formShown = true;
 					formularioMostrado = true;
