@@ -35,6 +35,10 @@
 	--muted:   #6b7789;
 	--line:    #e4e9f0;
 	--line-2:  #eef2f7;
+	/* Alto de la barra fija. Vive acá porque el chat lo necesita para no
+	   taparla: si cambia uno solo de los dos, el panel vuelve a montarse
+	   encima del logo. Se redefine en el salto de celular. */
+	--bar-h: 76px;
 	--soft:    #f6f8fb;
 	--paper:   #fff;
 
@@ -152,7 +156,7 @@ p:last-child { margin-bottom: 0; }
    sigue en 1140 porque un párrafo más ancho que eso se lee peor. */
 .bar-in {
 	max-width: var(--maxw-bar); margin: 0 auto; padding: 0 var(--gutter);
-	height: 76px; display: flex; align-items: center; gap: 34px;
+	height: var(--bar-h); display: flex; align-items: center; gap: 34px;
 }
 /* Marca: el logo del CRM + el nombre al lado.
    El archivo trae su propio fondo celeste; como la barra usa ese mismo
@@ -958,7 +962,12 @@ textarea { resize: vertical; min-height: 92px; }
 /* ── El panel ───────────────────────────────────────────────── */
 .ntgchat-panel {
 	position: absolute; right: 0; bottom: 78px;
-	width: 396px; max-height: min(620px, calc(100vh - 140px));
+	width: 396px;
+	/* El tope NO es un número al ojo: es lo que sobra debajo de la barra.
+	   78px es la separación de la burbuja, y 14 de aire. Antes el panel
+	   arrancaba 14px MÁS ARRIBA que el borde de la barra y le tapaba el
+	   logo y el botón "Talk to us". */
+	max-height: min(620px, calc(100vh - var(--bar-h) - 92px));
 	display: flex; flex-direction: column; overflow: hidden;
 	background: var(--paper);
 	border: 1px solid rgba(13,36,68,.1);
@@ -1019,7 +1028,11 @@ textarea { resize: vertical; min-height: 92px; }
 
 /* ── Cuerpo ─────────────────────────────────────────────────── */
 .ntgchat-body {
-	flex: 1; min-height: 220px; overflow-y: auto;
+	/* 140 y no 220: ahora que el panel se corta abajo de la barra, en una
+	   ventana baja (o un celular acostado) un piso alto acá empujaba el
+	   campo de escribir fuera del panel. Con pantalla normal igual queda
+	   más grande, porque es flex:1. */
+	flex: 1; min-height: 140px; overflow-y: auto;
 	padding: 18px; display: flex; flex-direction: column; gap: 12px;
 	background: var(--soft);
 	scrollbar-width: thin; scrollbar-color: rgba(107,119,137,.35) transparent;
@@ -1252,7 +1265,7 @@ textarea { resize: vertical; min-height: 92px; }
 	.ntgchat-bubble { width: 54px; height: 54px; }
 	.ntgchat-panel {
 		position: fixed; right: 10px; left: 10px; bottom: 78px;
-		width: auto; max-height: calc(100vh - 110px);
+		width: auto; max-height: calc(100vh - var(--bar-h) - 92px);
 		border-radius: 18px;
 	}
 	.ntgchat-msg { max-width: 90%; font-size: 14.5px; }
@@ -1309,7 +1322,8 @@ textarea { resize: vertical; min-height: 92px; }
 	   como un ícono de aplicación, no como la marca. Sube a 44 y la barra a
 	   68 para que respire. Lo que se achica en su lugar son las separaciones
 	   y el relleno de los botones — el ancho sigue entrando. */
-	.bar-in { height: 68px; gap: 10px; }
+	:root { --bar-h: 68px; }
+	.bar-in { height: var(--bar-h); gap: 10px; }
 	.brand  { gap: 10px; }
 	.brand-mark { height: 44px; width: 44px; border-radius: 11px; }
 	.brand-logo { border-radius: 11px; }
