@@ -18,8 +18,8 @@
 // no se recupera. Por eso hay tope de tiempo propio y de acá no sale ningún
 // throw — el mismo criterio que ya tiene el aviso por mail.
 
-import { cuerpoGroq, vaOtroModelo } from "../_groq.js";
-import { intentosIA } from "../_ia.js";
+import { vaOtroModelo } from "../_groq.js";
+import { intentosIA, adaptarCuerpo } from "../_ia.js";
 import { FICHA_BUSINESS } from "../_ntg.js";
 
 // Tope de tiempo total. Del otro lado hay una persona mirando el spinner del
@@ -169,7 +169,7 @@ export async function calificarLead({ datos, transcript, contexto }) {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         signal: abortar.signal,
-        body: JSON.stringify(cuerpoGroq({
+        body: JSON.stringify(adaptarCuerpo(proveedor, {
           model,
           temperature: 0.3,
           max_tokens: 700,

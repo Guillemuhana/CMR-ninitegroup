@@ -12,7 +12,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { bloqueCRM, _test } from "../api/_web/calificar.js";
-import { intentosIA } from "../api/_ia.js";
+import { intentosIA, adaptarCuerpo } from "../api/_ia.js";
 
 const { normalizar, entrada } = _test;
 
@@ -137,4 +137,38 @@ test("intentosIA: sin ninguna clave la fila queda vacía y quien llama lo nota",
   conEnv({ OPENAI_API_KEY: undefined, GROQ_API_KEY: undefined }, () => {
     assert.deepEqual(intentosIA(), []);
   });
+});
+
+/* ── Adaptación del cuerpo a cada API ──────────────────────────────────────
+   El bug que esto evita es silencioso y caro: los modelos GPT-5 rechazan
+   `max_tokens` con un 400, la fila caía a Groq sin decir nada, y quedabas
+   pagando OpenAI para que conteste Groq. */
+
+test("adaptarCuerpo: a OpenAI nunca le llega max_tokens", () => {
+  const cuerpo = adaptarCuerpo("openai", { model: "gpt-5.4-mini", temperature: 0.6, max_tokens: 500 });
+  assert.equal(cuerpo.max_tokens, undefined);
+  assert.equal(cuerpo.max_completion_tokens, 500);
+  assert.equal(cuerpo.temperature, 0.6, "la temperatura sí la acepta y no hay que tocarla");
+  assert.equal(cuerpo.model, "gpt-5.4-mini");
+});
+
+test("adaptarCuerpo: sin max_tokens no se inventa el campo", () => {
+  const cuerpo = adaptarCuerpo("openai", { model: "gpt-5.4-mini", messages: [] });
+  assert.ok(!("max_completion_tokens" in cuerpo));
+  assert.ok(!("max_tokens" in cuerpo));
+});
+
+test("adaptarCuerpo: el resto del cuerpo pasa intacto", () => {
+  const rf = { type: "json_object" };
+  const cuerpo = adaptarCuerpo("openai", { model: "m", max_tokens: 700, response_format: rf, messages: [{ role: "user", content: "x" }] });
+  assert.deepEqual(cuerpo.response_format, rf);
+  assert.equal(cuerpo.messages.length, 1);
+});
+
+test("adaptarCuerpo: a Groq se le sigue mandando max_tokens y el freno de razonamiento", () => {
+  const cuerpo = adaptarCuerpo("groq", { model: "openai/gpt-oss-120b", max_tokens: 500 });
+  assert.equal(cuerpo.max_tokens, 500, "Groq sí entiende max_tokens");
+  assert.ok(!("max_completion_tokens" in cuerpo));
+  // Sin esto, los gpt-oss se gastan el presupuesto pensando y vuelven vacíos.
+  assert.equal(cuerpo.reasoning_effort, "low");
 });

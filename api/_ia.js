@@ -34,6 +34,8 @@
 // una llamada por lead y nadie de afuera puede disparar, y Groq atendiendo
 // el chat abierto a internet.
 
+import { cuerpoGroq } from "./_groq.js";
+
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
@@ -42,9 +44,11 @@ const MODELOS_GROQ = (process.env.GROQ_MODEL
   : ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
 ).filter((m, i, a) => a.indexOf(m) === i);
 
-// Default conservador: el modelo chico y barato. Si OPENAI_MODEL no está,
-// igual se puede probar, pero lo correcto es fijarlo a mano.
-const MODELO_OPENAI = process.env.OPENAI_MODEL || "gpt-4o-mini";
+// Probado contra la cuenta el 22/09/2026 con el formato exacto que manda este
+// repo: acepta `temperature`, acepta JSON mode y contesta en ~900 ms, más
+// rápido que gpt-4.1-mini (~1.500 ms). Si OpenAI lo jubila, `OPENAI_MODEL`
+// lo pisa sin tocar código y, si ese también falla, la fila cae a Groq.
+const MODELO_OPENAI = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 
 /**
  * La fila de intentos, en orden. Cada uno es {proveedor, url, apiKey, model}.
@@ -77,6 +81,33 @@ export function intentosIA({ publico = false } = {}) {
   }
 
   return intentos;
+}
+
+/**
+ * Ajusta el cuerpo del pedido al proveedor que lo va a recibir.
+ *
+ * Las dos APIs son compatibles en lo grande, pero no en todo, y la diferencia
+ * muerde justo acá:
+ *
+ * · Groq: a los modelos que razonan (gpt-oss, qwen3) hay que bajarles el
+ *   esfuerzo o se comen el presupuesto de tokens pensando y devuelven el
+ *   contenido vacío. Eso ya lo resuelve cuerpoGroq().
+ *
+ * · OpenAI: los modelos de la familia GPT-5 RECHAZAN `max_tokens` —
+ *   "Unsupported parameter: use 'max_completion_tokens' instead"— y tiran
+ *   400. Como `max_completion_tokens` sí lo aceptan también los viejos
+ *   (probado contra gpt-4o-mini y gpt-4.1-mini), se manda siempre ese y no
+ *   hace falta mantener una lista de qué modelo quiere cuál.
+ *
+ * Sin esto, poner un modelo GPT-5 en OPENAI_MODEL parecía funcionar: cada
+ * pedido moría en 400 y la fila caía a Groq en silencio. Se pagaba OpenAI y
+ * contestaba Groq.
+ */
+export function adaptarCuerpo(proveedor, cuerpo) {
+  if (proveedor !== "openai") return cuerpoGroq(cuerpo);
+
+  const { max_tokens, ...resto } = cuerpo;
+  return max_tokens == null ? resto : { ...resto, max_completion_tokens: max_tokens };
 }
 
 /** ¿Hay alguna forma de contestar? Para el chequeo de configuración. */

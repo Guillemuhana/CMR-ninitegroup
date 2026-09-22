@@ -17,8 +17,8 @@
 // Este archivo solo conversa — así el chat nunca puede romper el flujo de
 // leads que ya funciona.
 
-import { cuerpoGroq, vaOtroModelo } from "../_groq.js";
-import { intentosIA } from "../_ia.js";
+import { vaOtroModelo } from "../_groq.js";
+import { intentosIA, adaptarCuerpo } from "../_ia.js";
 import { FICHA_NTG, FICHA_BUSINESS } from "../_ntg.js";
 
 // Tag interno para pedirle al widget que muestre el mini-formulario de
@@ -188,7 +188,7 @@ export default async function handler(req, res) {
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify(cuerpoGroq({ model, temperature: 0.6, max_tokens: 500, messages })),
+        body: JSON.stringify(adaptarCuerpo(proveedor, { model, temperature: 0.6, max_tokens: 500, messages })),
       });
       const data = await r.json().catch(() => ({}));
       if (r.ok) {

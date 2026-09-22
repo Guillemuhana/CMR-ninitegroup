@@ -203,8 +203,20 @@ cambiar URL, clave y nombre del modelo. `intentosIA()` arma esa fila:
 |---|---|
 | (nada) | Todo va a Groq, como siempre. |
 | `OPENAI_API_KEY` | OpenAI primero, **Groq siempre atrás como respaldo**. |
-| `OPENAI_MODEL` | Qué modelo. Confirmá el id vigente: los nombres cambian. |
+| `OPENAI_MODEL` | Qué modelo. Default `gpt-5.4-mini`. |
 | `OPENAI_EN_CHAT=0` | El chat público queda en Groq; OpenAI sólo califica. |
+
+**La trampa de `max_tokens`.** Los modelos de la familia GPT-5 rechazan ese
+parámetro con un 400 (`use 'max_completion_tokens' instead`). Como el error no
+se arregla reintentando, la fila caía a Groq en silencio: parecía andar, pero
+pagabas OpenAI para que contestara Groq. Lo traduce `adaptarCuerpo()` en
+`api/_ia.js`, que a OpenAI le manda siempre `max_completion_tokens` — los
+modelos viejos también lo aceptan, así que no hay que mantener ninguna lista.
+
+Probado contra la cuenta el 22/09/2026: `gpt-5.4-mini` acepta `temperature`,
+acepta JSON mode y contesta en ~900 ms, más rápido que `gpt-4.1-mini`
+(~1.500 ms). Una calificación completa de punta a punta tarda ~1,4 s, bien
+adentro del tope de 7 s.
 
 Un error que no se arregla reintentando —clave mal, cuenta sin crédito, modelo
 dado de baja— quema a *ese* proveedor, no a la fila: si OpenAI rebota, Groq le
