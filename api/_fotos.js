@@ -43,6 +43,22 @@ const esRemoto = (u) => /^https?:/i.test(u);
 // La paleta es la misma en todos los modelos: el acabado no cambia.
 const PALETA = [`${P}2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1.jpeg`];
 
+// Equipamiento: los mismos ocho detalles en todos los modelos y TODOS en la
+// landing, así que esto anda aunque WordPress esté caído. Responde solo la
+// pregunta que más hace el comprador: "¿qué trae adentro?".
+const DETALLE = [
+  "img/feat/acheating.jpg", "img/feat/toilet.jpg", "img/feat/sinks.jpg",
+  "img/feat/lighting.jpg", "img/feat/electrical.jpg", "img/feat/waterinlet.jpg",
+  "img/feat/jacks.jpg", "img/feat/handrails.jpg",
+];
+
+// Tomas de interior de la propia landing. Las dos primeras SÍ son de un modelo
+// puntual (lo dice el alt del HTML); las otras cuatro son genéricas y por eso
+// los modelos que sólo tienen ésas van marcados con interiorGenerico.
+const INT_2STALL = "img/int/5.jpg";
+const INT_4STALL = "img/int/4.jpg";
+const INT_GENERICO = ["img/int/1.jpg", "img/int/6.jpg", "img/int/2.jpg", "img/int/3.jpg"];
+
 // Interior compartido por los modelos grandes.
 const INTERIOR_456 = [
   `${P}2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM-1-1.jpeg`,
@@ -57,7 +73,8 @@ export const MEDIA = {
   "2-stall": {
     nombre: "2-Stall White Marble",
     exterior: ["img/2-stall.jpg", `${P}2026/07/2.jpeg`, `${P}2026/07/2s.jpeg`],
-    interior: [`${P}2026/07/interior2b.jpeg`, `${P}2026/07/interior2c.jpeg`, `${P}2026/07/2d.jpeg`],
+    interior: [INT_2STALL, ...INT_GENERICO.slice(0, 2), `${P}2026/07/interior2b.jpeg`, `${P}2026/07/interior2c.jpeg`, `${P}2026/07/2d.jpeg`],
+    detalle: DETALLE,
     plano: [`${P}2026/07/plano2.jpeg`],
     video: [`${P}2026/07/video2puertas.mp4`],
     paleta: PALETA,
@@ -66,9 +83,12 @@ export const MEDIA = {
     nombre: "3-Stall",
     exterior: ["img/3-stall.jpg", `${P}2026/06/WhatsApp-Image-2026-06-18-at-5.18.09-PM-2-1.jpeg`, `${P}2026/07/extras.jpeg`],
     interior: [
+      ...INT_GENERICO,
       `${P}2026/07/interior01.jpeg`, `${P}2026/07/interior02.jpeg`,
       `${P}2026/07/interior03.jpeg`, `${P}2026/07/interior04.jpeg`,
     ],
+    interiorGenerico: true,
+    detalle: DETALLE,
     plano: [`${P}2026/05/PHOTO-2026-01-08-01-13-01-1.jpg`],
     video: [
       `${P}2026/07/video03.mp4`,
@@ -82,27 +102,33 @@ export const MEDIA = {
     nombre: "4-Stall",
     exterior: ["img/4-stall.jpg", `${P}2026/07/exterior.jpeg`, `${P}2026/07/exteriror2.jpeg`],
     interior: [
+      INT_4STALL, ...INT_GENERICO.slice(0, 2),
       `${P}2026/07/interior01-1.jpeg`, `${P}2026/07/interior2.jpeg`, `${P}2026/07/interior3.jpeg`,
       `${P}2026/07/interior4.jpeg`, `${P}2026/07/interior5.jpeg`, `${P}2026/07/interior6.jpeg`,
     ],
+    detalle: DETALLE,
     plano: [`${P}2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg`],
     paleta: PALETA,
   },
   "ada-2": {
     nombre: "ADA + 2",
     exterior: ["img/ada-2.png", `${P}2026/05/ada22.png`],
-    interior: [`${P}2026/01/dfhxvb.png`],
+    interior: [...INT_GENERICO.slice(0, 2), `${P}2026/01/dfhxvb.png`],
+    interiorGenerico: true,
+    detalle: DETALLE,
     paleta: PALETA,
   },
   "6-stall": {
     nombre: "6-Stall",
     exterior: [`${P}2026/05/6bano.png`],
-    interior: INTERIOR_456,
+    interior: [...INT_GENERICO.slice(0, 2), ...INTERIOR_456],
+    interiorGenerico: true,
+    detalle: DETALLE,
     paleta: PALETA,
   },
 };
 
-export const TIPOS = ["exterior", "interior", "plano", "video", "paleta"];
+export const TIPOS = ["exterior", "interior", "detalle", "plano", "video", "paleta"];
 
 // Sinónimos de cada tipo: los escriben los modelos y también los visitantes.
 const ALIAS_TIPO = {
@@ -110,6 +136,8 @@ const ALIAS_TIPO = {
   adentro: "interior", dentro: "interior", inside: "interior", in: "interior", bano: "interior",
   planos: "plano", plan: "plano", layout: "plano", "floor-plan": "plano", floorplan: "plano", medidas: "plano",
   videos: "video", walkthrough: "video", recorrido: "video", tour: "video",
+  equipamiento: "detalle", equipo: "detalle", features: "detalle", detalles: "detalle",
+  incluye: "detalle", trae: "detalle", equipment: "detalle",
   colores: "paleta", color: "paleta", colors: "paleta", palette: "paleta", terminacion: "paleta",
 };
 
@@ -154,7 +182,14 @@ export function mediaDe(slug, tipo, tope = 3) {
   }
   if (!urls.length) return null;
 
-  return { slug, nombre: modelo.nombre, tipo: usado, urls: urls.slice(0, tope) };
+  // Honestidad: el 3-Stall y el ADA+2 no tienen tomas propias de interior en
+  // la landing, y el equipamiento es el mismo en toda la línea. Si mostramos
+  // esas fotos bajo el título "3-Stall · Interior", le estamos diciendo al
+  // cliente que está viendo SU unidad. El pie lo aclara.
+  const generico = (usado === "interior" && modelo.interiorGenerico === true) ||
+    usado === "detalle" || usado === "paleta";
+
+  return { slug, nombre: modelo.nombre, tipo: usado, generico, urls: urls.slice(0, tope) };
 }
 
 /**
@@ -168,7 +203,15 @@ export function tiposDe(slug) {
   return TIPOS.filter((t) => servibles(modelo, t).length > 0);
 }
 
-/** Modelos que hoy tienen algo para mostrar. */
+/**
+ * Modelos que hoy se pueden ofrecer.
+ *
+ * Se exige EXTERIOR, no "algo": el interior y el equipamiento son casi los
+ * mismos en toda la línea, así que un modelo del que sólo tenemos esas fotos
+ * no se puede mostrar de verdad. El 6-Stall es justo ese caso mientras
+ * WordPress esté caído — y ofrecerlo para después no tener con qué
+ * responder es peor que no nombrarlo.
+ */
 export function modelosDisponibles() {
-  return Object.keys(MEDIA).filter((slug) => tiposDe(slug).length > 0);
+  return Object.keys(MEDIA).filter((slug) => servibles(MEDIA[slug], "exterior").length > 0);
 }

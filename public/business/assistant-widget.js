@@ -489,16 +489,24 @@
 	   roto en la cara del prospecto.
 	   ────────────────────────────────────────────────────────── */
 	var TIPO_TXT = ES ? {
-		exterior: "Exterior", interior: "Interior", plano: "Plano",
-		video: "Video", paleta: "Paleta de colores",
+		exterior: "Exterior", interior: "Interior", detalle: "Equipamiento",
+		plano: "Plano", video: "Video", paleta: "Paleta de colores",
 	} : {
-		exterior: "Exterior", interior: "Inside", plano: "Floor plan",
-		video: "Video walkthrough", paleta: "Colour palette",
+		exterior: "Exterior", interior: "Inside", detalle: "Equipment",
+		plano: "Floor plan", video: "Video walkthrough", paleta: "Colour palette",
 	};
 
 	var PIE_FOTO = ES
 		? "Unidad de fábrica. La terminación final puede variar."
 		: "Factory-built unit. Final finish may vary.";
+
+	/* Cuando la toma no es de ESE modelo exacto —el equipamiento es igual en
+	   toda la línea, y de algunos modelos no tenemos interior propio— el pie
+	   lo dice. Mostrar una foto bajo el título "3-Stall · Interior" es
+	   afirmar que el cliente está viendo su unidad. */
+	var PIE_GENERICO = ES
+		? "Acabado y equipamiento de la línea: la distribución cambia según el modelo."
+		: "Line-wide finish and equipment; layout varies by model.";
 
 	var esVideo = function (u) { return /\.(mp4|webm|mov)(\?.*)?$/i.test(String(u || "")); };
 
@@ -555,7 +563,7 @@
 			titulo.textContent = (media.nombre || "") +
 				(TIPO_TXT[media.tipo] ? " · " + TIPO_TXT[media.tipo] : "");
 			var nota = document.createElement("span");
-			nota.textContent = PIE_FOTO;
+			nota.textContent = media.generico ? PIE_GENERICO : PIE_FOTO;
 			pie.appendChild(titulo);
 			pie.appendChild(nota);
 

@@ -284,13 +284,32 @@ test("apagado, pedir un video devuelve el exterior y NUNCA una lista vacía", ()
 
 test("apagado, la IA no ve modelos que no puede mostrar", () => {
   conEnv({ MEDIA_REMOTA: undefined }, () => {
-    // El 6-Stall sólo existe en WordPress: si no se puede servir, no se ofrece.
+    // El 6-Stall sólo tiene exterior en WordPress. Interior y equipamiento
+    // son casi iguales en toda la línea, así que con eso solo no se puede
+    // mostrar de verdad: se exige exterior para ofrecerlo.
     assert.ok(!modelosDisponibles().includes("6-stall"));
-    assert.deepEqual(tiposDe("3-stall"), ["exterior"]);
+    // Lo que SÍ se puede sin WordPress: exterior, interior y equipamiento,
+    // todo servido por la propia landing.
+    assert.deepEqual(tiposDe("3-stall"), ["exterior", "interior", "detalle"]);
+    assert.ok(!tiposDe("3-stall").includes("video"), "el video vive en WordPress");
   });
   conEnv({ MEDIA_REMOTA: "1" }, () => {
     assert.ok(modelosDisponibles().includes("6-stall"));
     assert.ok(tiposDe("3-stall").includes("video"));
+  });
+});
+
+test("el interior genérico se marca como tal, y el propio no", () => {
+  conEnv({ MEDIA_REMOTA: undefined }, () => {
+    // Mostrar una foto cualquiera bajo el título "3-Stall · Interior" es
+    // decirle al cliente que está viendo SU unidad. El pie tiene que aclararlo.
+    assert.equal(mediaDe("3-stall", "interior").generico, true);
+    // Del 2-Stall sí tenemos una toma propia (img/int/5.jpg).
+    const dos = mediaDe("2-stall", "interior");
+    assert.equal(dos.generico, false);
+    assert.equal(dos.urls[0], "img/int/5.jpg");
+    // El equipamiento es el mismo en toda la línea, siempre genérico.
+    assert.equal(mediaDe("2-stall", "detalle").generico, true);
   });
 });
 

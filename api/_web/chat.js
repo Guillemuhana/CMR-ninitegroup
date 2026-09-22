@@ -144,6 +144,7 @@ Pick the type from what they asked:
 - "what's it like inside", "how are the bathrooms" → interior
 - "how big is it", "measurements", "layout" → plano
 - "do you have a video", "can I see it in motion" → video
+- "what does it include", "does it have A/C", "hot water", "what's the equipment like" → detalle
 - "what colours", "what finish" → paleta
 
 Rules:
