@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { normalizarTelefono } from "../_meta/capi.js";
 import { enviarAvisoLead } from "./aviso-mail.js";
+import { calificarLead, bloqueCRM } from "./calificar.js";
 
 // Entrada de leads de la landing pública /business/ al CRM.
 //
@@ -17,11 +18,15 @@ import { enviarAvisoLead } from "./aviso-mail.js";
 //   1. Upsert del contacto por teléfono (nunca pisa el nombre, vendedor ni
 //      estado de un cliente que ya existe: un lead web no puede degradar una
 //      ficha que un vendedor viene trabajando).
-//   2. Inserta el pedido como mensaje ENTRANTE. De ahí en más funciona todo
+//   2. Califica la consulta con IA (api/_web/calificar.js) y arma el mensaje
+//      con esa calificación arriba de todo. Es opcional por diseño: si falla,
+//      el mensaje sale igual que antes.
+//   3. Inserta el pedido como mensaje ENTRANTE. De ahí en más funciona todo
 //      lo que ya existe: trg_touch_contacto sube no_leidos y ultimo_msg, y
 //      trg_notificar_push_mensaje manda el push a los vendedores. El lead
 //      aparece en la lista por Realtime, como cualquier consulta.
-//   3. Restaura ultimo_in_at — ver el comentario largo más abajo, importa.
+//   4. Restaura ultimo_in_at — ver el comentario largo más abajo, importa.
+//   5. Manda el aviso por mail a la casilla comercial.
 
 /** Endpoint público: no hay sesión, así que la validación la hacemos acá. */
 export default async function handler(req, res) {
@@ -58,30 +63,26 @@ export default async function handler(req, res) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // ── El texto que va a leer el vendedor en el chat ──────────────────────
-  // Se arma como un mensaje, no como un volcado de JSON: el vendedor lo abre
-  // desde el celular y tiene que entenderlo de un vistazo.
-  const lineas = ["🌐 New inquiry from the business landing page", ""];
-  const dato = (etiqueta, valor) => {
-    const v = String(valor || "").trim();
-    if (v) lineas.push(`${etiqueta}: ${v.slice(0, 400)}`);
-  };
-  dato("Name", nombre);
-  dato("Phone", b.telefono);
-  dato("Email", email);
-  dato("ZIP", b.zip);
-  dato("Package", b.paquete);
-  dato("Profile", b.perfil);
-  if (String(b.mensaje || "").trim()) {
-    lineas.push("", `"${String(b.mensaje).trim().slice(0, 1200)}"`);
-  }
-  if (String(b.escenario || "").trim()) {
-    lineas.push("", "📊 Calculator scenario they asked us to review:", String(b.escenario).slice(0, 900));
-  }
-  if (String(b.referrer || "").trim()) {
-    lineas.push("", `Came from: ${String(b.referrer).slice(0, 200)}`);
-  }
-  const contenido = lineas.join("\n");
+  // Señales de navegación que manda el widget: qué secciones miró, si usó la
+  // calculadora, cuánto tiempo estuvo, si es la primera visita. No es un dato
+  // que el visitante haya escrito, así que se recorta y se trata como texto
+  // suelto: sólo alimenta la calificación y se muestra al final del mensaje.
+  const contexto = String(b.contexto || "").trim().slice(0, 700);
+
+  // ── Calificación con IA ────────────────────────────────────────────────
+  //
+  // Se dispara ACÁ, antes de tocar Supabase, para que corra en paralelo con
+  // el upsert del contacto y no sume su demora entera a la espera del
+  // visitante. Se espera recién antes de armar el mensaje.
+  //
+  // calificarLead() nunca lanza y tiene tope de tiempo propio: si Groq está
+  // caído o tarda, devuelve null y el lead entra exactamente como antes.
+  const calificacionEnCurso = calificarLead({
+    datos: { nombre, telefono: b.telefono, email, zip: b.zip, paquete: b.paquete,
+             perfil: b.perfil, origen: b.origen, escenario: b.escenario },
+    transcript: b.mensaje,
+    contexto,
+  });
 
   try {
     // ── 1. Contacto ───────────────────────────────────────────────────────
@@ -130,7 +131,44 @@ export default async function handler(req, res) {
       contactoId = data.id;
     }
 
-    // ── 2. Mensaje entrante (dispara push + no_leidos + ultimo_msg) ───────
+    // ── 2. El texto que va a leer el vendedor en el chat ──────────────────
+    //
+    // Se arma como un mensaje, no como un volcado de JSON: el vendedor lo
+    // abre desde el celular y tiene que entenderlo de un vistazo.
+    //
+    // La calificación va ARRIBA DE TODO a propósito: es lo único que se lee
+    // en la previsualización de la lista de chats y en el push. Que la
+    // primera línea sea "🔥 Lead caliente · 87/100" y no "New inquiry from
+    // the business landing page" es la mitad del valor de todo esto.
+    const calificacion = await calificacionEnCurso;
+
+    const lineas = bloqueCRM(calificacion);
+    lineas.push("🌐 New inquiry from the business landing page", "");
+    const dato = (etiqueta, valor) => {
+      const v = String(valor || "").trim();
+      if (v) lineas.push(`${etiqueta}: ${v.slice(0, 400)}`);
+    };
+    dato("Name", nombre);
+    dato("Phone", b.telefono);
+    dato("Email", email);
+    dato("ZIP", b.zip);
+    dato("Package", b.paquete);
+    dato("Profile", b.perfil);
+    if (String(b.mensaje || "").trim()) {
+      lineas.push("", `"${String(b.mensaje).trim().slice(0, 1200)}"`);
+    }
+    if (String(b.escenario || "").trim()) {
+      lineas.push("", "📊 Calculator scenario they built on the page:", String(b.escenario).slice(0, 900));
+    }
+    if (contexto) {
+      lineas.push("", `🧭 On the page: ${contexto}`);
+    }
+    if (String(b.referrer || "").trim()) {
+      lineas.push("", `Came from: ${String(b.referrer).slice(0, 200)}`);
+    }
+    const contenido = lineas.join("\n");
+
+    // ── 3. Mensaje entrante (dispara push + no_leidos + ultimo_msg) ───────
     const { error: errMsg } = await admin.from("mensajes").insert({
       contacto_id: contactoId,
       direccion: "in",
@@ -139,7 +177,7 @@ export default async function handler(req, res) {
     });
     if (errMsg) throw errMsg;
 
-    // ── 3. Devolver ultimo_in_at a como estaba ────────────────────────────
+    // ── 4. Devolver ultimo_in_at a como estaba ────────────────────────────
     //
     // Esto NO es un detalle: ultimo_in_at es lo único que mira
     // dentroDeVentana() en src/promos.js para decidir si se le puede mandar
@@ -156,7 +194,7 @@ export default async function handler(req, res) {
       .eq("id", contactoId);
     if (errFix) throw errFix;
 
-    // ── 4. Aviso por mail a la casilla comercial ──────────────────────────
+    // ── 5. Aviso por mail a la casilla comercial ──────────────────────────
     //
     // Tercera vía, además del CRM y del push: que quede en la bandeja de
     // quien no vive adentro del CRM.
@@ -169,8 +207,9 @@ export default async function handler(req, res) {
       await enviarAvisoLead({
         datos: { nombre, telefono, email, zip: b.zip, paquete: b.paquete,
                  perfil: b.perfil, mensaje: b.mensaje, escenario: b.escenario,
-                 origen: b.origen },
+                 origen: b.origen, contexto },
         contactoNuevo: !existente,
+        calificacion,
       });
     } catch (e) {
       console.error("[lead] no se pudo mandar el aviso por mail:", e?.message || e);

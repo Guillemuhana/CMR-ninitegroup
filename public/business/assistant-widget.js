@@ -70,6 +70,17 @@
 		bienvenidaTitulo: "👋 ¡Hola! Bienvenido a NINIT GROUP",
 		bienvenidaTexto: "Estoy para ayudarlo a armar su negocio de alquiler de baños móviles. Pregúnteme por los precios, qué incluye cada paquete, la financiación o cómo arrancar en su zona.",
 		cebo: "👋 ¿Pensando en arrancar su propio negocio de alquiler? Pregúnteme lo que quiera.",
+		// Avisos según lo que la persona está haciendo en la página. Ver el
+		// bloque "CEBO INTELIGENTE" más abajo: se elige uno solo y se dice en
+		// el momento en que viene al caso, no siempre el mismo a los 6 segundos.
+		cebos: {
+			calculadora: "¿Quiere que revisemos esos números con usted? Dígame su zona y le digo qué es realista.",
+			paquetes: "¿Dudando entre Starter, Business Launch y Managed? Le ayudo a elegir en 30 segundos.",
+			dudas: "¿Le quedó alguna duda? Pregúnteme sin compromiso.",
+			formulario: "¿Alguna duda antes de dejarnos sus datos? Estoy acá.",
+			vuelve: "👋 ¡Qué bueno verlo de nuevo! ¿Retomamos donde quedó?",
+			salida: "¿Se va? Déjenos su consulta y un asesor le responde hoy mismo.",
+		},
 		pie: "Asistente con IA. Un asesor confirma todo dato importante.",
 		fichas: [
 			"¿Qué paquete me conviene?",
@@ -103,6 +114,14 @@
 		bienvenidaTitulo: "👋 Hi there — welcome to NINIT GROUP",
 		bienvenidaTexto: "I'm here to help you put together your restroom trailer rental business. Ask me about pricing, what each package includes, financing, or how to get started in your area.",
 		cebo: "👋 Thinking about starting your own rental business? Ask me anything.",
+		cebos: {
+			calculadora: "Want us to go over those numbers with you? Tell me your area and I'll tell you what's realistic.",
+			paquetes: "Torn between Starter, Business Launch and Managed? I can help you pick in 30 seconds.",
+			dudas: "Anything still unclear? Ask me — no commitment.",
+			formulario: "Any questions before you leave your info? I'm right here.",
+			vuelve: "👋 Good to see you again! Want to pick up where you left off?",
+			salida: "Heading out? Leave us your question and an advisor gets back to you today.",
+		},
 		pie: "AI assistant. An advisor confirms anything that matters.",
 		fichas: [
 			"Which package fits me?",
@@ -151,7 +170,7 @@
 	root.innerHTML =
 		'<div class="ntgchat-cebo" id="ntgchat-cebo" hidden>' +
 			'<button type="button" class="ntgchat-cebo-x" id="ntgchat-cebo-x" aria-label="' + T.cerrar + '">&times;</button>' +
-			'<span>' + T.cebo + '</span>' +
+			'<span id="ntgchat-cebo-txt">' + T.cebo + '</span>' +
 		'</div>' +
 		'<button type="button" class="ntgchat-bubble" id="ntgchat-toggle" aria-expanded="false" aria-controls="ntgchat-panel">' +
 			'<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>' +
@@ -183,35 +202,170 @@
 	var elSend   = root.querySelector("#ntgchat-send");
 	var elCebo   = root.querySelector("#ntgchat-cebo");
 	var elCeboX  = root.querySelector("#ntgchat-cebo-x");
+	var elCeboTx = root.querySelector("#ntgchat-cebo-txt");
 
 	/* ──────────────────────────────────────────────────────────
-	   El globo de cebo.
+	   Señales de la landing.
+
+	   Las publica business.js en window.NTG (qué secciones miró, si
+	   tocó la calculadora y con qué números, cuánto hace que está, si
+	   ya había entrado otro día). Se leen SIEMPRE a través de estos
+	   dos ayudantes: si business.js no cargó o cambió, el widget sigue
+	   funcionando con el contexto vacío, que es exactamente como
+	   funcionaba antes de que esto existiera.
+	   ────────────────────────────────────────────────────────── */
+	function contextoActual() {
+		try { return (window.NTG && window.NTG.contexto) ? String(window.NTG.contexto() || "") : ""; }
+		catch (e) { return ""; }
+	}
+	function señalesActuales() {
+		try { return (window.NTG && window.NTG.señales) ? window.NTG.señales() : null; }
+		catch (e) { return null; }
+	}
+	function escenarioActual() {
+		try { return (window.NTG && window.NTG.escenario) ? String(window.NTG.escenario() || "") : ""; }
+		catch (e) { return ""; }
+	}
+	function paqueteActual() {
+		try { return (window.NTG && window.NTG.paquete) ? String(window.NTG.paquete() || "") : ""; }
+		catch (e) { return ""; }
+	}
+
+	/* ──────────────────────────────────────────────────────────
+	   CEBO INTELIGENTE
 
 	   Una burbuja sola en un rincón no se mira: el visitante no sabe
-	   que hay alguien del otro lado. Esto la hace hablar primero.
+	   que hay alguien del otro lado. Esto la hace hablar primero —
+	   pero hablando de lo que la persona está haciendo justo ahora,
+	   no siempre la misma frase a los 6 segundos.
 
-	   Aparece a los 6 segundos, no de entrada: si salta apenas carga
-	   la página tapa el titular y molesta. Y si ya hablaron antes en
-	   esta pestaña, no aparece — ya sabe que el chat existe.
-	   Se puede cerrar, y cerrarlo se recuerda para no insistir.
+	   Qué dispara cuál:
+	     · tocó la calculadora   → le ofrecemos revisar SUS números
+	     · miró los paquetes     → le ofrecemos ayudarlo a elegir
+	     · llegó al formulario   → le preguntamos si le quedó una duda
+	     · ya había entrado antes→ lo saludamos como a alguien que vuelve
+	     · se va de la página    → última oferta antes de perderlo
+	     · nada de lo anterior   → el saludo genérico de siempre, a los 14 s
+
+	   Las reglas de cortesía importan tanto como los disparadores. Un
+	   widget que insiste espanta más de lo que capta:
+	     · nunca mientras el panel está abierto,
+	     · como mucho DOS en toda la visita, separados por 40 segundos,
+	     · nunca dos veces el mismo texto,
+	     · si lo cierra una vez, no vuelve a aparecer en toda la sesión,
+	     · si ya dejó sus datos, no se lo molesta más.
 	   ────────────────────────────────────────────────────────── */
 	var CEBO_KEY = "ntg_business_cebo_visto";
+	var CEBO_MAX = 2;
+	var CEBO_ESPERA = 40000;
 	var ceboDescartado = false;
 	try { ceboDescartado = sessionStorage.getItem(CEBO_KEY) === "1"; } catch (e) {}
 
+	var cebosMostrados = 0;
+	var ceboUltimo = 0;
+	var cebosDichos = {};
+	var relojGenerico = null;
+	var relojRetiro = null;
+
 	function ocultarCebo(recordar) {
-		if (!elCebo || elCebo.hidden) return;
-		elCebo.hidden = true;
+		// "Recordar" se procesa ANTES de mirar si el globo está visible. Si
+		// no, abrir el chat sin que hubiera aparecido ninguno no cancelaba
+		// nada, y al cerrar el panel saltaba un cebo tarde y sin sentido.
 		if (recordar) {
 			ceboDescartado = true;
+			clearTimeout(relojGenerico);
+			clearTimeout(relojRetiro);
 			try { sessionStorage.setItem(CEBO_KEY, "1"); } catch (e) {}
 		}
+		if (!elCebo || elCebo.hidden) return;
+		elCebo.hidden = true;
+	}
+
+	function mostrarCebo(clave) {
+		if (!elCebo || !elCeboTx) return;
+		if (ceboDescartado || formularioYaEnviado) return;
+		if (root.classList.contains("open")) return;
+		if (cebosMostrados >= CEBO_MAX) return;
+		if (ceboUltimo && Date.now() - ceboUltimo < CEBO_ESPERA) return;
+
+		var texto = (T.cebos && T.cebos[clave]) || T.cebo;
+		if (cebosDichos[texto]) return;
+		cebosDichos[texto] = true;
+
+		// Si ya había uno en pantalla, se esconde y se vuelve a mostrar en el
+		// cuadro siguiente: así el segundo ENTRA con su animación en vez de
+		// cambiar de texto en silencio, que se lee como un error.
+		var relanzar = !elCebo.hidden;
+		elCebo.hidden = true;
+		elCeboTx.textContent = texto;
+
+		var mostrar = function () {
+			if (ceboDescartado || root.classList.contains("open")) return;
+			elCebo.hidden = false;
+		};
+		if (relanzar) setTimeout(mostrar, 260); else mostrar();
+
+		cebosMostrados++;
+		ceboUltimo = Date.now();
+		clearTimeout(relojGenerico);
+
+		// Se retira solo. Un globo que se queda pegado en la esquina toda la
+		// visita deja de ser una invitación y pasa a ser un cartel. Ojo: NO
+		// cuenta como descartado — el visitante no lo cerró, así que el
+		// siguiente disparador todavía tiene derecho a hablar.
+		clearTimeout(relojRetiro);
+		relojRetiro = setTimeout(function () { ocultarCebo(false); }, 22000);
+	}
+
+	/* Un cebo que sale de una señal espera un poco antes de aparecer: si
+	   salta en el mismo instante en que la persona movió un deslizador,
+	   se siente como que alguien le está mirando la pantalla. */
+	function ceboDemorado(clave, ms) {
+		setTimeout(function () { mostrarCebo(clave); }, ms);
 	}
 
 	if (elCebo && !ceboDescartado && !historial.length) {
-		setTimeout(function () {
-			if (!root.classList.contains("open")) elCebo.hidden = false;
-		}, 6000);
+		var señalesInicio = señalesActuales();
+
+		if (señalesInicio && señalesInicio.visitas > 1) {
+			// Alguien que vuelve ya sabe que el chat existe: no hace falta
+			// esperar a que lo descubra.
+			setTimeout(function () { mostrarCebo("vuelve"); }, 4000);
+		} else {
+			// El genérico se corrió de 6 a 14 segundos para darle lugar a los
+			// contextuales, que valen mucho más. Si en esos 14 segundos la
+			// persona hizo algo, gana lo que hizo y el genérico se cancela.
+			relojGenerico = setTimeout(function () { mostrarCebo("generico"); }, 14000);
+		}
+
+		document.addEventListener("ntg:senal", function (ev) {
+			var tipo = (ev && ev.detail && ev.detail.tipo) || "";
+			if (tipo === "calculadora")            ceboDemorado("calculadora", 12000);
+			else if (tipo === "paquete")           ceboDemorado("paquetes", 6000);
+			else if (tipo === "seccion:packages")  ceboDemorado("paquetes", 9000);
+			else if (tipo === "seccion:faq")       ceboDemorado("dudas", 8000);
+			else if (tipo === "seccion:talk")      ceboDemorado("formulario", 9000);
+		});
+
+		/* Intención de salida: el puntero se va por arriba de la ventana,
+		   camino a la pestaña o a la barra de direcciones. Es el último
+		   momento útil para ofrecer algo.
+
+		   Sólo en escritorio, y a propósito: en el celular no existe el
+		   equivalente honesto. Los disparadores táctiles que se usan para
+		   esto (un scroll rápido hacia arriba, el evento de ocultar la
+		   página) o molestan a quien no se estaba yendo, o llegan cuando la
+		   pestaña ya se cerró y no se ve nada. */
+		var yaHuboSalida = false;
+		document.addEventListener("mouseout", function (ev) {
+			if (yaHuboSalida || ev.relatedTarget || ev.clientY > 4) return;
+			var s = señalesActuales();
+			// Alguien que llegó, no miró nada y se va en diez segundos no es
+			// un lead: es un rebote. Insistirle no lo convierte.
+			if (s && s.segundos < 20) return;
+			yaHuboSalida = true;
+			mostrarCebo("salida");
+		});
 	}
 	if (elCeboX) {
 		elCeboX.addEventListener("click", function (ev) {
@@ -387,6 +541,10 @@
 				mensajes: historial.map(function (m) {
 					return { role: m.role, content: m.content, formShown: !!m.formShown };
 				}),
+				// Lo que la persona estuvo haciendo en la página. El servidor
+				// lo usa para elegir de qué hablar, NO para mencionarlo: ver
+				// contextoPrompt() en api/_web/chat.js.
+				contexto: contextoActual(),
 			}),
 		})
 			.then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
@@ -420,6 +578,33 @@
 	   upsert por teléfono, dispara el push a los vendedores y
 	   aparece en el CRM como cualquier consulta — igual que hoy.
 	   ────────────────────────────────────────────────────────── */
+	/* Lo que la persona YA escribió en el chat no se le vuelve a pedir: si
+	   dejó el teléfono o el mail en un mensaje, el mini-formulario aparece
+	   con ese campo lleno. Cada campo que hay que tipear de nuevo es gente
+	   que abandona.
+
+	   Conservador a propósito: se toma el primer candidato claro y nada más.
+	   Un teléfono mal adivinado es peor que un campo vacío — el vendedor
+	   llama a un número que no existe y el lead se pierde igual. */
+	function datosDelChat() {
+		var texto = historial
+			.filter(function (m) { return m.role === "user"; })
+			.map(function (m) { return m.content; })
+			.join("\n");
+
+		var email = (texto.match(/[^\s@<>()]+@[^\s@<>()]+\.[a-z]{2,}/i) || [""])[0];
+
+		var telefono = "";
+		var m = texto.match(/\+?\d[\d\s().\-]{8,17}\d/);
+		if (m) {
+			var digitos = m[0].replace(/\D/g, "");
+			// Entre 10 y 15 dígitos: así un precio, un código postal o un año
+			// no se cuelan como número de teléfono.
+			if (digitos.length >= 10 && digitos.length <= 15) telefono = m[0].trim();
+		}
+		return { email: email, telefono: telefono };
+	}
+
 	function mostrarMiniFormulario() {
 		if (elBody.querySelector(".ntgchat-leadform")) return;
 
@@ -434,6 +619,10 @@
 			'<p class="ntgchat-leadform-msg" id="ntgchat-lf-msg" role="status" aria-live="polite"></p>';
 		elBody.appendChild(wrap);
 		elBody.scrollTop = elBody.scrollHeight;
+
+		var yaDicho = datosDelChat();
+		if (yaDicho.telefono) wrap.querySelector("#ntgchat-lf-phone").value = yaDicho.telefono;
+		if (yaDicho.email) wrap.querySelector("#ntgchat-lf-email").value = yaDicho.email;
 
 		var btn = wrap.querySelector("#ntgchat-lf-submit");
 		var salida = wrap.querySelector("#ntgchat-lf-msg");
@@ -463,7 +652,15 @@
 					nombre: nombre,
 					telefono: telefono,
 					email: email,
-					mensaje: T.conversacion + "\n" + transcript.slice(0, 1200),
+					// El transcript entero: es lo que lee la calificación con
+					// IA del lado del servidor (api/_web/calificar.js) para
+					// decirle al vendedor si conviene llamar ya. Recortarlo a
+					// 1.200 caracteres se comía justo el final, que es donde
+					// la persona dice para cuándo y de dónde es.
+					mensaje: T.conversacion + "\n" + transcript.slice(0, 5000),
+					paquete: paqueteActual(),
+					escenario: escenarioActual(),
+					contexto: contextoActual(),
 					origen: "landing /business — chat widget",
 					referrer: document.referrer || "",
 					url: window.location.href,

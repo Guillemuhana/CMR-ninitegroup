@@ -119,10 +119,105 @@ Ver `PROMOCIONES.md` antes de tocar cualquier cosa relacionada con envíos.
 
 ### Variables de entorno
 
-Las mismas que ya usa el resto de `api/`, no hay ninguna nueva:
+Las mismas que ya usa el resto de `api/`:
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `GROQ_API_KEY` — el asistente y la calificación del lead.
+- `OPENAI_API_KEY` / `OPENAI_MODEL` / `OPENAI_EN_CHAT` — opcionales, ver
+  "Qué proveedor de IA contesta" más abajo.
+
+## La parte que capta: señales, asistente y calificación
+
+Tres piezas que se apoyan una en la otra. La regla común: **ninguna puede
+romper la carga del lead**. Si la IA falla, si `business.js` no cargó, si Groq
+está caído — el formulario sigue entrando al CRM exactamente como antes.
+
+### 1. Señales de navegación (`business.js`)
+
+Qué secciones miró, si tocó la calculadora y con qué números, cuánto hace que
+está, si ya había entrado otro día, de qué campaña vino. Viven en un objeto en
+memoria y se publican en `window.NTG` (`contexto()`, `escenario()`,
+`paquete()`, `señales()`), más un evento `ntg:senal` cada vez que pasa algo.
+
+Están en `business.js` y no en el widget a propósito: el widget se tiene que
+poder borrar de `index.html` sin romper la landing.
+
+**No mandan nada por su cuenta.** No hay cookies de terceros y no identifican a
+nadie: es un objeto en memoria que viaja *con el lead* sólo si el visitante
+decide dejarlo.
+
+### 2. El asistente sabe qué está mirando (`api/_web/chat.js`)
+
+El widget manda ese contexto con cada mensaje. El servidor lo inyecta como
+`contextoPrompt()`, con una instrucción explícita que importa más que el dato:
+**el asistente lo usa para elegir de qué hablar, nunca para mencionarlo.**
+Nada de "veo que estuviste mirando la calculadora" — que a uno lo miren por
+encima del hombro espanta, y espantar a un prospecto sale más caro que la
+pregunta que nos ahorramos.
+
+El cebo también dejó de ser uno solo a los 6 segundos. Ahora hay uno por
+situación (tocó la calculadora, miró los paquetes, llegó al formulario, vuelve
+otro día, se está yendo) y reglas de cortesía duras: máximo dos en toda la
+visita, separados por 40 segundos, nunca con el panel abierto, y si lo cierra
+una vez no vuelve a aparecer. El de salida sólo existe en escritorio: en el
+celular no hay un equivalente honesto, los disparadores táctiles o molestan a
+quien no se estaba yendo o llegan cuando la pestaña ya se cerró.
+
+### 3. El lead llega calificado (`api/_web/calificar.js`)
+
+Antes la conversación entera caía en el CRM como un volcado de texto y el
+vendedor tenía que leerla desde el celular para saber si valía la pena llamar.
+Ahora la IA la lee primero y deja arriba de todo:
+
+```
+🔥 Lead caliente · 87/100
+Arranca en Orlando con un 3-Stall, financiando.
+📍 Orlando, FL  ·  🚚 3-Stall  ·  🗓️ 30-60 días  ·  💵 financia
+⚠️ Lo frena: no sabe cómo son los permisos en Florida
+👉 Siguiente paso: mandarle la cotización y el resumen de permisos de FL
+```
+
+Va **primero** porque es lo único que se ve en la previsualización de la lista
+de chats y en la notificación push. El asunto del mail de aviso también empieza
+por ahí (`🔥 87/100 · Lead nuevo: …`).
+
+Detalles que importan:
+
+- **Tope de 7 segundos y ningún `throw`.** Se dispara en paralelo con el upsert
+  del contacto y se espera recién antes de armar el mensaje. Si no llegó, el
+  lead entra sin calificar.
+- **No se llama si no hay nada que leer.** Sin conversación y sin calculadora,
+  el modelo sólo podría repetir campos que el vendedor ya ve.
+- **El prompt prohíbe inventar.** Si el visitante no dijo la zona, el campo va
+  vacío: un dato inventado hace que el vendedor abra la llamada con un error.
+- El mail y el CRM aclaran que lo escribió la IA y que es para priorizar, no un
+  dato confirmado.
+
+### Qué proveedor de IA contesta (`api/_ia.js`)
+
+La API de Groq es compatible con la de OpenAI, así que cambiar de proveedor es
+cambiar URL, clave y nombre del modelo. `intentosIA()` arma esa fila:
+
+| Env | Qué pasa |
+|---|---|
+| (nada) | Todo va a Groq, como siempre. |
+| `OPENAI_API_KEY` | OpenAI primero, **Groq siempre atrás como respaldo**. |
+| `OPENAI_MODEL` | Qué modelo. Confirmá el id vigente: los nombres cambian. |
+| `OPENAI_EN_CHAT=0` | El chat público queda en Groq; OpenAI sólo califica. |
+
+Un error que no se arregla reintentando —clave mal, cuenta sin crédito, modelo
+dado de baja— quema a *ese* proveedor, no a la fila: si OpenAI rebota, Groq le
+contesta igual al prospecto.
+
+**Por qué existe `OPENAI_EN_CHAT`:** `chat.js` es público y su freno de abuso
+vive en la memoria del proceso — Vercel levanta varias instancias, cada una con
+su contador, así que frena un bucle ingenuo y poco más. Con Groq el peor caso
+es quedarse sin cuota gratis; con una clave de OpenAI, el peor caso es una
+factura. Hasta que ese límite viva en un almacenamiento compartido (Supabase o
+Upstash), se puede tener las dos cosas: OpenAI calificando leads —una llamada
+por lead, que nadie de afuera puede disparar— y Groq atendiendo el chat abierto
+a internet.
 
 ## Ruteo
 

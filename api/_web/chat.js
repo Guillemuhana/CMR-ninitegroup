@@ -18,14 +18,8 @@
 // leads que ya funciona.
 
 import { cuerpoGroq, vaOtroModelo } from "../_groq.js";
+import { intentosIA } from "../_ia.js";
 import { FICHA_NTG, FICHA_BUSINESS } from "../_ntg.js";
-
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-
-const MODELOS = (process.env.GROQ_MODEL
-  ? [process.env.GROQ_MODEL, "openai/gpt-oss-20b"]
-  : ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]
-).filter((m, i, a) => a.indexOf(m) === i);
 
 // Tag interno para pedirle al widget que muestre el mini-formulario de
 // contacto. Nunca debe llegar al visitante — se lee y se recorta acá mismo,
@@ -77,6 +71,24 @@ End your reply with the exact tag ${TAG_FORM} on its own, as the very last thing
 Do not offer it on a first "hi" or a single vague question, and do not offer it twice in the same conversation unless the visitor explicitly asks again later. Never mention this tag or explain it — it is invisible machinery, the widget reads it and shows a short contact form.`;
 }
 
+// Cómo se le pasa al modelo lo que el visitante estuvo haciendo en la página.
+//
+// La línea fina: saber que alguien pasó cuatro minutos en la calculadora con
+// un 3-Stall sirve muchísimo para no hacerle preguntas que ya se contestó
+// solo. Decírselo en la cara —"veo que estuviste mirando..."— lo espanta. Así
+// que el contexto entra como algo que el asistente SABE, no como algo que
+// menciona: cambia qué pregunta y qué da por sabido, nunca el tema.
+function contextoPrompt(contexto) {
+  return `WHAT THIS VISITOR HAS BEEN DOING ON THE PAGE (behavioural signals from the page itself — they did NOT tell you any of this):
+${contexto}
+
+HOW TO USE IT — read carefully, this is easy to get wrong:
+- Use it to CHOOSE what to talk about and what to skip. If they spent time on the calculator, don't explain that there is a calculator — go straight to their numbers. If they were reading the packages, get concrete about which one fits instead of re-pitching the offer.
+- NEVER say out loud that you can see what they viewed, how long they stayed, or that they were here before. No "I noticed you were looking at…", no "I see you've used our calculator". Being watched is creepy and it costs us the lead.
+- NEVER treat these signals as facts they stated. If the signal says they looked at the 4-Stall, that is interest, not a decision — ask, don't assume.
+- If a signal contradicts what they type, what they type wins, always.`;
+}
+
 // ── Freno de abuso ────────────────────────────────────────────────────────
 //
 // Este endpoint es PÚBLICO y gasta plata: cada llamada es un pedido a Groq.
@@ -122,8 +134,12 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: "Demasiados mensajes seguidos. Esperá un minuto." });
   }
 
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "Falta configurar GROQ_API_KEY en el servidor." });
+  // `publico: true` — cualquiera puede llamar a este endpoint desde internet,
+  // así que acá se respeta OPENAI_EN_CHAT. Ver la nota larga en api/_ia.js.
+  const intentos = intentosIA({ publico: true });
+  if (!intentos.length) {
+    return res.status(500).json({ error: "Falta configurar GROQ_API_KEY (u OPENAI_API_KEY) en el servidor." });
+  }
 
   const entrada = Array.isArray(req.body?.mensajes) ? req.body.mensajes : null;
   if (!entrada || !entrada.length) return res.status(400).json({ error: "Faltan mensajes." });
@@ -144,8 +160,16 @@ export default async function handler(req, res) {
   const idioma = detectarIdioma(historial.filter((m) => m.role === "user").map((m) => m.content));
   const yaOfrecioFormulario = entrada.some((m) => m.role === "assistant" && m.formShown);
 
+  // Señales de navegación que manda el widget (secciones que miró, si usó la
+  // calculadora y con qué números, cuánto hace que está, si ya había entrado
+  // antes). No es algo que el visitante nos haya dicho: es contexto para que
+  // el asistente hable de lo que la persona está mirando en vez de arrancar
+  // de cero. Cómo se usa —y cómo NO— está en el bloque de abajo.
+  const contexto = String(req.body?.contexto || "").trim().slice(0, 700);
+
   const messages = [
     { role: "system", content: systemPrompt(idioma) },
+    ...(contexto ? [{ role: "system", content: contextoPrompt(contexto) }] : []),
     ...(yaOfrecioFormulario
       ? [{ role: "system", content: "The contact form was already offered earlier in this conversation. Do not add the tag again unless the visitor explicitly asks to talk to someone or for the form again." }]
       : []),
@@ -153,9 +177,15 @@ export default async function handler(req, res) {
   ];
 
   let ultimoError = "Error al consultar el asistente.";
-  for (const model of MODELOS) {
+  // Un error que no se arregla reintentando quema a ESE proveedor, no a la
+  // fila: si la clave de OpenAI está vencida, Groq todavía tiene que poder
+  // contestarle al prospecto.
+  const quemados = new Set();
+
+  for (const { proveedor, url, apiKey, model } of intentos) {
+    if (quemados.has(proveedor)) continue;
     try {
-      const r = await fetch(GROQ_URL, {
+      const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify(cuerpoGroq({ model, temperature: 0.6, max_tokens: 500, messages })),
@@ -167,10 +197,11 @@ export default async function handler(req, res) {
         if (mostrarFormulario) contenido = contenido.replace(TAG_FORM, "").trim();
         return res.status(200).json({ reply: contenido, mostrarFormulario });
       }
-      ultimoError = data?.error?.message || `Groq devolvió ${r.status}`;
-      if (!vaOtroModelo(r.status, ultimoError)) break;
+      ultimoError = data?.error?.message || `${proveedor} devolvió ${r.status}`;
+      if (!vaOtroModelo(r.status, ultimoError)) quemados.add(proveedor);
     } catch (e) {
-      ultimoError = e?.message || "Error de conexión con Groq.";
+      ultimoError = e?.message || `Error de conexión con ${proveedor}.`;
+      quemados.add(proveedor);
     }
   }
   return res.status(500).json({ error: ultimoError });

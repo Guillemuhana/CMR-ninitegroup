@@ -347,11 +347,138 @@
 	   formulario antes de bajar hasta él.
 	   ────────────────────────────────────────────────────────── */
 	var selPaquete = $("f-pack");
+	var paqueteElegido = "";
 	Array.prototype.forEach.call(document.querySelectorAll("[data-pack]"), function (btn) {
 		btn.addEventListener("click", function () {
-			if (selPaquete) selPaquete.value = btn.getAttribute("data-pack");
+			paqueteElegido = btn.getAttribute("data-pack") || "";
+			if (selPaquete) selPaquete.value = paqueteElegido;
+			avisarSeñal("paquete");
 		});
 	});
+
+	/* ──────────────────────────────────────────────────────────
+	   SEÑALES DE NAVEGACIÓN
+
+	   Qué secciones miró, si tocó la calculadora y con qué números,
+	   cuánto hace que está, si ya había entrado antes. Tres usos:
+
+	     1. El asistente (assistant-widget.js) habla de lo que la
+	        persona está mirando en vez de arrancar de cero, y elige
+	        CUÁNDO ofrecerse en vez de saltar siempre a los 6 segundos.
+	     2. Viajan con el lead: el vendedor ve "estuvo 6 minutos en la
+	        calculadora con un 3-Stall" antes de levantar el teléfono.
+	     3. Alimentan la calificación con IA (api/_web/calificar.js).
+
+	   Vive acá y no en el widget a propósito: el widget se tiene que
+	   poder borrar de index.html sin romper nada, y esto es de la
+	   landing. Si el widget no está, las señales simplemente no las
+	   lee nadie.
+
+	   Qué NO hace: no manda nada a ningún lado por su cuenta, no pone
+	   cookies de terceros y no identifica a nadie. Es un objeto en
+	   memoria que se adjunta al lead SI el visitante decide dejarlo.
+	   ────────────────────────────────────────────────────────── */
+	var señales = {
+		inicio: Date.now(),
+		secciones: [],
+		calculadora: false,
+		visitas: 1
+	};
+
+	function avisarSeñal(tipo) {
+		try {
+			document.dispatchEvent(new CustomEvent("ntg:senal", { detail: { tipo: tipo } }));
+		} catch (e) { /* navegadores viejos: el widget igual puede preguntar */ }
+	}
+
+	// Visitas anteriores. localStorage y no sessionStorage: la gracia es
+	// justamente saber que alguien VUELVE otro día. Si está bloqueado
+	// (Safari privado, cuotas), queda en 1 y no pasa nada.
+	try {
+		var previas = parseInt(localStorage.getItem("ntg_visitas") || "0", 10);
+		señales.visitas = (isFinite(previas) ? previas : 0) + 1;
+		localStorage.setItem("ntg_visitas", String(señales.visitas));
+	} catch (e) {}
+
+	// Secciones que entraron en pantalla de verdad (un 35%, no un roce).
+	if ("IntersectionObserver" in window) {
+		var ioSec = new IntersectionObserver(function (entries) {
+			entries.forEach(function (e) {
+				if (!e.isIntersecting) return;
+				var id = e.target.id;
+				if (id && señales.secciones.indexOf(id) === -1) {
+					señales.secciones.push(id);
+					avisarSeñal("seccion:" + id);
+				}
+				ioSec.unobserve(e.target);
+			});
+		}, { threshold: 0.35 });
+		Array.prototype.forEach.call(document.querySelectorAll("section[id]"), function (s) {
+			ioSec.observe(s);
+		});
+	}
+
+	// Un solo oyente delegado sobre el panel de la calculadora, en vez de
+	// meter mano en los listeners de cada campo que ya existen.
+	var panelCalc = $("calculator");
+	if (panelCalc) {
+		var marcarCalc = function () {
+			if (señales.calculadora) return;
+			señales.calculadora = true;
+			avisarSeñal("calculadora");
+		};
+		panelCalc.addEventListener("input", marcarCalc, true);
+		panelCalc.addEventListener("change", marcarCalc, true);
+	}
+
+	// Parámetros de campaña, para saber de qué aviso vino el lead.
+	var campaña = "";
+	try {
+		var qs = new URLSearchParams(window.location.search);
+		campaña = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "fbclid", "gclid"]
+			.map(function (k) { return qs.get(k) ? k + "=" + qs.get(k) : ""; })
+			.filter(Boolean).join(" · ").slice(0, 200);
+	} catch (e) {}
+
+	/** Resumen en una línea de todo lo anterior. En inglés, como el resto
+	 *  del mensaje que le llega al vendedor. Vacío si no hay nada que decir. */
+	function contextoNavegacion() {
+		var minutos = Math.round((Date.now() - señales.inicio) / 60000);
+		var partes = [];
+
+		if (señales.secciones.length) {
+			partes.push("Sections viewed: " + señales.secciones.slice(0, 12).join(", "));
+		}
+		if (señales.calculadora) {
+			var opcion = hayCalc ? elModel.options[elModel.selectedIndex] : null;
+			partes.push("Played with the calculator" + (opcion
+				? " (" + opcion.text + ", " + elRentals.value + " rentals/mo, est. net " + $("o-net").textContent + "/mo)"
+				: ""));
+		}
+		if (pidioRevision) partes.push("Clicked \"have us review these numbers\"");
+		if (paqueteElegido) partes.push("Clicked the " + paqueteElegido + " package button");
+		partes.push(minutos < 1 ? "Less than a minute on the page" : minutos + " min on the page");
+		if (señales.visitas > 1) partes.push("Visit #" + señales.visitas + " (has been here before)");
+		if (campaña) partes.push("Campaign: " + campaña);
+
+		return partes.join(" · ").slice(0, 700);
+	}
+
+	/* Puente para el asistente. Es lo único que el widget conoce de este
+	   archivo, y todo lo que lee es de sólo lectura. */
+	window.NTG = window.NTG || {};
+	window.NTG.contexto = contextoNavegacion;
+	window.NTG.escenario = function () { return señales.calculadora ? resumenEscenario() : ""; };
+	window.NTG.paquete = function () { return paqueteElegido; };
+	window.NTG.señales = function () {
+		return {
+			secciones: señales.secciones.slice(),
+			calculadora: señales.calculadora,
+			paquete: paqueteElegido,
+			visitas: señales.visitas,
+			segundos: Math.round((Date.now() - señales.inicio) / 1000)
+		};
+	};
 
 	/* ──────────────────────────────────────────────────────────
 	   FORMULARIO -> CRM
@@ -424,6 +551,10 @@
 			// Trampa anti-bot: si viene con algo, es un bot.
 			company: $("f-company").value,
 			escenario: pidioRevision ? resumenEscenario() : "",
+			// Lo que estuvo haciendo en la página. Va con el lead para que el
+			// vendedor sepa con quién habla antes de marcar, y para que la
+			// calificación con IA tenga de dónde agarrarse.
+			contexto: contextoNavegacion(),
 			origen: "landing /business",
 			referrer: document.referrer || "",
 			url: window.location.href

@@ -31,10 +31,18 @@ This repository is a React + Vite CRM frontend backed by Supabase and Vercel ser
 - `npm test` — runner nativo de Node (`node --test`), sin dependencias extra.
 
 Test coverage is partial: today the Meta Conversions API integration
-(`tests/meta-capi.test.js`) and the mass-send rules (`tests/promos.test.js`) are
-covered. There is no linter and no type-checker configured in this repository.
+(`tests/meta-capi.test.js`), the mass-send rules (`tests/promos.test.js`) and
+the landing's lead qualification plus AI-provider selection
+(`tests/calificacion.test.js`) are covered. There is no linter and no
+type-checker configured in this repository.
 
 ## Environment and runtime conventions
+- AI calls go through `api/_ia.js` (`intentosIA()`), which picks the provider:
+  Groq by default, OpenAI first when `OPENAI_API_KEY` is set, always with Groq
+  behind it as a fallback. Today only the landing's two call sites
+  (`api/_web/chat.js`, `api/_web/calificar.js`) use it; the CRM's own AI
+  functions still build their Groq request inline. Read the note at the top of
+  `api/_ia.js` before pointing a paid key at a public endpoint.
 - Frontend public envs must use `VITE_` prefix and are read from `import.meta.env`.
   - `VITE_SUPABASE_URL`
   - `VITE_SUPABASE_ANON_KEY`
