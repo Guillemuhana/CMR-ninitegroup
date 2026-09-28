@@ -10,6 +10,7 @@
     { "source": "/business/:ruta*", "destination": "https://ntg-business.vercel.app/:ruta*", "permanent": false }
   ],
   "rewrites": [
+    { "source": "/api/prospectos", "destination": "/api/push?accion=prospectos" },
     { "source": "/api/push-subscribe", "destination": "/api/push?accion=subscribe" },
     { "source": "/api/push-send", "destination": "/api/push?accion=send" },
     { "source": "/api/meta-evento", "destination": "/api/push?accion=meta" },

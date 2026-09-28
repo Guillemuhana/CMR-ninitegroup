@@ -24,6 +24,7 @@ import enviar from "./_push/enviar.js";
 import metaEvento from "./_meta/enviar.js";
 import lead from "./_web/lead.js";
 import chat from "./_web/chat.js";
+import prospectos from "./_prospectos/buscar.js";
 
 export default async function handler(req, res) {
   const accion = String(req.query?.accion || "");
@@ -33,6 +34,7 @@ export default async function handler(req, res) {
   if (accion === "meta") return metaEvento(req, res);
   if (accion === "lead") return lead(req, res);
   if (accion === "chat") return chat(req, res);
+  if (accion === "prospectos") return prospectos(req, res);
 
   return res.status(404).json({ error: "Acción de push desconocida." });
 }

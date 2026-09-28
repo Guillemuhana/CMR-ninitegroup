@@ -26,6 +26,7 @@ import DiarioVendedor from "./DiarioVendedor";
 import CEODashboard from "./CEODashboard";
 import Agenda from "./Agenda";
 import Directorio from "./Directorio";
+import Prospectos from "./prospectos/Prospectos";
 import Promociones from "./Promociones";
 import FiltrosModal, { FILTROS_INICIAL, contarActivos, aplicaFiltrosIA } from "./FiltrosModal";
 import { cargarConsultaronFin } from "./finConsultas";
@@ -1699,6 +1700,7 @@ function BottomNav({ vista, setVista, rol, contactos = [], userName, onLogout })
 const NAV_ITEMS = [
   { key: "chat",       label: "Conversaciones",  icon: MessageSquare, roles: ["ceo", "vendedor"], badge: "noLeidos" },
   { key: "prioridad",  label: "Piden contacto",  icon: PhoneCall,     roles: ["ceo", "vendedor"], badge: "pide" },
+  { key: "prospectos", label: "Clientes potenciales", icon: Search, roles: ["ceo"] },
   { key: "directorio", label: "Contactos",       icon: Users,         roles: ["ceo"] },
   { key: "pedidos",    label: "Pedidos",         icon: ShoppingBag,   roles: ["ceo", "vendedor"] },
   { key: "agenda",     label: "Calendario",      icon: Calendar,      roles: ["ceo", "vendedor"] },
@@ -5279,7 +5281,7 @@ export default function App() {
     activo !== null ||
     vista === "prioridad" || vista === "pedidos" || vista === "reportes" || vista === "admin" ||
     vista === "control" || vista === "diario" || vista === "agenda" || vista === "directorio" ||
-    vista === "promos"
+    vista === "promos" || vista === "prospectos"
   );
 
   return (
@@ -5328,7 +5330,12 @@ export default function App() {
       </div>
 
       <div className="app-main">
-        {vista === "directorio" && rol === "ceo" ? (
+        {vista === "prospectos" && rol === "ceo" ? (
+          <>
+            {isMobile && <MobileBack title="Clientes potenciales" onBack={() => setVista("chat")} />}
+            <div className="scroll-y" style={{ flex: 1, overflowY: "auto" }}><Prospectos /></div>
+          </>
+        ) : vista === "directorio" && rol === "ceo" ? (
           <>
             {isMobile && <MobileBack title="Directorio" onBack={() => setVista("chat")} />}
             <div style={{ flex: 1, overflowY: "auto", height: "100%" }}><Directorio /></div>
