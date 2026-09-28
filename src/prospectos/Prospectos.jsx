@@ -231,6 +231,28 @@ const PASOS = [
     texto: "Tildá los negocios que querés visitar (o ninguno para usar todos los que están a la vista) y tocá Crear hoja de ruta: quedan ordenados por cercanía, con el recorrido en Google Maps. Se puede asignar un vendedor a cada uno, compartir, descargar el PDF, imprimir o bajar la planilla CSV." },
 ];
 
+// Con qué funciona. Tiene que decir la verdad de cómo está armado: si se
+// cambia la fuente o la IA (api/_prospectos/buscar.js, api/_ia.js), se
+// actualiza acá.
+const MOTOR = [
+  { icono: Globe, titulo: "Google Maps (Google Places)",
+    texto: "Los negocios salen de la misma base que Google Maps: reales, abiertos hoy, con dirección, teléfono, web, reseñas y ubicación exacta. Nada de listas viejas compradas ni datos inventados. Si algún día se quita la clave de Google, busca en OpenStreetMap, gratis pero con menos datos." },
+  { icono: Sparkles, titulo: "Inteligencia artificial con la ficha de NTG",
+    texto: "OpenAI (con Groq de respaldo) lee cada negocio junto con la ficha comercial de Nini T Group: qué vendemos, las unidades, los paquetes Starter / Business Launch / Managed y lo que nunca se puede prometer. Con eso puntúa, sugiere la unidad y escribe el enfoque y los mensajes." },
+  { icono: Target, titulo: "Rubros pensados para vender trailers",
+    texto: "Cada rubro tiene su puntaje base según qué tan buen comprador es: primero los que ya alquilan para eventos (le suman una línea de más valor), después los que hoy pagan alquiler de baños cada fin de semana (bodas, hoteles, campings, ferias). La IA ajusta ese puntaje negocio por negocio." },
+  { icono: Route, titulo: "Recorrido ordenado por cercanía",
+    texto: "Con las coordenadas reales de cada negocio arma la ruta sin zigzags y la abre en Google Maps, partida en tramos si son muchas paradas." },
+];
+
+const VENTAJAS = [
+  "En unos segundos te trae hasta 40 negocios de cualquier zona de USA, ya puntuados y con teléfono en casi todos.",
+  "No es una lista: te dice a quién llamar primero y con qué frase abrir la conversación.",
+  "El email y el WhatsApp salen personalizados para cada negocio, en inglés, respetando la ficha de NTG.",
+  "Si la IA falla, la búsqueda sale igual con el puntaje por rubro: nunca te quedás sin resultados.",
+  "Lo que antes era una tarde buscando en Google Maps y copiando teléfonos, ahora son unos minutos.",
+];
+
 const CUIDADOS = [
   "No mandes el mismo mensaje en masa: son negocios que todavía no nos conocen. WhatsApp bloquea el número si muchos lo reportan, y en USA los SMS de publicidad sin permiso tienen multas.",
   "La firma de los emails tiene que llevar la dirección postal de NTG (lo pide la ley de email comercial de USA). Se edita en Contactar → Firma de los emails. La línea para darse de baja se agrega sola.",
@@ -268,6 +290,22 @@ function Instructivo({ onCerrar }) {
               </li>
             ))}
           </ol>
+
+          <div className="motor">
+            <div className="canal-titulo"><Radar size={15} /> Con qué funciona</div>
+            <div className="motor-grilla">
+              {MOTOR.map(({ icono: Icono, titulo, texto }) => (
+                <div key={titulo} className="motor-item">
+                  <div className="motor-titulo"><Icono size={15} /> {titulo}</div>
+                  <p>{texto}</p>
+                </div>
+              ))}
+            </div>
+            <div className="canal-titulo" style={{ marginTop: 14 }}><Star size={15} /> Por qué es tan bueno</div>
+            <ul className="ventajas">
+              {VENTAJAS.map((v) => <li key={v}><CheckCircle2 size={14} /> {v}</li>)}
+            </ul>
+          </div>
 
           <div className="cuidados">
             <div className="canal-titulo" style={{ color: "#9a3412" }}><AlertTriangle size={15} /> Importante</div>
@@ -567,6 +605,16 @@ export default function Prospectos() {
                       color: #fff; background: linear-gradient(140deg,#ef4444,#7f1d1d); }
         .paso-titulo { font-size: 14px; font-weight: 800; color: #0f172a; }
         .paso p { margin: 3px 0 0; font-size: 13px; line-height: 1.55; color: #475569; }
+        .motor { margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: #f0f9ff; border: 1px solid #bae6fd; }
+        .motor-grilla { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .motor-item { padding: 11px 13px; border-radius: 12px; background: #fff; border: 1px solid #e0f2fe; }
+        .motor-titulo { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: #0c4a6e; }
+        .motor-titulo svg { color: #0284c7; flex-shrink: 0; }
+        .motor-item p { margin: 5px 0 0; font-size: 12.5px; line-height: 1.5; color: #334155; }
+        .ventajas { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
+        .ventajas li { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.5; color: #0f172a; }
+        .ventajas svg { color: #16a34a; flex-shrink: 0; margin-top: 3px; }
+        @media (max-width: 767px) { .motor-grilla { grid-template-columns: 1fr; } }
         .cuidados { margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: #fff7ed; border: 1px solid #fed7aa; }
         .cuidados ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
         .cuidados li { font-size: 13px; line-height: 1.5; color: #7c2d12; }
