@@ -31,7 +31,7 @@ export function docHojaRutaProspectos(paradas, opciones = {}) {
       p.nombre || "Sin nombre",
       p.direccion || "Sin dirección",
       p.telefono && p.telefono !== "No disponible" ? p.telefono : "—",
-      `${p.prioridad || "—"}${p.lead_score ? ` (${p.lead_score}/10)` : ""}`,
+      `${p.prioridad || "—"}${p.lead_score ? ` (${p.lead_score}/100)` : ""}`,
       vendedores[p.place_id] || "Sin asignar",
       "",
     ]),

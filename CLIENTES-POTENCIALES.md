@@ -1,30 +1,78 @@
-﻿# Clientes potenciales — Nini T Group
+# Clientes potenciales — Nini T Group
 
-La sección está en el menú del CEO y en Más desde el celular. Busca negocios por rubro y ciudad, estado o ZIP de Estados Unidos. Incluye filtros, selección, asignación de vendedores, rutas en Google Maps, CSV, PDF, impresión y compartir. La prioridad representa afinidad comercial; no confirma intención de compra.
+Sección del menú del propietario (CEO), también en **Más** desde el celular.
+Busca negocios reales en Estados Unidos que pueden comprar un restroom
+trailer, los puntúa según su afinidad con NTG, redacta el primer contacto y
+arma la hoja de ruta para visitarlos.
 
-## Conexión preparada; activación pendiente
+## Cómo se usa
 
-El navegador llama a `POST /api/prospectos` con la sesión de Supabase. El servidor verifica el permiso CEO y llama al workflow propio de NTG. La ruta usa el dispatcher `api/push.js`, manteniendo el número de funciones de Vercel. Para probar la API localmente se necesita el runtime de Vercel; `npm run dev` solo sirve el frontend.
+1. Elegí un rubro (o escribí cualquiera, en español o inglés).
+2. Elegí la zona: arranca en **Miami, FL** y despliega el sur de Florida, el
+   resto de Florida, Texas, California y las áreas grandes de USA. También
+   acepta cualquier ciudad, condado, estado o ZIP.
+3. Cada negocio trae puntaje (0-100), prioridad, perfil de comprador, unidad
+   y paquete sugeridos y el enfoque para la primera llamada.
+4. **Contactar**: la IA redacta un email y un WhatsApp de presentación para
+   ese negocio. Se revisan y se mandan desde el correo / WhatsApp del
+   vendedor, uno por uno. También **Llamar**, y el negocio queda marcado como
+   contactado en ese navegador.
+5. **Hoja de ruta**: ordena por cercanía, abre Google Maps, exporta PDF/CSV y
+   se comparte con el vendedor.
 
-El proyecto de origen está en `C:/app/NM/munich-crm-VSCODE`. Su buscador llama al workflow remoto `munich-prospectos-buscar`; ese workflow no está exportado en los archivos revisados. No se modificó Munich ni su contador de pruebas.
+## Rubros
 
-Para activar búsquedas reales:
+Definidos en `api/_prospectos/rubros.js` (fuente única para servidor y
+pantalla): baños portátiles, alquiler para eventos, séptico, venues de bodas,
+hoteles y resorts, campings y RV parks, fairgrounds, viñedos y granjas, golf,
+organizadores, constructoras y catering. Cada uno tiene su puntaje base, el
+perfil de comprador (sale de `FICHA_BUSINESS` en `api/_ntg.js`) y la unidad
+sugerida con las capacidades de la ficha.
 
-1. Duplicar/adaptar el workflow de origen en n8n para NTG: búsqueda de negocios de USA y clasificación para restroom trailers. Debe consumir `contexto_comercial` e `instrucciones` enviados por el servidor, en lugar de los criterios de alimentos de Munich. Verificar el país con la fuente de datos, no inferirlo del texto de búsqueda. No inventar contactos.
-2. Configurar Header Auth en el webhook de n8n: nombre `X-Prospectos-Secret`, valor secreto elegido para esta integración.
-3. Configurar `PROSPECTOS_WEBHOOK` (URL HTTPS propia de NTG) y `PROSPECTOS_WEBHOOK_SECRET` en el servidor/Vercel. La autenticación utiliza `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` existentes. No usar prefijo `VITE_` para el webhook ni el secreto.
-4. Publicar y probar una búsqueda desde la cuenta CEO. La conexión remota y los resultados reales aún no fueron verificados.
+## De dónde salen los datos
 
-## Contrato del workflow
+`POST /api/prospectos` → `api/push.js?accion=prospectos` →
+`api/_prospectos/buscar.js`. Sólo el CEO (se valida la sesión en el servidor).
 
-Recibe POST JSON con `busqueda`, `zona`, `query_completo`, `pais: "US"`, `empresa`, `contexto_comercial` e `instrucciones`. La ficha se carga de `api/_ntg.js`, que sigue siendo la fuente comercial autorizada.
+- **Google Places** si está `GOOGLE_PLACES_API_KEY` en Vercel: teléfono, web,
+  reseñas y coordenadas de casi todos los negocios. Habilitar "Places API
+  (New)" en Google Cloud y restringir la clave a esa API. Google cobra por
+  búsqueda después de la cuota gratis mensual; cada búsqueda del CRM son 1 o 2
+  pedidos.
+- **OpenStreetMap (Nominatim)** si no hay clave: gratis y sin configurar,
+  pero con menos teléfonos y casi sin emails. Algunos rubros (baños
+  portátiles) casi no están cargados ahí. Nominatim pide no pasar de un
+  pedido por segundo: el código espera entre consultas.
 
-Responde con un array o con `{ "resultados": [...] }` / `{ "leads": [...] }`, máximo 100 negocios, en menos de 22 segundos. Si el workflow original tarda más, hay que adaptar el procesamiento o implementar trabajos asíncronos antes de activarlo.
+Google Places no da emails; OpenStreetMap a veces. Cuando no hay email, el
+mensaje se copia y se usa el formulario de la web del negocio.
 
-Cada negocio requiere `place_id` único, `nombre` y `pais: "US"` verificado. Campos opcionales: `direccion`, `ciudad`, `telefono`, `email` (texto o lista), `sitio_web`, `tipo_negocio`, `latitud`/`longitud` (o `lat`/`lng`), `prioridad` (`ALTA`, `MEDIA`, `BAJA`), `lead_score` (0–100), `productos_sugeridos` y `enfoque_venta` (textos). Los datos desconocidos deben quedar vacíos. La API rechaza respuestas sin país US, normaliza los campos y elimina IDs repetidos.
+## Puntaje
 
-No se importan automáticamente resultados al CRM ni se envían mensajes a clientes. Las asignaciones y resultados se mantienen mientras la pantalla está abierta. Nini no aplica el contador de pruebas de Munich.
+Primero reglas (rubro + datos de contacto + reseñas). Después, si hay IA
+configurada (`GROQ_API_KEY` u `OPENAI_API_KEY`, ver `api/_ia.js`), la IA lee
+la ficha de NTG y ajusta el puntaje de cada negocio. Si la IA falla o tarda,
+la búsqueda sale igual con el puntaje de reglas.
 
-## Verificación local
+## Por qué el contacto no es masivo
 
-`node --test tests/prospectos.test.js` verifica permisos, configuración, consulta USA, respuestas incorrectas, duplicados y errores de red sin consumir búsquedas reales. `npm run build` verifica la compilación del frontend.
+Son contactos fríos, que nunca le escribieron a NTG:
+
+- **WhatsApp**: la API oficial de Meta exige opt-in y plantilla aprobada;
+  mandar en masa a quien no lo pidió termina con el número bloqueado. Por eso
+  se abre el WhatsApp del vendedor (`wa.me`) con el texto listo, uno a uno, y
+  no pasa por `enviarPorCanal()`.
+- **SMS**: el marketing por SMS en USA exige consentimiento previo (TCPA).
+  No se ofrece.
+- **Email**: B2B es válido bajo CAN-SPAM con asunto honesto, identificación y
+  baja. La línea de baja la agrega el código. **La firma tiene que llevar una
+  dirección postal real de NTG**: se edita en el modal de Contactar.
+
+Los mensajes obedecen `api/_ntg.js` (nada de ingresos garantizados, "we
+manufacture", franquicia, ni precios de paquetes).
+
+## Qué no hace
+
+No importa los negocios al CRM ni guarda búsquedas en Supabase. Los
+resultados y las asignaciones viven mientras la pantalla está abierta; la
+marca de "contactado" y la firma quedan en el navegador (localStorage).

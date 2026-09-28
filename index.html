@@ -112,13 +112,13 @@
       /* Escritorio: rail de navegación · conversaciones · panel activo */
       .app-layout  { display: flex; height: 100%; overflow: hidden; }
       /* El rail ocupa siempre 72px de layout: solo íconos. Al pasar el mouse el
-         contenido (.rail-flyout) se despliega a 236px POR ENCIMA del resto, sin
+         contenido (.rail-flyout) se despliega a 280px POR ENCIMA del resto, sin
          empujar la lista ni el chat: el espacio reservado nunca cambia. */
       .app-rail    { flex-shrink: 0; width: 72px; height: 100%; position: relative; z-index: 60; }
       .rail-flyout { position: absolute; top: 0; bottom: 0; left: 0; width: 72px; overflow: hidden;
                      transition: width .18s ease, box-shadow .18s ease; }
       .app-rail:hover .rail-flyout,
-      .app-rail:focus-within .rail-flyout { width: 236px; box-shadow: 8px 0 32px rgba(0,0,0,.32); }
+      .app-rail:focus-within .rail-flyout { width: 280px; box-shadow: 8px 0 32px rgba(0,0,0,.32); }
 
       /* Estado plegado: sin textos, íconos centrados y el badge sobre el ícono. */
       .app-rail:not(:hover):not(:focus-within) .rail-label { display: none !important; }

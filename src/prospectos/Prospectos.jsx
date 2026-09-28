@@ -1,18 +1,38 @@
 import { useMemo, useState } from "react";
 import {
-  ArrowRight, Building2, CheckCircle2, Download, ExternalLink, FileSpreadsheet, Gauge, Globe,
-  ChevronDown, Loader2, Mail, MapPin, MessageSquareQuote, Navigation, Phone, Printer, Radar, Route, Search,
-  Send, Share2, ShoppingBag, Sparkles, Star, Target, TrendingUp, X,
+  AlertTriangle, ArrowRight, Building2, CheckCircle2, Copy, Download, ExternalLink, FileSpreadsheet, Gauge, Globe,
+  ChevronDown, Loader2, Mail, MapPin, MessageCircle, MessageSquareQuote, Navigation, Phone, Printer, Radar, Route, Search,
+  Send, Share2, ShoppingBag, Sparkles, Star, Target, TrendingUp, UserCheck, X,
 } from "lucide-react";
 import { docHojaRutaProspectos } from "./documentos";
-import { PROSPECTOS_PRUEBAS } from "./config";
 import { supabase, VENDEDORES as EQUIPO_COMERCIAL } from "../lib";
 import { descargarDoc, enviarDoc, imprimirDoc } from "./imprimir";
+import { RUBROS } from "../../api/_prospectos/rubros.js";
+import { ZONAS, ZONA_INICIAL } from "./zonas";
 
-// Mensaje para integraciones con pruebas limitadas.
-const TEXTO_AGOTADO =
-  `Se terminaron las ${PROSPECTOS_PRUEBAS} búsquedas de prueba de clientes potenciales. ` +
-  "Escribinos para activar el servicio completo y la pestaña se destraba.";
+// ── Preferencias de este navegador ───────────────────────────
+// Quién ya fue contactado y la firma de los emails. Es una ayuda para el
+// vendedor en su equipo, no un registro: si se borra, no se pierde nada.
+const CLAVE_CONTACTADOS = "ntg-prospectos-contactados";
+const CLAVE_FIRMA = "ntg-prospectos-firma";
+const leer = (clave, defecto) => {
+  try { const v = localStorage.getItem(clave); return v ? JSON.parse(v) : defecto; } catch { return defecto; }
+};
+const guardar = (clave, valor) => { try { localStorage.setItem(clave, JSON.stringify(valor)); } catch { /* sin almacenamiento */ } };
+
+const FIRMA_INICIAL = `${EQUIPO_COMERCIAL[0] || "Nini T Group"}\nNini T Group · https://ninitgroup.com`;
+
+/** Número para wa.me: sólo dígitos y con el 1 de USA adelante. */
+function numeroWhatsApp(tel) {
+  const d = String(tel || "").replace(/\D/g, "");
+  if (d.length === 10) return `1${d}`;
+  if (d.length === 11 && d.startsWith("1")) return d;
+  return "";
+}
+
+const emailsDe = (r) => (Array.isArray(r.email) ? r.email : r.email ? [r.email] : []).filter((e) => e && e !== "No disponible");
+const telefonoDe = (r) => (r.telefono && r.telefono !== "No disponible" ? r.telefono : "");
+const celdaCSV = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
 // Google Maps acepta origen + 9 puntos más en un link de indicaciones.
 // Si la búsqueda trae más clientes, la ruta se parte en tramos encadenados.
@@ -180,20 +200,69 @@ function CroquisRuta({ paradas }) {
 
 /** Anillo de score al estilo de un medidor, en vez del texto suelto. */
 function AnilloScore({ valor = 0, color }) {
-  const pct = Math.max(0, Math.min(10, Number(valor) || 0)) * 10;
+  const pct = Math.max(0, Math.min(100, Number(valor) || 0));
   return (
     <div className="anillo" style={{ background: `conic-gradient(${color} ${pct}%, #e9edf3 0)` }}>
       <div className="anillo-centro">
         <span style={{ color }}>{valor || 0}</span>
-        <small>/10</small>
+        <small>/100</small>
       </div>
     </div>
   );
 }
 
-export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: true, consumir: async () => ({ permitido: true }) } }) {
+/**
+ * Campo de zona: se escribe libre (ciudad, condado, estado o ZIP) y al
+ * enfocarlo despliega las zonas sugeridas agrupadas, filtradas por lo que
+ * se va tipeando. Miami queda primero porque es la base de NTG.
+ */
+function ZonaSelector({ valor, onCambiar, onEnter }) {
+  const [abierto, setAbierto] = useState(false);
+  const [filtroZona, setFiltroZona] = useState("");
+  const t = filtroZona.trim().toLowerCase();
+  const grupos = ZONAS
+    .map((g) => ({ ...g, lista: g.lista.filter((z) => !t || z.toLowerCase().includes(t)) }))
+    .filter((g) => g.lista.length);
+  const elegir = (z) => { onCambiar(z); setFiltroZona(""); setAbierto(false); };
+
+  return (
+    <div className="campo campo-zona">
+      <MapPin size={16} />
+      <input value={valor} role="combobox" aria-expanded={abierto} aria-label="Ciudad, estado o ZIP"
+        placeholder="Ciudad, estado o ZIP de Estados Unidos"
+        onFocus={(e) => { setFiltroZona(""); setAbierto(true); e.target.select(); }}
+        onChange={(e) => { onCambiar(e.target.value); setFiltroZona(e.target.value); setAbierto(true); }}
+        onBlur={() => setTimeout(() => setAbierto(false), 120)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { setAbierto(false); onEnter(); }
+          if (e.key === "Escape") setAbierto(false);
+        }} />
+      <ChevronDown size={16} className="campo-flecha" />
+      {abierto && (
+        <div className="zonas-lista" role="listbox">
+          {grupos.map((g) => (
+            <div key={g.grupo}>
+              <div className="zonas-grupo">{g.grupo}</div>
+              {g.lista.map((z) => (
+                <button key={z} type="button" role="option" aria-selected={z === valor} className="zona-op" data-activa={z === valor ? 1 : 0}
+                  onMouseDown={(e) => e.preventDefault()} onClick={() => elegir(z)}>
+                  <MapPin size={13} /> {z}
+                </button>
+              ))}
+            </div>
+          ))}
+          {!grupos.length && (
+            <div className="zonas-vacio">No está en la lista, pero se puede buscar igual: tocá Buscar para “{valor}”.</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Prospectos() {
   const [busqueda, setBusqueda] = useState("");
-  const [zona, setZona] = useState("Miami, FL");
+  const [zona, setZona] = useState(ZONA_INICIAL);
   const [cargando, setCargando] = useState(false);
   const [resultados, setResultados] = useState([]);
   const [error, setError] = useState(null);
@@ -203,14 +272,47 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
   const [seleccionados, setSeleccionados] = useState([]);
   const [mensajeAccion, setMensajeAccion] = useState("");
   const [rutaAbierta, setRutaAbierta] = useState(false);
+  const [info, setInfo] = useState(null);             // fuente e IA de la última búsqueda
+  const [soloCon, setSoloCon] = useState("");         // "", "email" o "telefono"
+  const [contactados, setContactados] = useState(() => leer(CLAVE_CONTACTADOS, {}));
+  const [mensaje, setMensaje] = useState(null);       // { negocio, cargando, asunto, email, whatsapp, error }
+  const [firma, setFirma] = useState(() => leer(CLAVE_FIRMA, FIRMA_INICIAL));
 
-  const RUBROS = ["Event rental companies", "Portable restroom rentals", "Wedding venues", "Event planners", "Construction companies", "Campgrounds", "Outdoor event venues"];
   const VENDEDORES = ["Sin asignar", ...EQUIPO_COMERCIAL];
+
+  const marcarContactado = (r, canal) => {
+    setContactados((prev) => {
+      const nuevo = { ...prev, [r.place_id]: { canal, fecha: new Date().toISOString() } };
+      guardar(CLAVE_CONTACTADOS, nuevo);
+      return nuevo;
+    });
+  };
+
+  /** Pide al servidor el mensaje de presentación para ese negocio. */
+  const redactarPara = async (r) => {
+    setMensaje({ negocio: r, cargando: true });
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Iniciá sesión para redactar el mensaje.");
+      const res = await fetch("/api/prospectos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ accion: "redactar", firma, negocio: r }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo redactar el mensaje.");
+      setMensaje({ negocio: r, asunto: data.asunto, email: data.email, whatsapp: data.whatsapp, ia: data.ia });
+    } catch (err) {
+      setMensaje({ negocio: r, error: err instanceof SyntaxError || err instanceof TypeError ? "No se pudo conectar. Probá de nuevo." : err.message });
+    }
+  };
+
+  const copiar = async (textoCopiar, aviso) => {
+    try { await navigator.clipboard.writeText(textoCopiar); setMensajeAccion(aviso); } catch { setMensajeAccion("No se pudo copiar."); }
+  };
 
   const buscar = async () => {
     if (!busqueda.trim() || !zona.trim() || cargando) return;
-    // Sin pruebas no se llama a Google Maps ni a la IA: se corta antes de gastar.
-    if (!prueba.sinLimite && prueba.restantes === 0) { setError(TEXTO_AGOTADO); return; }
     setCargando(true); setError(null); setResultados([]); setBusquedaHecha(false); setRutaAbierta(false);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -222,23 +324,20 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo completar la búsqueda.");
-      const lista = Array.isArray(data) ? data : data.resultados || data.leads || [];
-      // La prueba se descuenta recién con la búsqueda ya hecha, y en la base:
-      // si n8n falla no se pierde una, y borrar la caché no regala otras tres.
-      const permiso = await prueba.consumir();
-      if (!permiso.permitido) {
-        setError(permiso.fallo ? "No se pudo verificar la prueba. Probá de nuevo en un momento." : TEXTO_AGOTADO);
-        return;
-      }
-      setResultados(lista); setSeleccionados([]); setVendedorAsignado({}); setFiltro("TODOS"); setMensajeAccion(""); setBusquedaHecha(true);
+      const lista = Array.isArray(data.resultados) ? data.resultados : [];
+      setInfo({ fuente: data.fuente, ia: data.ia });
+      setResultados(lista); setSoloCon(""); setSeleccionados([]); setVendedorAsignado({}); setFiltro("TODOS"); setMensajeAccion(""); setBusquedaHecha(true);
     } catch (err) {
       setError(err instanceof SyntaxError || err instanceof TypeError ? "No se pudo conectar con el buscador. Intentá nuevamente en unos minutos." : err.message);
     } finally { setCargando(false); }
   };
 
   const filtrados = useMemo(
-    () => resultados.filter((r) => filtro === "TODOS" || r.prioridad === filtro),
-    [resultados, filtro]
+    () => resultados.filter((r) =>
+      (filtro === "TODOS" || r.prioridad === filtro) &&
+      (soloCon !== "email" || emailsDe(r).length > 0) &&
+      (soloCon !== "telefono" || !!telefonoDe(r))),
+    [resultados, filtro, soloCon]
   );
   const conteo = {
     TODOS: resultados.length,
@@ -317,9 +416,14 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
 
   const exportarCSV = () => {
     if (!paradas.length) return;
-    const headers = ["Orden","Prioridad","Score","Nombre","Dirección","Teléfono","Email","Web","Productos sugeridos","Enfoque de venta","Vendedor"];
-    const rows = paradas.map((r, i) => [i + 1, r.prioridad || "", r.lead_score || "", `"${r.nombre || ""}"`, `"${r.direccion || ""}"`, r.telefono || "", Array.isArray(r.email) ? r.email.join("|") : (r.email || ""), r.sitio_web || "", `"${r.productos_sugeridos || ""}"`, `"${r.enfoque_venta || ""}"`, vendedorAsignado[r.place_id] || "Sin asignar"]);
-    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const headers = ["Orden", "Prioridad", "Score", "Nombre", "Rubro", "Dirección", "Teléfono", "Email", "Web", "Sugerido", "Enfoque de venta", "Vendedor", "Contactado"];
+    const rows = paradas.map((r, i) => {
+      const c = contactados[r.place_id];
+      return [i + 1, r.prioridad, r.lead_score, r.nombre, r.rubro, r.direccion, telefonoDe(r), emailsDe(r).join(" | "), r.sitio_web,
+        r.productos_sugeridos, r.enfoque_venta, vendedorAsignado[r.place_id] || "Sin asignar",
+        c ? `${c.canal} ${new Date(c.fecha).toLocaleDateString("es-AR")}` : ""].map(celdaCSV);
+    });
+    const csv = [headers.map(celdaCSV).join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
     a.download = `clientes-potenciales_${busqueda}_${new Date().toLocaleDateString("es-AR").replace(/\//g, "-")}.csv`; a.click();
@@ -339,13 +443,14 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
         .prospectos *, .prospectos *::before, .prospectos *::after { box-sizing: border-box; }
 
         /* ── Cabecera con el aire de un buscador con IA ── */
-        .hero { position: relative; overflow: hidden; border-radius: 24px; padding: 30px 28px 26px;
+        .hero { position: relative; z-index: 5; border-radius: 24px; padding: 30px 28px 26px;
                 background: radial-gradient(120% 140% at 12% 0%, #3b0d0d 0%, #171b2c 45%, #0b1020 100%);
                 color: #fff; box-shadow: 0 24px 50px -28px rgba(15,23,42,.75); }
-        .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+        .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
                 background: radial-gradient(60% 90% at 88% 8%, rgba(248,113,113,.30), transparent 60%),
                             radial-gradient(50% 80% at 4% 96%, rgba(56,189,248,.20), transparent 60%); }
         .hero > * { position: relative; z-index: 1; }
+        .hero > .panel-busqueda { z-index: 3; }
         .hero-chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px; border-radius: 999px;
                      background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.20);
                      font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
@@ -379,11 +484,37 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
         .btn-buscar:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 14px 28px -10px rgba(239,68,68,1); }
         .btn-buscar:disabled { background: rgba(255,255,255,.14); color: #94a3b8; box-shadow: none; cursor: not-allowed; }
 
-        .prueba { display: flex; align-items: center; gap: 9px; margin-top: 14px; padding: 10px 14px; border-radius: 12px;
-                  font-size: 13px; font-weight: 600; color: #fde68a; line-height: 1.45;
-                  background: rgba(253,224,71,.10); border: 1px solid rgba(253,224,71,.28); }
-        .prueba[data-agotada="1"] { color: #fecaca; background: rgba(248,113,113,.12); border-color: rgba(248,113,113,.35); }
-        .prueba svg { flex-shrink: 0; }
+        .hero-nota { margin-top: 14px !important; font-size: 12px !important; color: #94a3b8 !important; }
+
+        /* ── Selector de zona ── */
+        .campo-zona input { padding-right: 38px; }
+        .zonas-lista { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 30; max-height: 340px; overflow-y: auto;
+                       padding: 6px; border-radius: 14px; background: #fff; color: #0f172a;
+                       box-shadow: 0 24px 50px -18px rgba(2,6,23,.6); border: 1px solid #e2e8f0; animation: aparecer .15s ease both; }
+        .zonas-grupo { padding: 9px 10px 4px; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #94a3b8; }
+        .zona-op { width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 0; border-radius: 9px;
+                   background: none; color: #334155; font-size: 13.5px; text-align: left; cursor: pointer; }
+        .zona-op svg { color: #cbd5e1; flex-shrink: 0; }
+        .zona-op:hover, .zona-op[data-activa="1"] { background: #fef2f2; color: #b91c1c; }
+        .zona-op:hover svg, .zona-op[data-activa="1"] svg { color: #ef4444; }
+        .zonas-vacio { padding: 12px 10px; font-size: 13px; color: #64748b; line-height: 1.45; }
+
+        /* ── Contacto ── */
+        .contactar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+        .contactar .btn { text-decoration: none; }
+        .pastilla-ok { background: #ecfdf5; color: #047857; }
+        .fuente { margin-top: 12px; padding: 10px 14px; border-radius: 12px; font-size: 12.5px; line-height: 1.5;
+                  color: #475569; background: #f8fafc; border: 1px solid #e6eaf1; }
+        .canal { margin-top: 16px; padding: 14px; border-radius: 16px; border: 1px solid #e6eaf1; background: #fbfcfe; }
+        .canal:first-of-type { margin-top: 0; }
+        .canal-titulo { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 10px; }
+        .canal-campo { width: 100%; display: block; margin-bottom: 10px; padding: 10px 12px; border-radius: 11px; border: 1px solid #e2e8f0;
+                       font: inherit; font-size: 13.5px; line-height: 1.5; color: #0f172a; background: #fff; resize: vertical; }
+        .canal-campo:focus { outline: none; border-color: #f87171; box-shadow: 0 0 0 3px rgba(248,113,113,.16); }
+        .canal-nota { margin: 10px 0 0; font-size: 12px; color: #64748b; line-height: 1.5; }
+        .btn-apagado { opacity: .45; pointer-events: none; }
+        .barra-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+        .barra-acciones a.btn { text-decoration: none; }
 
         .rubros { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-top: 16px; }
         .rubros > span { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: #94a3b8; text-transform: uppercase; margin-right: 4px; }
@@ -552,7 +683,7 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
       <header className="hero">
         <span className="hero-chip"><Sparkles size={13} /> Prospección con IA</span>
         <h1>Encontrá y ordená tus <em>clientes potenciales</em></h1>
-        <p>La IA rastrea negocios reales en la zona que elijas, los puntúa según su potencial para Nini T Group y arma la hoja de ruta ya ordenada por cercanía, lista para mandarle al vendedor.</p>
+        <p>Encontrá hoteles, venues de bodas, empresas de eventos, campings y más en cualquier zona de Estados Unidos. La IA puntúa cada negocio según su potencial para Nini T Group, te redacta el email o WhatsApp de presentación y arma la hoja de ruta para visitarlos.</p>
 
         <div className="panel-busqueda">
           <label className="campo">
@@ -560,37 +691,25 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
             <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} onKeyDown={(e) => e.key === "Enter" && buscar()}
               placeholder="Rubro o tipo de negocio: event rentals, wedding venues…" aria-label="Rubro o tipo de negocio" />
           </label>
-          <label className="campo campo-zona">
-            <MapPin size={16} />
-            <input value={zona} onChange={(e) => setZona(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && buscar()}
-              placeholder="Ciudad, estado o ZIP de Estados Unidos" aria-label="Ciudad, estado o ZIP" />
-          </label>
+          <ZonaSelector valor={zona} onCambiar={setZona} onEnter={buscar} />
           <button className="btn-buscar" onClick={buscar}
-            disabled={cargando || !busqueda.trim() || !zona.trim() || (!prueba.sinLimite && prueba.restantes === 0)}>
+            disabled={cargando || !busqueda.trim() || !zona.trim()}>
             {cargando ? <><Loader2 size={17} className="gira" /> Buscando…</> : <><Sparkles size={17} /> Buscar</>}
           </button>
         </div>
 
-        <p style={{ fontSize: 12, color: "#64748b" }}>La prioridad indica afinidad con Nini T Group; no confirma intención de compra. Los datos de contacto dependen de las fuentes disponibles.</p>
-
-        {!prueba.sinLimite && prueba.restantes !== null && (
-          <div className="prueba" data-agotada={prueba.restantes === 0 ? 1 : 0}>
-            <Sparkles size={15} />
-            <span>
-              {prueba.restantes > 0
-                ? `Versión de prueba: ${prueba.restantes === 1 ? "te queda 1 búsqueda" : `te quedan ${prueba.restantes} búsquedas`} de ${PROSPECTOS_PRUEBAS}.`
-                : TEXTO_AGOTADO}
-            </span>
-          </div>
-        )}
-
         <div className="rubros">
-          <span>Acceso rápido</span>
+          <span>Rubros para NTG</span>
           {RUBROS.map((r) => (
-            <button key={r} className="rubro" data-activo={busqueda === r ? 1 : 0} onClick={() => setBusqueda(r)}>{r}</button>
+            <button key={r.id} className="rubro" data-activo={busqueda === r.etiqueta ? 1 : 0} onClick={() => setBusqueda(r.etiqueta)}
+              title={r.angulo}>{r.etiqueta}</button>
           ))}
         </div>
+
+        <p className="hero-nota">
+          El puntaje es afinidad con Nini T Group, no intención de compra confirmada. También podés escribir cualquier rubro
+          (en español o inglés) y la zona como ciudad, estado o ZIP.
+        </p>
       </header>
 
       {/* ── Acciones de la hoja de ruta ── */}
@@ -714,13 +833,91 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
         </div>
       )}
 
+      {/* ── Contactar: email y WhatsApp redactados para ese negocio ── */}
+      {mensaje && (() => {
+        const r = mensaje.negocio;
+        const emails = emailsDe(r);
+        const wa = numeroWhatsApp(telefonoDe(r));
+        const cambiar = (campo) => (e) => setMensaje((m) => ({ ...m, [campo]: e.target.value }));
+        const mailto = `mailto:${encodeURIComponent(emails[0] || "")}?subject=${encodeURIComponent(mensaje.asunto || "")}&body=${encodeURIComponent(mensaje.email || "")}`;
+        return (
+          <div className="capa" role="dialog" aria-modal="true" aria-label={`Contactar a ${r.nombre}`} onClick={() => setMensaje(null)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-cabecera">
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 16.5, fontWeight: 800 }}>Contactar a {r.nombre}</div>
+                  <div style={{ fontSize: 12, color: "#cbd5e1", marginTop: 2 }}>
+                    Revisalo y mandalo vos, de a uno: es la forma segura de escribirle a alguien que todavía no nos conoce.
+                  </div>
+                </div>
+                <button className="modal-cerrar" onClick={() => setMensaje(null)} aria-label="Cerrar"><X size={18} /></button>
+              </div>
+
+              <div style={{ padding: "18px 20px 22px" }}>
+                {mensaje.cargando && (
+                  <div className="vacio" style={{ padding: "36px 10px" }}>
+                    <div className="radar"><Sparkles size={30} /></div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#0f172a" }}>Redactando el mensaje para {r.nombre}…</div>
+                  </div>
+                )}
+                {mensaje.error && <div className="aviso aviso-mal"><AlertTriangle size={16} /> {mensaje.error}</div>}
+
+                {mensaje.email && (
+                  <>
+                    <section className="canal">
+                      <div className="canal-titulo"><Mail size={15} /> Email {emails[0] ? `a ${emails[0]}` : "(este negocio no tiene email cargado: copialo y usá el formulario de su web)"}</div>
+                      <input className="canal-campo" value={mensaje.asunto} onChange={cambiar("asunto")} aria-label="Asunto" />
+                      <textarea className="canal-campo" rows={10} value={mensaje.email} onChange={cambiar("email")} aria-label="Cuerpo del email" />
+                      <div className="barra-acciones">
+                        <a className={`btn btn-principal${emails[0] ? "" : " btn-apagado"}`} href={emails[0] ? mailto : undefined}
+                          onClick={() => emails[0] && marcarContactado(r, "email")}>
+                          <Mail size={15} /> Abrir en mi correo
+                        </a>
+                        <button className="btn" onClick={() => copiar(`${mensaje.asunto}\n\n${mensaje.email}`, "Email copiado.")}><Copy size={15} /> Copiar</button>
+                        {r.sitio_web && (
+                          <a className="btn" href={r.sitio_web} target="_blank" rel="noopener noreferrer"><Globe size={15} /> Su web</a>
+                        )}
+                      </div>
+                    </section>
+
+                    <section className="canal">
+                      <div className="canal-titulo"><MessageCircle size={15} /> WhatsApp {wa ? `al ${telefonoDe(r)}` : "(sin un teléfono válido de USA)"}</div>
+                      <textarea className="canal-campo" rows={4} value={mensaje.whatsapp} onChange={cambiar("whatsapp")} aria-label="Mensaje de WhatsApp" />
+                      <div className="barra-acciones">
+                        <a className={`btn btn-principal${wa ? "" : " btn-apagado"}`} target="_blank" rel="noopener noreferrer"
+                          href={wa ? `https://wa.me/${wa}?text=${encodeURIComponent(mensaje.whatsapp)}` : undefined}
+                          onClick={() => wa && marcarContactado(r, "WhatsApp")}>
+                          <MessageCircle size={15} /> Abrir WhatsApp
+                        </a>
+                        <button className="btn" onClick={() => copiar(mensaje.whatsapp, "Mensaje copiado.")}><Copy size={15} /> Copiar</button>
+                      </div>
+                      <p className="canal-nota">Muchos teléfonos de negocios son fijos y no tienen WhatsApp: si no abre, llamalos.</p>
+                    </section>
+
+                    <details className="canal">
+                      <summary className="canal-titulo" style={{ cursor: "pointer" }}>Firma de los emails</summary>
+                      <textarea className="canal-campo" rows={3} value={firma}
+                        onChange={(e) => { setFirma(e.target.value); guardar(CLAVE_FIRMA, e.target.value); }} aria-label="Firma" />
+                      <p className="canal-nota">
+                        Para cumplir la ley de email comercial de USA (CAN-SPAM) la firma debe llevar una dirección postal real de NTG.
+                        La línea para darse de baja se agrega sola. La firma nueva se usa en el próximo mensaje que redactes.
+                      </p>
+                    </details>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Buscando ── */}
       {cargando && (
         <div style={{ marginTop: 24 }}>
           <div className="vacio" style={{ paddingBottom: 26 }}>
             <div className="radar"><Radar size={34} /></div>
             <div style={{ fontSize: 17.5, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>Rastreando negocios en {zona}…</div>
-            <div style={{ fontSize: 13.5 }}>La IA está analizando cada negocio y puntuando su potencial. Puede tardar 1 o 2 minutos.</div>
+            <div style={{ fontSize: 13.5 }}>Buscando en el mapa y puntuando cada negocio con la IA. Tarda entre 5 y 20 segundos.</div>
           </div>
           <div className="lista">{[0, 1, 2].map((i) => <div key={i} className="esqueleto" style={{ animationDelay: `${i * 160}ms` }} />)}</div>
         </div>
@@ -750,20 +947,37 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
               {["TODOS", "ALTA", "MEDIA", "BAJA"].map((f) => (
                 <button key={f} className="filtro" data-activo={filtro === f ? 1 : 0} onClick={() => setFiltro(f)}>{f} ({conteo[f]})</button>
               ))}
+              <button className="filtro" data-activo={soloCon === "email" ? 1 : 0} onClick={() => setSoloCon(soloCon === "email" ? "" : "email")}>
+                <Mail size={13} style={{ verticalAlign: -2, marginRight: 5 }} />Con email ({resultados.filter((r) => emailsDe(r).length).length})
+              </button>
+              <button className="filtro" data-activo={soloCon === "telefono" ? 1 : 0} onClick={() => setSoloCon(soloCon === "telefono" ? "" : "telefono")}>
+                <Phone size={13} style={{ verticalAlign: -2, marginRight: 5 }} />Con teléfono ({resultados.filter((r) => telefonoDe(r)).length})
+              </button>
             </div>
             <span style={{ fontSize: 12.5, color: "#64748b", display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <Building2 size={13} /> {filtrados.length} negocios encontrados
+              <Building2 size={13} /> {filtrados.length} negocios
             </span>
           </div>
+
+          {info && (
+            <div className="fuente">
+              {info.fuente === "google"
+                ? "Datos de Google Maps."
+                : "Datos de OpenStreetMap (gratis): algunos negocios no tienen teléfono o web cargados. Con una clave de Google Places los resultados son más completos."}
+              {" "}{info.ia ? "Puntaje y enfoque analizados por la IA con la ficha de NTG." : "Puntaje calculado por reglas del rubro (la IA no respondió esta vez)."}
+            </div>
+          )}
 
           <div className="lista">
             {filtrados.map((r, i) => {
               const c = colorPrioridad(r.prioridad);
               const clave = r.place_id || `resultado-${i}`;
               const elegida = seleccionados.includes(clave);
-              const emails = Array.isArray(r.email) ? r.email : (r.email ? [r.email] : []);
+              const emails = emailsDe(r);
+              const tel = telefonoDe(r);
               const web = r.sitio_web || r.website;
               const orden = paradas.indexOf(r) + 1;
+              const contacto = contactados[r.place_id];
               return (
                 <article className="tarjeta" key={clave} data-elegida={elegida ? 1 : 0} style={{ animationDelay: `${Math.min(i, 10) * 35}ms` }}>
                   <div className="tarjeta-barra" style={{ background: c.barra }} />
@@ -784,9 +998,21 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: 12.5, color: "#64748b", marginTop: 5, display: "inline-flex", alignItems: "center", gap: 6 }}>
-                          <Building2 size={13} /> {r.tipo_negocio || r.tipos_negocio || "Negocio"} · {r.ciudad || zona}
+                        <div style={{ fontSize: 12.5, color: "#64748b", marginTop: 5, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <Building2 size={13} /> {r.tipo_negocio || r.rubro || "Negocio"} · {r.ciudad || zona}
+                          {r.perfil && <span className="pastilla">{r.perfil}</span>}
+                          {contacto && (
+                            <span className="pastilla pastilla-ok" title={new Date(contacto.fecha).toLocaleString("es-AR")}>
+                              <UserCheck size={11} /> Contactado por {contacto.canal} · {new Date(contacto.fecha).toLocaleDateString("es-AR")}
+                            </span>
+                          )}
                         </div>
+                        {r.motivo && <div style={{ fontSize: 12.5, color: "#334155", marginTop: 6 }}>{r.motivo}</div>}
+                        {r.alerta && (
+                          <div style={{ fontSize: 12.5, color: "#b45309", marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                            <AlertTriangle size={13} /> {r.alerta}
+                          </div>
+                        )}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <AnilloScore valor={r.lead_score} color={c.text} />
@@ -804,11 +1030,11 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
                           <MapPin size={14} /><span>{r.direccion}</span><ExternalLink size={12} style={{ marginLeft: "auto" }} />
                         </a>
                       )}
-                      {r.telefono && r.telefono !== "No disponible" && (
-                        <a className="dato" href={`tel:${r.telefono}`}><Phone size={14} /><span>{r.telefono}</span></a>
+                      {tel && (
+                        <a className="dato" href={`tel:${tel}`} onClick={() => marcarContactado(r, "llamada")}><Phone size={14} /><span>{tel}</span></a>
                       )}
-                      {emails.length > 0 && emails[0] !== "No disponible" && (
-                        <a className="dato" href={`mailto:${emails[0]}`}><Mail size={14} /><span>{emails.slice(0, 2).join(" · ")}</span></a>
+                      {emails.length > 0 && (
+                        <span className="dato"><Mail size={14} /><span>{emails.slice(0, 2).join(" · ")}</span></span>
                       )}
                       {web && web !== "No disponible" && (
                         <a className="dato" href={web.startsWith("http") ? web : `https://${web}`} target="_blank" rel="noopener noreferrer">
@@ -833,6 +1059,18 @@ export default function Prospectos({ prueba = { restantes: Infinity, sinLimite: 
                         )}
                       </div>
                     )}
+
+                    <div className="contactar">
+                      <button className="btn btn-principal" onClick={() => redactarPara(r)} title="La IA redacta el email y el WhatsApp de presentación">
+                        <Sparkles size={15} /> Contactar
+                      </button>
+                      {tel && (
+                        <a className="btn" href={`tel:${tel}`} onClick={() => marcarContactado(r, "llamada")}><Phone size={15} /> Llamar</a>
+                      )}
+                      {r.maps_url && (
+                        <a className="btn" href={r.maps_url} target="_blank" rel="noopener noreferrer"><Star size={15} /> Ver en Google</a>
+                      )}
+                    </div>
                   </div>
                 </article>
               );

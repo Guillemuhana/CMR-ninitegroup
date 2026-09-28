@@ -1,7 +1,7 @@
 // v2.1 — 2026-06-08
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import {
-  Bell, Search, LogOut, MessageSquare, BarChart2,
+  Bell, Search, Radar, LogOut, MessageSquare, BarChart2,
   Pencil, Bot, User, Calendar, Send, X, Check, Plus,
   Sparkles, Phone, PhoneCall, Mail, Building2, MapPin, FileText,
   AlertCircle, Clock, ChevronLeft, ChevronRight, Zap, ShoppingBag, Shield, Trash2,
@@ -1629,7 +1629,7 @@ function BottomNav({ vista, setVista, rol, contactos = [], userName, onLogout })
     <button key={key} onClick={onClick} aria-current={activo ? "page" : undefined}
       style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, padding: "7px 2px 5px",
         border: "none", background: "none", cursor: "pointer", position: "relative", borderRadius: 0,
-        color: activo ? C.red : L.muted, fontFamily: FONT_BODY, fontSize: 10, fontWeight: activo ? 700 : 500 }}>
+        color: activo ? C.red : L.muted, fontFamily: FONT_BODY, fontSize: 11, fontWeight: activo ? 700 : 500 }}>
       <span style={{ position: "relative", display: "flex" }}>
         <Icon size={21} />
         {n > 0 && (
@@ -1670,15 +1670,15 @@ function BottomNav({ vista, setVista, rol, contactos = [], userName, onLogout })
               <button key={key} onClick={() => { setVista(key); setMas(false); }}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, padding: "13px 20px", border: "none", cursor: "pointer",
                   background: vista === key ? L.soft : "none", borderRadius: 0,
-                  fontFamily: FONT_BODY, fontSize: 14.5, fontWeight: vista === key ? 700 : 500, color: vista === key ? C.red : L.text }}>
-                <Icon size={19} color={vista === key ? C.red : L.muted} /> {label}
+                  fontFamily: FONT_BODY, fontSize: 16, fontWeight: vista === key ? 700 : 500, color: vista === key ? C.red : L.text }}>
+                <Icon size={21} color={vista === key ? C.red : L.muted} /> {label}
               </button>
             ))}
             <div style={{ borderTop: `1px solid ${L.border}`, marginTop: 6, paddingTop: 6 }}>
               <button onClick={onLogout}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: 13, padding: "13px 20px", border: "none", cursor: "pointer", background: "none", borderRadius: 0,
-                  fontFamily: FONT_BODY, fontSize: 14.5, fontWeight: 500, color: L.muted }}>
-                <LogOut size={19} /> Cerrar sesión · {userName}
+                  fontFamily: FONT_BODY, fontSize: 16, fontWeight: 500, color: L.muted }}>
+                <LogOut size={21} /> Cerrar sesión · {userName}
               </button>
             </div>
           </div>
@@ -1700,7 +1700,7 @@ function BottomNav({ vista, setVista, rol, contactos = [], userName, onLogout })
 const NAV_ITEMS = [
   { key: "chat",       label: "Conversaciones",  icon: MessageSquare, roles: ["ceo", "vendedor"], badge: "noLeidos" },
   { key: "prioridad",  label: "Piden contacto",  icon: PhoneCall,     roles: ["ceo", "vendedor"], badge: "pide" },
-  { key: "prospectos", label: "Clientes potenciales", icon: Search, roles: ["ceo"] },
+  { key: "prospectos", label: "Clientes potenciales", icon: Radar, roles: ["ceo"], destacado: "Nuevo" },
   { key: "directorio", label: "Contactos",       icon: Users,         roles: ["ceo"] },
   { key: "pedidos",    label: "Pedidos",         icon: ShoppingBag,   roles: ["ceo", "vendedor"] },
   { key: "agenda",     label: "Calendario",      icon: Calendar,      roles: ["ceo", "vendedor"] },
@@ -1725,31 +1725,38 @@ function NavRail({ vista, setVista, rol, contactos = [], userName, userEmail, on
 
       {/* Logo */}
       <div className="rail-brand" style={{ padding: "16px 18px 14px", flexShrink: 0 }}>
-        <LogoBrillo imgStyle={{ width: "100%", maxWidth: 168, height: 40, objectFit: "contain", objectPosition: "center", filter: "brightness(0) invert(1)", opacity: 0.96, display: "block", margin: "0 auto" }} />
-        <div className="rail-label" style={{ fontSize: 8.5, fontWeight: 700, color: COLOR.navText, letterSpacing: 1.6, textTransform: "uppercase", marginTop: 5, paddingLeft: 2 }}>
+        <LogoBrillo imgStyle={{ width: "100%", maxWidth: 190, height: 46, objectFit: "contain", objectPosition: "center", filter: "brightness(0) invert(1)", opacity: 0.96, display: "block", margin: "0 auto" }} />
+        <div className="rail-label" style={{ fontSize: 11, fontWeight: 700, color: COLOR.navText, letterSpacing: 1.6, textTransform: "uppercase", marginTop: 5, paddingLeft: 2 }}>
           Sistema de CRM
         </div>
       </div>
 
       {/* Secciones */}
-      <div className="scroll-y" style={{ flex: 1, overflowY: "auto", padding: "6px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
-        {items.map(({ key, label, icon: Icon, badge }) => {
+      <div className="scroll-y" style={{ flex: 1, overflowY: "auto", padding: "8px 10px", display: "flex", flexDirection: "column", gap: 4 }}>
+        {items.map(({ key, label, icon: Icon, badge, destacado }) => {
           const activo = vista === key;
           const n = badge ? conteo(badge) : 0;
           return (
             <button key={key} onClick={() => setVista(key)} aria-current={activo ? "page" : undefined}
               className="rail-item" title={label}
-              style={{ position: "relative", display: "flex", alignItems: "center", gap: 11, padding: "10px 12px", border: "none", cursor: "pointer", width: "100%",
+              style={{ position: "relative", display: "flex", alignItems: "center", gap: 13, padding: "13px 14px", border: "none", cursor: "pointer", width: "100%",
                 background: activo ? COLOR.navActive : "transparent",
-                color: activo ? COLOR.navTextActive : COLOR.navText,
-                fontFamily: FONT_BODY, fontSize: 13.5, fontWeight: activo ? 700 : 500, textAlign: "left", transition: "background .15s, color .15s" }}
+                color: activo ? COLOR.navTextActive : destacado ? "#fff" : COLOR.navText,
+                boxShadow: destacado && !activo ? "inset 0 0 0 1px rgba(251,191,36,.35)" : "none",
+                fontFamily: FONT_BODY, fontSize: 16.5, fontWeight: activo ? 700 : 500, textAlign: "left", transition: "background .15s, color .15s" }}
               onMouseEnter={(e) => { if (!activo) { e.currentTarget.style.background = COLOR.navBgHover; e.currentTarget.style.color = "#fff"; } }}
-              onMouseLeave={(e) => { if (!activo) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = COLOR.navText; } }}>
-              <Icon size={17} style={{ flexShrink: 0 }} />
+              onMouseLeave={(e) => { if (!activo) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = destacado ? "#fff" : COLOR.navText; } }}>
+              <Icon size={21} style={{ flexShrink: 0 }} color={destacado && !activo ? "#fbbf24" : undefined} />
               <span className="rail-label" style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+              {destacado && !n && (
+                <span className="rail-label" style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase", color: "#fff",
+                  padding: "3px 7px", borderRadius: 999, background: "linear-gradient(135deg,#ef4444,#f59e0b)" }}>
+                  {destacado}
+                </span>
+              )}
               {n > 0 && (
-                <span className="rail-badge" style={{ flexShrink: 0, background: activo ? "rgba(255,255,255,.25)" : COLOR.navActive, color: "#fff", fontSize: 10.5, fontWeight: 800,
-                  borderRadius: 9, minWidth: 19, height: 18, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", fontVariantNumeric: "tabular-nums" }}>
+                <span className="rail-badge" style={{ flexShrink: 0, background: activo ? "rgba(255,255,255,.25)" : COLOR.navActive, color: "#fff", fontSize: 12, fontWeight: 800,
+                  borderRadius: 10, minWidth: 22, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", fontVariantNumeric: "tabular-nums" }}>
                   {n}
                 </span>
               )}
@@ -1764,12 +1771,12 @@ function NavRail({ vista, setVista, rol, contactos = [], userName, userEmail, on
           title={`${userName} · ${rol === "ceo" ? "Propietario" : "Vendedor"}`}>
           <Avatar nombre={userName} size={34} border="none" />
           <div className="rail-label" style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 14.5, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {userName}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 1 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: COLOR.success, flexShrink: 0 }} />
-              <span style={{ fontSize: 10.5, color: COLOR.navText, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 12, color: COLOR.navText, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {rol === "ceo" ? "Propietario" : "Vendedor"} · En línea
               </span>
             </div>
@@ -1778,7 +1785,7 @@ function NavRail({ vista, setVista, rol, contactos = [], userName, userEmail, on
             style={{ background: "none", border: "none", cursor: "pointer", color: COLOR.navText, display: "flex", padding: 5, flexShrink: 0 }}
             onMouseEnter={(e) => { e.currentTarget.style.color = "#fff"; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = COLOR.navText; }}>
-            <LogOut size={15} />
+            <LogOut size={17} />
           </button>
         </div>
       </div>

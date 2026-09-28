@@ -33,7 +33,7 @@ This repository is a React + Vite CRM frontend backed by Supabase and Vercel ser
 Test coverage is partial: today the Meta Conversions API integration
 (`tests/meta-capi.test.js`), the mass-send rules (`tests/promos.test.js`) and
 the landing's lead qualification plus AI-provider selection
-(`tests/calificacion.test.js`) are covered. There is no linter and no
+(`tests/calificacion.test.js`) and the prospect search (`tests/prospectos.test.js`) are covered. There is no linter and no
 type-checker configured in this repository.
 
 ## Environment and runtime conventions
@@ -53,7 +53,7 @@ type-checker configured in this repository.
 - Serverless API endpoints use standard Node env vars such as `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
 - Do not move `SUPABASE_SERVICE_ROLE_KEY` to the client-side code.
 - `.env.example` lists every variable with fictitious values. Meta Conversions API vars (`META_*`) are documented in `META-CAPI.md`.
-- Vercel Hobby caps the project at **12 serverless functions** and `api/` is exactly at 12. Files and folders starting with `_` inside `api/` do not count: that is the mechanism for shared code (`_meta/`, `_push/`, `_reporte/`, `_fin/`, `_cotizacion/`, `_web/`). New endpoints hang off an existing dispatcher plus a rewrite in `vercel.json` — `api/push.js` already dispatches four actions this way (`subscribe`, `send`, `meta`, `lead`).
+- Vercel Hobby caps the project at **12 serverless functions** and `api/` is exactly at 12. Files and folders starting with `_` inside `api/` do not count: that is the mechanism for shared code (`_meta/`, `_push/`, `_reporte/`, `_fin/`, `_cotizacion/`, `_web/`, `_prospectos/`). New endpoints hang off an existing dispatcher plus a rewrite in `vercel.json` — `api/push.js` already dispatches several actions this way (`subscribe`, `send`, `meta`, `lead`, `chat`, `prospectos`).
 
 ## Key conventions and patterns
 - The app uses ES modules (`type: module` in `package.json`).
