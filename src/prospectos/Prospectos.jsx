@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  AlertTriangle, ArrowRight, Building2, CheckCircle2, Copy, Download, ExternalLink, FileSpreadsheet, Gauge, Globe,
+  AlertTriangle, ArrowRight, BookOpen, Building2, CheckCircle2, Copy, Download, ExternalLink, FileSpreadsheet, Gauge, Globe,
   ChevronDown, Loader2, Mail, MapPin, MessageCircle, MessageSquareQuote, Navigation, Phone, Printer, Radar, Route, Search,
   Send, Share2, ShoppingBag, Sparkles, Star, Target, TrendingUp, UserCheck, X,
 } from "lucide-react";
@@ -211,6 +211,78 @@ function AnilloScore({ valor = 0, color }) {
   );
 }
 
+// ── Instructivo ──────────────────────────────────────────────
+// Lo que necesita saber quien abre la sección por primera vez. Si cambia
+// cómo funciona algo de acá, se actualiza también CLIENTES-POTENCIALES.md.
+const PASOS = [
+  { icono: Search, titulo: "1. Elegí qué buscar",
+    texto: "Tocá uno de los rubros (Hoteles y resorts, Venues de bodas, Alquiler para eventos, Baños portátiles…) o escribí cualquier otro, en español o inglés." },
+  { icono: MapPin, titulo: "2. Elegí la zona",
+    texto: "Arranca en Miami, FL. Tocá el campo para ver otras localidades de Florida, Texas, California y el resto de USA, o escribí cualquier ciudad, condado, estado o ZIP. Después tocá Buscar." },
+  { icono: Target, titulo: "3. Leé el puntaje",
+    texto: "Cada negocio trae un puntaje de 0 a 100 y una prioridad (ALTA, MEDIA, BAJA): indica qué tanto encaja con Nini T Group, no que ya quiera comprar. Abajo aparecen la unidad y el paquete sugeridos, y el enfoque para la primera llamada." },
+  { icono: Mail, titulo: "4. Filtrá",
+    texto: "Tocá las tarjetas de arriba o los botones ALTA / MEDIA / BAJA para ver sólo esa prioridad. \"Con email\" y \"Con teléfono\" dejan sólo los que se pueden contactar por ese medio." },
+  { icono: Sparkles, titulo: "5. Contactá",
+    texto: "El botón Contactar le pide a la IA un email y un WhatsApp de presentación para ese negocio, en inglés. Revisalo, cambiá lo que quieras y tocá \"Abrir en mi correo\" o \"Abrir WhatsApp\": se manda desde tu cuenta, de a uno. También está Llamar." },
+  { icono: UserCheck, titulo: "6. Seguí quién ya fue contactado",
+    texto: "Al llamar, abrir el correo o el WhatsApp, el negocio queda marcado \"Contactado\" con la fecha. La marca queda en este navegador: en otra computadora o celular no se ve." },
+  { icono: Route, titulo: "7. Armá la hoja de ruta para visitarlos",
+    texto: "Tildá los negocios que querés visitar (o ninguno para usar todos los que están a la vista) y tocá Crear hoja de ruta: quedan ordenados por cercanía, con el recorrido en Google Maps. Se puede asignar un vendedor a cada uno, compartir, descargar el PDF, imprimir o bajar la planilla CSV." },
+];
+
+const CUIDADOS = [
+  "No mandes el mismo mensaje en masa: son negocios que todavía no nos conocen. WhatsApp bloquea el número si muchos lo reportan, y en USA los SMS de publicidad sin permiso tienen multas.",
+  "La firma de los emails tiene que llevar la dirección postal de NTG (lo pide la ley de email comercial de USA). Se edita en Contactar → Firma de los emails. La línea para darse de baja se agrega sola.",
+  "Si alguien contesta que no le escribamos más, no se le vuelve a escribir.",
+  "Google casi nunca trae el email del negocio. Si no hay, copiá el mensaje y usá el formulario de su web, o mandá WhatsApp o llamá. Muchos teléfonos de negocios son fijos y no tienen WhatsApp.",
+  "Los resultados no se guardan en el CRM: si cerrás la sección, se pierden. Si te sirven, bajá la planilla CSV antes de salir.",
+];
+
+function Instructivo({ onCerrar }) {
+  return (
+    <div className="capa" role="dialog" aria-modal="true" aria-label="Cómo usar Clientes potenciales" onClick={onCerrar}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-cabecera">
+          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+            <div style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 12, display: "grid", placeItems: "center", background: "rgba(255,255,255,.14)" }}>
+              <BookOpen size={19} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 16.5, fontWeight: 800 }}>Cómo usar Clientes potenciales</div>
+              <div style={{ fontSize: 12, color: "#cbd5e1", marginTop: 2 }}>De la búsqueda al primer contacto, en 7 pasos</div>
+            </div>
+          </div>
+          <button className="modal-cerrar" onClick={onCerrar} aria-label="Cerrar"><X size={18} /></button>
+        </div>
+
+        <div style={{ padding: "18px 20px 22px" }}>
+          <ol className="pasos">
+            {PASOS.map(({ icono: Icono, titulo, texto }) => (
+              <li key={titulo} className="paso">
+                <div className="paso-icono"><Icono size={17} /></div>
+                <div>
+                  <div className="paso-titulo">{titulo}</div>
+                  <p>{texto}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="cuidados">
+            <div className="canal-titulo" style={{ color: "#9a3412" }}><AlertTriangle size={15} /> Importante</div>
+            <ul>{CUIDADOS.map((c) => <li key={c}>{c}</li>)}</ul>
+          </div>
+
+          <div className="barra-acciones" style={{ marginTop: 16, justifyContent: "flex-end" }}>
+            <button className="btn btn-principal" onClick={onCerrar}><CheckCircle2 size={15} /> Entendido</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Campo de zona: se escribe libre (ciudad, condado, estado o ZIP) y al
  * enfocarlo despliega las zonas sugeridas agrupadas, filtradas por lo que
@@ -276,6 +348,7 @@ export default function Prospectos() {
   const [soloCon, setSoloCon] = useState("");         // "", "email" o "telefono"
   const [contactados, setContactados] = useState(() => leer(CLAVE_CONTACTADOS, {}));
   const [mensaje, setMensaje] = useState(null);       // { negocio, cargando, asunto, email, whatsapp, error }
+  const [ayuda, setAyuda] = useState(false);
   const [firma, setFirma] = useState(() => leer(CLAVE_FIRMA, FIRMA_INICIAL));
 
   const VENDEDORES = ["Sin asignar", ...EQUIPO_COMERCIAL];
@@ -484,6 +557,19 @@ export default function Prospectos() {
         .btn-buscar:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 14px 28px -10px rgba(239,68,68,1); }
         .btn-buscar:disabled { background: rgba(255,255,255,.14); color: #94a3b8; box-shadow: none; cursor: not-allowed; }
 
+        .btn-ayuda { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px; cursor: pointer;
+                     font-size: 13px; font-weight: 700; color: #fff; background: rgba(255,255,255,.10);
+                     border: 1px solid rgba(255,255,255,.22); transition: background .15s; }
+        .btn-ayuda:hover { background: rgba(255,255,255,.20); }
+        .pasos { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .paso { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; border: 1px solid #e6eaf1; background: #fbfcfe; }
+        .paso-icono { width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; display: grid; place-items: center;
+                      color: #fff; background: linear-gradient(140deg,#ef4444,#7f1d1d); }
+        .paso-titulo { font-size: 14px; font-weight: 800; color: #0f172a; }
+        .paso p { margin: 3px 0 0; font-size: 13px; line-height: 1.55; color: #475569; }
+        .cuidados { margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: #fff7ed; border: 1px solid #fed7aa; }
+        .cuidados ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+        .cuidados li { font-size: 13px; line-height: 1.5; color: #7c2d12; }
         .hero-nota { margin-top: 14px !important; font-size: 12px !important; color: #94a3b8 !important; }
 
         /* ── Selector de zona ── */
@@ -681,7 +767,10 @@ export default function Prospectos() {
 
       {/* ── Cabecera ── */}
       <header className="hero">
-        <span className="hero-chip"><Sparkles size={13} /> Prospección con IA</span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+          <span className="hero-chip"><Sparkles size={13} /> Prospección con IA</span>
+          <button className="btn-ayuda" onClick={() => setAyuda(true)}><BookOpen size={15} /> Cómo usar</button>
+        </div>
         <h1>Encontrá y ordená tus <em>clientes potenciales</em></h1>
         <p>Encontrá hoteles, venues de bodas, empresas de eventos, campings y más en cualquier zona de Estados Unidos. La IA puntúa cada negocio según su potencial para Nini T Group, te redacta el email o WhatsApp de presentación y arma la hoja de ruta para visitarlos.</p>
 
@@ -1093,10 +1182,13 @@ export default function Prospectos() {
           <div className="vacio-icono"><Radar size={34} /></div>
           <div style={{ fontSize: 17.5, fontWeight: 800, color: "#475569", marginBottom: 6 }}>Listo para rastrear</div>
           <div style={{ fontSize: 13.5, maxWidth: 460, margin: "0 auto" }}>
-            Escribí un rubro arriba y elegí la zona. Después, con un clic, la hoja de ruta queda armada en el mapa y lista para compartir.
+            Elegí un rubro y la zona arriba y tocá Buscar. Después podés contactar a cada negocio por email o WhatsApp, o armar la hoja de ruta para visitarlos.
           </div>
+          <button className="btn" style={{ marginTop: 16 }} onClick={() => setAyuda(true)}><BookOpen size={15} /> Ver el instructivo</button>
         </div>
       )}
+
+      {ayuda && <Instructivo onCerrar={() => setAyuda(false)} />}
     </div>
   );
 }
