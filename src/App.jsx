@@ -1700,7 +1700,7 @@ function BottomNav({ vista, setVista, rol, contactos = [], userName, onLogout })
 const NAV_ITEMS = [
   { key: "chat",       label: "Conversaciones",  icon: MessageSquare, roles: ["ceo", "vendedor"], badge: "noLeidos" },
   { key: "prioridad",  label: "Piden contacto",  icon: PhoneCall,     roles: ["ceo", "vendedor"], badge: "pide" },
-  { key: "prospectos", label: "Clientes potenciales", icon: Radar, roles: ["ceo"], destacado: "Nuevo" },
+  { key: "prospectos", label: "Clientes potenciales", icon: Radar, roles: ["ceo"], destacado: true },
   { key: "directorio", label: "Contactos",       icon: Users,         roles: ["ceo"] },
   { key: "pedidos",    label: "Pedidos",         icon: ShoppingBag,   roles: ["ceo", "vendedor"] },
   { key: "agenda",     label: "Calendario",      icon: Calendar,      roles: ["ceo", "vendedor"] },
@@ -1748,12 +1748,6 @@ function NavRail({ vista, setVista, rol, contactos = [], userName, userEmail, on
               onMouseLeave={(e) => { if (!activo) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = destacado ? "#fff" : COLOR.navText; } }}>
               <Icon size={21} style={{ flexShrink: 0 }} color={destacado && !activo ? "#fbbf24" : undefined} />
               <span className="rail-label" style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
-              {destacado && !n && (
-                <span className="rail-label" style={{ flexShrink: 0, fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase", color: "#fff",
-                  padding: "3px 7px", borderRadius: 999, background: "linear-gradient(135deg,#ef4444,#f59e0b)" }}>
-                  {destacado}
-                </span>
-              )}
               {n > 0 && (
                 <span className="rail-badge" style={{ flexShrink: 0, background: activo ? "rgba(255,255,255,.25)" : COLOR.navActive, color: "#fff", fontSize: 12, fontWeight: 800,
                   borderRadius: 10, minWidth: 22, height: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 5px", fontVariantNumeric: "tabular-nums" }}>
