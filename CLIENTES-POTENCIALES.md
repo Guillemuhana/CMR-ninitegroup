@@ -71,8 +71,27 @@ Son contactos fríos, que nunca le escribieron a NTG:
 Los mensajes obedecen `api/_ntg.js` (nada de ingresos garantizados, "we
 manufacture", franquicia, ni precios de paquetes).
 
+## Guardados (cartera)
+
+Botón **Guardar** en los resultados: guarda los tildados o, si no hay
+ninguno tildado, todos los que están a la vista, en la tabla
+`prospectos_guardados` (`supabase_prospectos_migration.sql`, **hay que
+correrla una vez en producción** desde el SQL Editor). Si un negocio ya
+estaba guardado no se duplica ni se pisa su estado, nota o vendedor
+(upsert por `place_id` con `ignoreDuplicates`).
+
+La pestaña **Guardados** lista la cartera con estado (nuevo → contactado →
+respondió → interesado / descartado), vendedor, nota y CSV. Contactar desde
+ahí, o desde la búsqueda si ya estaba guardado, suma el contacto en la base
+(cuántos, canal, fecha) y pasa "nuevo" a "contactado". Código:
+`src/prospectos/Guardados.jsx` y `src/prospectos/cartera.js`.
+
+Es una tabla aparte de `contactos` a propósito: estos negocios nunca le
+escribieron a NTG, y en `contactos` se mezclarían con los chats reales y con
+los envíos masivos de Promociones, que a ellos no se les pueden mandar.
+
 ## Qué no hace
 
-No importa los negocios al CRM ni guarda búsquedas en Supabase. Los
-resultados y las asignaciones viven mientras la pantalla está abierta; la
-marca de "contactado" y la firma quedan en el navegador (localStorage).
+Una búsqueda que no se guardó se pierde al salir de la sección. La marca de
+"contactado" de un negocio **no guardado** y la firma de los emails quedan
+sólo en ese navegador (localStorage).

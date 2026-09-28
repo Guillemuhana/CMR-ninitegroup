@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle, ArrowRight, BookOpen, Building2, CheckCircle2, Copy, Download, ExternalLink, FileSpreadsheet, Gauge, Globe,
+  AlertTriangle, ArrowRight, BookOpen, BookmarkCheck, BookmarkPlus, Building2, Database, CheckCircle2, Copy, Download, ExternalLink, FileSpreadsheet, Gauge, Globe,
   ChevronDown, Loader2, Mail, MapPin, MessageCircle, MessageSquareQuote, Navigation, Phone, Printer, Radar, Route, Search,
   Send, Share2, ShoppingBag, Sparkles, Star, Target, TrendingUp, UserCheck, X,
 } from "lucide-react";
@@ -9,6 +9,11 @@ import { supabase, VENDEDORES as EQUIPO_COMERCIAL } from "../lib";
 import { descargarDoc, enviarDoc, imprimirDoc } from "./imprimir";
 import { RUBROS } from "../../api/_prospectos/rubros.js";
 import { ZONAS, ZONA_INICIAL } from "./zonas";
+import { AnilloScore, colorPrioridad, emailsDe, telefonoDe, numeroWhatsApp, celdaCSV } from "./comun";
+import Guardados from "./Guardados";
+import {
+  actualizarGuardado, borrarGuardado, cambiosPorContacto, cargarGuardados, guardarProspectos,
+} from "./cartera";
 
 // ── Preferencias de este navegador ───────────────────────────
 // Quién ya fue contactado y la firma de los emails. Es una ayuda para el
@@ -22,28 +27,11 @@ const guardar = (clave, valor) => { try { localStorage.setItem(clave, JSON.strin
 
 const FIRMA_INICIAL = `${EQUIPO_COMERCIAL[0] || "Nini T Group"}\nNini T Group · sales@ninitgroup.com · https://ninitgroup.com`;
 
-/** Número para wa.me: sólo dígitos y con el 1 de USA adelante. */
-function numeroWhatsApp(tel) {
-  const d = String(tel || "").replace(/\D/g, "");
-  if (d.length === 10) return `1${d}`;
-  if (d.length === 11 && d.startsWith("1")) return d;
-  return "";
-}
-
-const emailsDe = (r) => (Array.isArray(r.email) ? r.email : r.email ? [r.email] : []).filter((e) => e && e !== "No disponible");
-const telefonoDe = (r) => (r.telefono && r.telefono !== "No disponible" ? r.telefono : "");
-const celdaCSV = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-
 // Google Maps acepta origen + 9 puntos más en un link de indicaciones.
 // Si la búsqueda trae más clientes, la ruta se parte en tramos encadenados.
 const MAX_PARADAS_TRAMO = 10;
 
-const PRIORIDAD = {
-  ALTA:  { bg: "#fef2f2", text: "#b91c1c", borde: "#fecaca", barra: "linear-gradient(180deg,#ef4444,#b91c1c)", punto: "#ef4444" },
-  MEDIA: { bg: "#fffbeb", text: "#b45309", borde: "#fde68a", barra: "linear-gradient(180deg,#f59e0b,#b45309)", punto: "#f59e0b" },
-  BAJA:  { bg: "#f0fdf4", text: "#15803d", borde: "#bbf7d0", barra: "linear-gradient(180deg,#22c55e,#15803d)", punto: "#22c55e" },
-};
-const colorPrioridad = (p) => PRIORIDAD[p] || PRIORIDAD.BAJA;
+
 
 
 
@@ -198,19 +186,6 @@ function CroquisRuta({ paradas }) {
   );
 }
 
-/** Anillo de score al estilo de un medidor, en vez del texto suelto. */
-function AnilloScore({ valor = 0, color }) {
-  const pct = Math.max(0, Math.min(100, Number(valor) || 0));
-  return (
-    <div className="anillo" style={{ background: `conic-gradient(${color} ${pct}%, #e9edf3 0)` }}>
-      <div className="anillo-centro">
-        <span style={{ color }}>{valor || 0}</span>
-        <small>/100</small>
-      </div>
-    </div>
-  );
-}
-
 // ── Instructivo ──────────────────────────────────────────────
 // Lo que necesita saber quien abre la sección por primera vez. Si cambia
 // cómo funciona algo de acá, se actualiza también CLIENTES-POTENCIALES.md.
@@ -223,11 +198,13 @@ const PASOS = [
     texto: "Cada negocio trae un puntaje de 0 a 100 y una prioridad (ALTA, MEDIA, BAJA): indica qué tanto encaja con Nini T Group, no que ya quiera comprar. Abajo aparecen la unidad y el paquete sugeridos, y el enfoque para la primera llamada." },
   { icono: Mail, titulo: "4. Filtrá",
     texto: "Tocá las tarjetas de arriba o los botones ALTA / MEDIA / BAJA para ver sólo esa prioridad. \"Con email\" y \"Con teléfono\" dejan sólo los que se pueden contactar por ese medio." },
-  { icono: Sparkles, titulo: "5. Contactá",
-    texto: "El botón Contactar le pide a la IA un email y un WhatsApp de presentación para ese negocio, en inglés. Revisalo, cambiá lo que quieras y tocá \"Abrir en mi correo\" o \"Abrir WhatsApp\": se manda desde tu cuenta, de a uno. También está Llamar." },
-  { icono: UserCheck, titulo: "6. Seguí quién ya fue contactado",
-    texto: "Al llamar, abrir el correo o el WhatsApp, el negocio queda marcado \"Contactado\" con la fecha. La marca queda en este navegador: en otra computadora o celular no se ve." },
-  { icono: Route, titulo: "7. Armá la hoja de ruta para visitarlos",
+  { icono: BookmarkPlus, titulo: "5. Guardá los que te interesan",
+    texto: "Tildá los negocios que querés quedarte (o ninguno para guardar todos los que están a la vista) y tocá Guardar. Pasan a la pestaña Guardados, que queda en el CRM para siempre y se ve desde cualquier computadora o celular. Si uno ya estaba guardado, no se duplica." },
+  { icono: Sparkles, titulo: "6. Contactá",
+    texto: "El botón Contactar (en la búsqueda o en Guardados) le pide a la IA un email y un WhatsApp de presentación para ese negocio, en inglés. Revisalo, cambiá lo que quieras y tocá \"Abrir en mi correo\" o \"Abrir WhatsApp\": se manda desde tu cuenta, de a uno. También está Llamar." },
+  { icono: Database, titulo: "7. Trabajá la cartera en Guardados",
+    texto: "Cada cliente guardado tiene un estado (Nuevo, Contactado, Respondió, Interesado, Descartado), un vendedor y una nota. Al contactarlo se anota solo: cuántas veces, por qué medio y cuándo, y pasa de Nuevo a Contactado. Filtrá por estado para saber a quién te falta escribir o a quién volver a llamar." },
+  { icono: Route, titulo: "8. Armá la hoja de ruta para visitarlos",
     texto: "Tildá los negocios que querés visitar (o ninguno para usar todos los que están a la vista) y tocá Crear hoja de ruta: quedan ordenados por cercanía, con el recorrido en Google Maps. Se puede asignar un vendedor a cada uno, compartir, descargar el PDF, imprimir o bajar la planilla CSV." },
 ];
 
@@ -258,7 +235,7 @@ const CUIDADOS = [
   "La firma de los emails tiene que llevar la dirección postal de NTG (lo pide la ley de email comercial de USA). Se edita en Contactar → Firma de los emails. La línea para darse de baja se agrega sola.",
   "Si alguien contesta que no le escribamos más, no se le vuelve a escribir.",
   "Google casi nunca trae el email del negocio. Si no hay, copiá el mensaje y usá el formulario de su web, o mandá WhatsApp o llamá. Muchos teléfonos de negocios son fijos y no tienen WhatsApp.",
-  "Los resultados no se guardan en el CRM: si cerrás la sección, se pierden. Si te sirven, bajá la planilla CSV antes de salir.",
+  "Una búsqueda que no guardaste se pierde al salir de la sección: tocá Guardar antes de irte.",
 ];
 
 function Instructivo({ onCerrar }) {
@@ -272,7 +249,7 @@ function Instructivo({ onCerrar }) {
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 16.5, fontWeight: 800 }}>Cómo usar Clientes potenciales</div>
-              <div style={{ fontSize: 12, color: "#cbd5e1", marginTop: 2 }}>De la búsqueda al primer contacto, en 7 pasos</div>
+              <div style={{ fontSize: 12, color: "#cbd5e1", marginTop: 2 }}>De la búsqueda al primer contacto, en 8 pasos</div>
             </div>
           </div>
           <button className="modal-cerrar" onClick={onCerrar} aria-label="Cerrar"><X size={18} /></button>
@@ -391,12 +368,71 @@ export default function Prospectos() {
 
   const VENDEDORES = ["Sin asignar", ...EQUIPO_COMERCIAL];
 
+  // ── Cartera de guardados (Supabase) ──
+  const [pestana, setPestana] = useState("buscar");   // "buscar" | "guardados"
+  const [guardados, setGuardados] = useState([]);
+  const [estadoGuardados, setEstadoGuardados] = useState({ cargando: true, faltaTabla: false, error: null });
+  const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    cargarGuardados().then(({ lista, error, faltaTabla }) => {
+      if (!vivo) return;
+      setGuardados(lista || []);
+      setEstadoGuardados({ cargando: false, faltaTabla, error });
+    });
+    return () => { vivo = false; };
+  }, []);
+
+  const guardadoDe = useMemo(() => new Map(guardados.map((g) => [g.place_id, g])), [guardados]);
+
+  const reemplazar = (fila) => setGuardados((prev) => prev.map((g) => (g.id === fila.id ? fila : g)));
+
+  /** Cambia un guardado: se ve al instante y se confirma con lo que devuelve la base. */
+  const actualizar = async (g, cambios) => {
+    reemplazar({ ...g, ...cambios });
+    const { fila, error } = await actualizarGuardado(g.id, cambios);
+    if (fila) reemplazar(fila);
+    else { reemplazar(g); setMensajeAccion(`No se pudo guardar el cambio: ${error || "sin conexión"}.`); }
+  };
+
+  const borrar = async (g) => {
+    setGuardados((prev) => prev.filter((x) => x.id !== g.id));
+    const { error } = await borrarGuardado(g.id);
+    if (error) { setGuardados((prev) => [g, ...prev]); setMensajeAccion(`No se pudo quitar: ${error}.`); }
+  };
+
+  /** Guarda los tildados o, si no hay ninguno, todos los que están a la vista. */
+  const guardarClientes = async () => {
+    const elegidos = filtrados.filter((r, i) => seleccionados.includes(r.place_id || `resultado-${i}`));
+    const lista = (elegidos.length ? elegidos : filtrados).filter((r) => r.place_id);
+    if (!lista.length || guardando) return;
+    setGuardando(true);
+    const { nuevos, error, faltaTabla } = await guardarProspectos(lista, { busqueda, zona, fuente: info?.fuente });
+    setGuardando(false);
+    if (faltaTabla) {
+      setEstadoGuardados((e) => ({ ...e, faltaTabla: true }));
+      setMensajeAccion("Todavía no se puede guardar: falta crear la tabla en Supabase. Abrí la pestaña Guardados para ver cómo.");
+      return;
+    }
+    if (error) { setMensajeAccion(`No se pudieron guardar: ${error}.`); return; }
+    setGuardados((prev) => [...nuevos, ...prev]);
+    const ya = lista.length - nuevos.length;
+    setMensajeAccion(
+      `${nuevos.length === 1 ? "Se guardó 1 cliente" : `Se guardaron ${nuevos.length} clientes`}` +
+      `${ya ? ` (${ya} ya estaba${ya === 1 ? "" : "n"} guardado${ya === 1 ? "" : "s"})` : ""}. Están en la pestaña Guardados.`
+    );
+  };
+
+  /** Anota el contacto: en este navegador siempre, y en la base si el negocio está guardado. */
   const marcarContactado = (r, canal) => {
     setContactados((prev) => {
       const nuevo = { ...prev, [r.place_id]: { canal, fecha: new Date().toISOString() } };
       guardar(CLAVE_CONTACTADOS, nuevo);
       return nuevo;
     });
+    const g = guardadoDe.get(r.place_id);
+    if (g) actualizar(g, cambiosPorContacto(g, canal));
   };
 
   /** Pide al servidor el mensaje de presentación para ese negocio. */
@@ -605,6 +641,18 @@ export default function Prospectos() {
                       color: #fff; background: linear-gradient(140deg,#ef4444,#7f1d1d); }
         .paso-titulo { font-size: 14px; font-weight: 800; color: #0f172a; }
         .paso p { margin: 3px 0 0; font-size: 13px; line-height: 1.55; color: #475569; }
+        .pestanas { display: flex; gap: 6px; margin-top: 18px; padding: 5px; border-radius: 16px; background: #eef2f7; width: fit-content; max-width: 100%; }
+        .pestana { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: 0; border-radius: 12px; cursor: pointer;
+                   font-size: 14.5px; font-weight: 700; color: #475569; background: transparent; transition: background .15s, color .15s, box-shadow .15s; }
+        .pestana:hover { color: #0f172a; }
+        .pestana[data-activa="1"] { background: #fff; color: #b91c1c; box-shadow: 0 6px 16px -10px rgba(15,23,42,.6); }
+        .pestana-n { min-width: 22px; height: 20px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center;
+                     font-size: 11.5px; font-weight: 800; color: #fff; background: #b91c1c; }
+        .pestana[data-activa="0"] .pestana-n { background: #94a3b8; }
+        .campo-claro input { color: #0f172a; background: #fff; border-color: #e2e8f0; }
+        .campo-claro input::placeholder { color: #94a3b8; }
+        .campo-claro input:focus { background: #fff; }
+        .tarjeta[data-descartado="1"] { opacity: .6; }
         .motor { margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: #f0f9ff; border: 1px solid #bae6fd; }
         .motor-grilla { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .motor-item { padding: 11px 13px; border-radius: 12px; background: #fff; border: 1px solid #e0f2fe; }
@@ -849,6 +897,27 @@ export default function Prospectos() {
         </p>
       </header>
 
+      {/* ── Pestañas: buscar / cartera guardada ── */}
+      <nav className="pestanas" aria-label="Secciones de clientes potenciales">
+        <button className="pestana" data-activa={pestana === "buscar" ? 1 : 0} onClick={() => setPestana("buscar")}>
+          <Search size={16} /> Buscar
+          {resultados.length > 0 && <span className="pestana-n">{resultados.length}</span>}
+        </button>
+        <button className="pestana" data-activa={pestana === "guardados" ? 1 : 0} onClick={() => setPestana("guardados")}>
+          <Database size={16} /> Guardados
+          {guardados.length > 0 && <span className="pestana-n">{guardados.length}</span>}
+        </button>
+      </nav>
+
+      {mensajeAccion && <div className="aviso aviso-ok"><CheckCircle2 size={16} /> {mensajeAccion}</div>}
+
+      {pestana === "guardados" && (
+        <Guardados estado={estadoGuardados} lista={guardados} vendedores={VENDEDORES}
+          onActualizar={actualizar} onBorrar={borrar} onContactar={redactarPara}
+          onLlamar={(g) => marcarContactado(g, "llamada")} onIrABuscar={() => setPestana("buscar")} />
+      )}
+
+      {pestana === "buscar" && (<>
       {/* ── Acciones de la hoja de ruta ── */}
       <section className="ruta-barra" data-activa={hayRuta ? 1 : 0}>
         <div style={{ display: "flex", alignItems: "center", gap: 13, minWidth: 0 }}>
@@ -892,8 +961,8 @@ export default function Prospectos() {
         </div>
       </section>
 
-      {mensajeAccion && <div className="aviso aviso-ok"><CheckCircle2 size={16} /> {mensajeAccion}</div>}
       {error && <div className="aviso aviso-mal"><Radar size={16} /> {error}</div>}
+      </>)}
 
       {/* ── Modal de la hoja de ruta ── */}
       {rutaAbierta && (
@@ -1048,6 +1117,7 @@ export default function Prospectos() {
         );
       })()}
 
+      {pestana === "buscar" && (<>
       {/* ── Buscando ── */}
       {cargando && (
         <div style={{ marginTop: 24 }}>
@@ -1091,9 +1161,16 @@ export default function Prospectos() {
                 <Phone size={13} style={{ verticalAlign: -2, marginRight: 5 }} />Con teléfono ({resultados.filter((r) => telefonoDe(r)).length})
               </button>
             </div>
-            <span style={{ fontSize: 12.5, color: "#64748b", display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <Building2 size={13} /> {filtrados.length} negocios
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12.5, color: "#64748b", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <Building2 size={13} /> {filtrados.length} negocios
+              </span>
+              <button className="btn btn-principal" onClick={guardarClientes} disabled={guardando || !filtrados.length}
+                title="Guardar en la pestaña Guardados para trabajarlos después">
+                {guardando ? <Loader2 size={15} className="gira" /> : <BookmarkPlus size={15} />}
+                {seleccionados.length ? `Guardar ${seleccionados.length} tildado${seleccionados.length === 1 ? "" : "s"}` : `Guardar los ${filtrados.length}`}
+              </button>
+            </div>
           </div>
 
           {info && (
@@ -1125,6 +1202,9 @@ export default function Prospectos() {
                           <input className="tilde" type="checkbox" checked={elegida} onChange={() => alternarSeleccion(clave)}
                             aria-label={`Seleccionar ${r.nombre || "cliente"}`} />
                           {orden > 0 && <span className="orden" title="Orden en la hoja de ruta">{orden}</span>}
+                          {guardadoDe.has(r.place_id) && (
+                            <span className="pastilla pastilla-ok" title="Ya está en la pestaña Guardados"><BookmarkCheck size={11} /> Guardado</span>
+                          )}
                           <span style={{ fontSize: 16.5, fontWeight: 800, letterSpacing: "-.01em" }}>{r.nombre}</span>
                           <span className="chip-prioridad" style={{ background: c.bg, color: c.text, borderColor: c.borde }}>
                             <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.punto }} /> {r.prioridad}
@@ -1235,6 +1315,7 @@ export default function Prospectos() {
           <button className="btn" style={{ marginTop: 16 }} onClick={() => setAyuda(true)}><BookOpen size={15} /> Ver el instructivo</button>
         </div>
       )}
+      </>)}
 
       {ayuda && <Instructivo onCerrar={() => setAyuda(false)} />}
     </div>
