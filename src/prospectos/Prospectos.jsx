@@ -20,7 +20,7 @@ const leer = (clave, defecto) => {
 };
 const guardar = (clave, valor) => { try { localStorage.setItem(clave, JSON.stringify(valor)); } catch { /* sin almacenamiento */ } };
 
-const FIRMA_INICIAL = `${EQUIPO_COMERCIAL[0] || "Nini T Group"}\nNini T Group · https://ninitgroup.com`;
+const FIRMA_INICIAL = `${EQUIPO_COMERCIAL[0] || "Nini T Group"}\nNini T Group · sales@ninitgroup.com · https://ninitgroup.com`;
 
 /** Número para wa.me: sólo dígitos y con el 1 de USA adelante. */
 function numeroWhatsApp(tel) {
