@@ -239,49 +239,33 @@ NTG no financia directamente. Respuesta correcta: "Trabajamos con socios de fina
 
 ════ SHOWROOM Y FEATURES ════
 No hay showroom tradicional — la mayoría de las unidades se construyen a pedido, pero se pueden compartir fotos reales, el catálogo y avances de producción.
-IMÁGENES POR MODELO (links oficiales — el vendedor las manda al cliente; vos podés sugerir cuál usar). Cada modelo tiene exterior, y según el modelo: interior, plano y/o video. La paleta de colores es la misma para todos los modelos.
+IMÁGENES POR MODELO (links oficiales, hospedados en el CRM — el vendedor las manda al cliente; vos podés sugerir cuál usar). NUNCA uses links de ninitgroup.com/wp-content: ese hosting está caído.
 EXTERIORES:
-- 2-Stall White Marble → https://ninitgroup.com/wp-content/uploads/2026/07/2.jpeg
-- 3-Stall (el más popular) → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-18-at-5.18.09-PM-2-1.jpeg
-- 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/exterior.jpeg · https://ninitgroup.com/wp-content/uploads/2026/07/exteriror2.jpeg
-- ADA+2 → https://ninitgroup.com/wp-content/uploads/2026/05/ada22.png
-- 6-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/6bano.png
-- Vista general / render → https://ninitgroup.com/wp-content/uploads/2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png
+- 2-Stall White Marble → https://ninit-crm.vercel.app/cotizacion/img/2-stall/hero.jpg
+- 3-Stall (el más popular) → https://ninit-crm.vercel.app/cotizacion/img/3-stall/crm-exterior.jpg
+- 4-Stall → https://ninit-crm.vercel.app/cotizacion/img/4-stall/hero.jpg
+- 5-Stall → https://ninit-crm.vercel.app/cotizacion/img/5-stall/hero.jpg
+- ADA+2 → https://ninit-crm.vercel.app/cotizacion/img/ada-2/hero.png
+- 6-Stall → https://ninit-crm.vercel.app/cotizacion/img/6-stall/hero.png
 INTERIORES:
-- 2-Stall:
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior2b.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior2c.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/2d.jpeg
-  - (foto extra) https://ninitgroup.com/wp-content/uploads/2026/07/2s.jpeg
-- 3-Stall:
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior01.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior02.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior03.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior04.jpeg
-  - (foto extra) https://ninitgroup.com/wp-content/uploads/2026/07/extras.jpeg
-  - (videos interior) https://ninitgroup.com/wp-content/uploads/2026/07/videointerior1.mp4 · https://ninitgroup.com/wp-content/uploads/2026/07/videointerior2.mp4 · https://ninitgroup.com/wp-content/uploads/2026/07/videointerior3.mp4
-- 4-Stall:
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior01-1.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior2.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior3.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior4.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior5.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/07/interior6.jpeg
-  - (foto extra) https://ninitgroup.com/wp-content/uploads/2026/07/extras.jpeg
-- 5-Stall y 6-Stall (comparten el mismo interior):
-  - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM-1-1.jpeg
-  - https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-3.jpeg
-- ADA+2: https://ninitgroup.com/wp-content/uploads/2026/01/dfhxvb.png
+- 2-Stall: https://ninit-crm.vercel.app/cotizacion/img/2-stall/int-1.jpg · https://ninit-crm.vercel.app/cotizacion/img/2-stall/int-2.jpg · https://ninit-crm.vercel.app/cotizacion/img/2-stall/int-3.jpg · https://ninit-crm.vercel.app/cotizacion/img/2-stall/int-4.jpg
+- 3-Stall: https://ninit-crm.vercel.app/cotizacion/img/3-stall/crm-interior-1.jpg · https://ninit-crm.vercel.app/cotizacion/img/3-stall/crm-interior-2.jpg · https://ninit-crm.vercel.app/cotizacion/img/3-stall/crm-interior-3.jpg · https://ninit-crm.vercel.app/cotizacion/img/3-stall/crm-interior-4.jpg
+- 4-Stall: https://ninit-crm.vercel.app/cotizacion/img/4-stall/int-1.jpg · https://ninit-crm.vercel.app/cotizacion/img/4-stall/int-2.jpg · https://ninit-crm.vercel.app/cotizacion/img/4-stall/int-3.jpg · https://ninit-crm.vercel.app/cotizacion/img/4-stall/int-4.jpg · https://ninit-crm.vercel.app/cotizacion/img/4-stall/int-5.jpg · https://ninit-crm.vercel.app/cotizacion/img/4-stall/int-6.jpg
+- 6-Stall: https://ninit-crm.vercel.app/cotizacion/img/6-stall/int-1.jpg · https://ninit-crm.vercel.app/cotizacion/img/6-stall/int-2.jpg
+- ADA+2: https://ninit-crm.vercel.app/cotizacion/img/ada-2/int-1.png
 PLANOS (floor plans):
-- 2-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/plano2.jpeg
-- 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/05/PHOTO-2026-01-08-01-13-01-1.jpg
-- 4-Stall → https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg
+- 2-Stall → https://ninit-crm.vercel.app/cotizacion/img/2-stall/floorplan.jpg
+- 3-Stall → https://ninit-crm.vercel.app/cotizacion/img/3-stall/crm-floorplan.jpg
+- 4-Stall → https://ninit-crm.vercel.app/cotizacion/img/4-stall/floorplan.jpg
 VIDEOS:
-- 2-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/video2puertas.mp4
-- 3-Stall → https://ninitgroup.com/wp-content/uploads/2026/07/video03.mp4
-PALETA DE COLORES (misma para todos los modelos):
-- https://ninitgroup.com/wp-content/uploads/2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1.jpeg
-Usá SOLO estos links. No inventes otras URLs de imágenes. En el chat el vendedor tiene un botón "Fotos" → elige el modelo → elige Exterior / Interior / Plano / Video / Paleta.
+- 2-Stall → https://ninit-crm.vercel.app/business/media/2-stall/video-1.mp4 · https://ninit-crm.vercel.app/business/media/2-stall/video-2.mp4
+- 3-Stall → https://ninit-crm.vercel.app/business/media/3-stall/video-1.mp4
+- 4-Stall → https://ninit-crm.vercel.app/business/media/4-stall/video-1.mp4
+MÁS FOTOS:
+- 2-Stall → https://ninit-crm.vercel.app/business/media/2-stall/principal.jpeg · https://ninit-crm.vercel.app/business/media/2-stall/exterior.png · https://ninit-crm.vercel.app/business/media/2-stall/foto-1.jpeg
+- 3-Stall → https://ninit-crm.vercel.app/business/media/3-stall/foto-1.jpeg · https://ninit-crm.vercel.app/business/media/3-stall/foto-2.jpeg · https://ninit-crm.vercel.app/business/media/3-stall/foto-3.jpeg · https://ninit-crm.vercel.app/business/media/3-stall/foto-4.jpeg
+ACABADOS / PALETA (los mismos 10 en todos los modelos): https://ninit-crm.vercel.app/cotizacion/img/finishes/01-pure-white.jpg … https://ninit-crm.vercel.app/cotizacion/img/finishes/10-pure-black.jpg
+Usá SOLO estos links. No inventes otras URLs de imágenes. En el chat el vendedor tiene un botón "Fotos" → elige el modelo → elige Exterior / Interior / Plano / Video / Equipamiento / Paleta.
 Features estándar: A/C, luces LED, inodoros con descarga, lavamanos, espejos, tanques de agua limpia/residual, sistema de bomba de agua, freno eléctrico, escalones plegables, gatos estabilizadores, pasamanos. No abrumar con detalle técnico salvo que lo pidan.
 
 ════ PIPELINE DE VENTAS (estados del CRM) ════
@@ -2878,70 +2862,85 @@ const AV_ACCION = {
 // ============================================================
 // FOTOS POR MODELO (links de imagen para enviar al cliente)
 // ============================================================
-const FOTO_PREFIX = "https://ninitgroup.com/wp-content/uploads/";
+// Salen de public/cotizacion/img (las mismas que usa el Purchase Agreement),
+// servidas por Vercel desde el dominio del CRM. NO de ninitgroup.com: ese
+// hosting se queda sin cuota ("509 Bandwidth Limit Exceeded") y el cliente
+// recibía links rotos. Tienen que ser URLs absolutas porque las baja Meta.
+// Los videos y las fotos sueltas de cada unidad viven en public/business/media
+// (nombres sin espacios ni eñes, para que el link sea estable y sirva en n8n).
+const FOTO_PREFIX = "https://ninit-crm.vercel.app/cotizacion/img/";
+const MEDIA_PREFIX = "https://ninit-crm.vercel.app/business/media/";
+const fotos = (...rutas) => rutas.map((r) => FOTO_PREFIX + r).join("\n");
+const media = (...rutas) => rutas.map((r) => MEDIA_PREFIX + r).join("\n");
 
-// Assets compartidos entre modelos
-const FOTO_INTERIOR_456 = `Here's the interior 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.48-PM-1-1.jpeg\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.47-PM-3.jpeg`;
-const FOTO_PALETA = `Here's our color palette 🎨 (same premium finish on every model) 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-13-at-3.33.46-PM-1.jpeg`;
+// Assets compartidos entre modelos: los 10 acabados son iguales en todos.
+const FOTO_PALETA = `Here are our finish options 🎨 (same premium finishes on every model) 👇\n${fotos(
+  "finishes/01-pure-white.jpg", "finishes/02-snow-mountain-stone.jpg", "finishes/03-florence-black-gold.jpg",
+  "finishes/04-florence-white-gold.jpg", "finishes/05-armani-gray.jpg", "finishes/06-pandora.jpg",
+  "finishes/07-italian-gray.jpg", "finishes/08-fish-belly-white.jpg", "finishes/09-white-jade.jpg",
+  "finishes/10-pure-black.jpg")}`;
 
-// Cada modelo tiene varios assets: Exterior / Interior / Plano / Video / Paleta
+// Cada modelo tiene varios assets: Exterior / Interior / Plano / Video / Equipamiento / Paleta
 // (solo se listan los assets disponibles para cada modelo)
 const FOTOS_MODELOS = [
   {
     label: "2-Stall White Marble",
     assets: [
-      { tipo: "Exterior", texto: `Here's our 2-Stall White Marble unit 👇\n${FOTO_PREFIX}2026/07/2.jpeg` },
-      { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/07/interior2b.jpeg\n${FOTO_PREFIX}2026/07/interior2c.jpeg\n${FOTO_PREFIX}2026/07/2d.jpeg` },
-      { tipo: "Extra", texto: `Here's another view 👇\n${FOTO_PREFIX}2026/07/2s.jpeg` },
-      { tipo: "Plano", texto: `Here's the floor plan of the 2-Stall 👇\n${FOTO_PREFIX}2026/07/plano2.jpeg` },
-      { tipo: "Video", texto: `Here's a video walkthrough of the 2-Stall 👇\n${FOTO_PREFIX}2026/07/video2puertas.mp4` },
+      { tipo: "Exterior", texto: `Here's our 2-Stall White Marble unit 👇\n${media("2-stall/principal.jpeg", "2-stall/exterior.png")}` },
+      { tipo: "Interior", texto: `Here's the interior 👇\n${fotos("2-stall/int-1.jpg", "2-stall/int-2.jpg", "2-stall/int-3.jpg", "2-stall/int-4.jpg")}` },
+      { tipo: "Extra", texto: `Here's another view 👇\n${media("2-stall/foto-1.jpeg")}` },
+      { tipo: "Plano", texto: `Here's the floor plan of the 2-Stall 👇\n${fotos("2-stall/floorplan.jpg")}` },
+      { tipo: "Video", texto: `Here's a video walkthrough of the 2-Stall 👇\n${media("2-stall/video-1.mp4")}` },
+      { tipo: "Video 2", texto: `Here's another video of the 2-Stall 👇\n${media("2-stall/video-2.mp4")}` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
     ],
   },
   {
     label: "3-Stall (most popular ⭐)",
     assets: [
-      { tipo: "Exterior", texto: `Here's our 3-Stall unit — our most popular one ⭐ 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-18-at-5.18.09-PM-2-1.jpeg` },
-      { tipo: "Video", texto: `Here's a video walkthrough of the 3-Stall ⭐ 👇\n${FOTO_PREFIX}2026/07/video03.mp4` },
-      { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/07/interior01.jpeg\n${FOTO_PREFIX}2026/07/interior02.jpeg\n${FOTO_PREFIX}2026/07/interior03.jpeg\n${FOTO_PREFIX}2026/07/interior04.jpeg` },
-      { tipo: "Video interior 1", texto: `Here's a look inside on video 👇\n${FOTO_PREFIX}2026/07/videointerior1.mp4` },
-      { tipo: "Video interior 2", texto: `Here's another look inside on video 👇\n${FOTO_PREFIX}2026/07/videointerior2.mp4` },
-      { tipo: "Video interior 3", texto: `And one more from inside 👇\n${FOTO_PREFIX}2026/07/videointerior3.mp4` },
-      { tipo: "Extra", texto: `Here's another view 👇\n${FOTO_PREFIX}2026/07/extras.jpeg` },
-      { tipo: "Plano", texto: `Here's the floor plan of the 3-Stall 👇\n${FOTO_PREFIX}2026/05/PHOTO-2026-01-08-01-13-01-1.jpg` },
+      { tipo: "Exterior", texto: `Here's our 3-Stall unit — our most popular one ⭐ 👇\n${fotos("3-stall/crm-exterior.jpg")}` },
+      { tipo: "Más fotos", texto: `Here are more photos of the 3-Stall ⭐ 👇\n${media("3-stall/foto-1.jpeg", "3-stall/foto-2.jpeg", "3-stall/foto-3.jpeg", "3-stall/foto-4.jpeg")}` },
+      { tipo: "Interior", texto: `Here's the interior 👇\n${fotos("3-stall/crm-interior-1.jpg", "3-stall/crm-interior-2.jpg", "3-stall/crm-interior-3.jpg", "3-stall/crm-interior-4.jpg")}` },
+      { tipo: "Plano", texto: `Here's the floor plan of the 3-Stall 👇\n${fotos("3-stall/crm-floorplan.jpg")}` },
+      { tipo: "Video", texto: `Here's a video walkthrough of the 3-Stall ⭐ 👇\n${media("3-stall/video-1.mp4")}` },
+      { tipo: "Equipamiento", texto: `Here's what comes inside every unit 👇\n${fotos("3-stall/feat-acheating.jpg", "3-stall/feat-toilet.jpg", "3-stall/feat-sinks.jpg", "3-stall/feat-lighting.jpg", "3-stall/feat-electrical.jpg", "3-stall/feat-handrails.jpg")}` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
     ],
   },
   {
     label: "4-Stall",
     assets: [
-      { tipo: "Exterior", texto: `Here's our 4-Stall unit 👇\n${FOTO_PREFIX}2026/07/exterior.jpeg\n${FOTO_PREFIX}2026/07/exteriror2.jpeg` },
-      { tipo: "Interior", texto: `Here's the interior 👇\n${FOTO_PREFIX}2026/07/interior01-1.jpeg\n${FOTO_PREFIX}2026/07/interior2.jpeg\n${FOTO_PREFIX}2026/07/interior3.jpeg\n${FOTO_PREFIX}2026/07/interior4.jpeg\n${FOTO_PREFIX}2026/07/interior5.jpeg\n${FOTO_PREFIX}2026/07/interior6.jpeg` },
-      { tipo: "Extra", texto: `Here's another view 👇\n${FOTO_PREFIX}2026/07/extras.jpeg` },
-      { tipo: "Plano", texto: `Here's the floor plan of the 4-Stall 👇\n${FOTO_PREFIX}2026/06/WhatsApp-Image-2026-06-11-at-4.39.53-PM.jpeg` },
+      { tipo: "Exterior", texto: `Here's our 4-Stall unit 👇\n${fotos("4-stall/hero.jpg")}` },
+      { tipo: "Interior", texto: `Here's the interior 👇\n${fotos("4-stall/int-1.jpg", "4-stall/int-2.jpg", "4-stall/int-3.jpg", "4-stall/int-4.jpg", "4-stall/int-5.jpg", "4-stall/int-6.jpg")}` },
+      { tipo: "Plano", texto: `Here's the floor plan of the 4-Stall 👇\n${fotos("4-stall/floorplan.jpg")}` },
+      { tipo: "Video", texto: `Here's a video walkthrough of the 4-Stall 👇\n${media("4-stall/video-1.mp4")}` },
+      { tipo: "Equipamiento", texto: `Here's a look at the equipment 👇\n${fotos("4-stall/equipo-1.jpg", "4-stall/equipo-2.jpg", "4-stall/equipo-ac.jpg", "4-stall/equipo-electrico.jpg", "4-stall/equipo-tanque.jpg")}` },
+      { tipo: "Paleta de colores", texto: FOTO_PALETA },
+    ],
+  },
+  {
+    label: "5-Stall",
+    assets: [
+      { tipo: "Exterior", texto: `Here's our 5-Stall unit 👇\n${fotos("5-stall/hero.jpg")}` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
     ],
   },
   {
     label: "ADA+2 Accessible",
     assets: [
-      { tipo: "Exterior", texto: `Here's our ADA+2 fully accessible unit 👇\n${FOTO_PREFIX}2026/05/ada22.png` },
-      { tipo: "Interior", texto: `Here's the interior of the ADA+2 👇\n${FOTO_PREFIX}2026/01/dfhxvb.png` },
+      { tipo: "Exterior", texto: `Here's our ADA+2 fully accessible unit 👇\n${fotos("ada-2/hero.png")}` },
+      { tipo: "Interior", texto: `Here's the interior of the ADA+2 👇\n${fotos("ada-2/int-1.png")}` },
+      { tipo: "Video", texto: `Here's a video of the unit 👇\n${media("ada-2/video-1.mp4")}` },
+      { tipo: "Video 2", texto: `Here's another video 👇\n${media("ada-2/video-2.mp4")}` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
     ],
   },
   {
     label: "6-Stall",
     assets: [
-      { tipo: "Exterior", texto: `Here's our 6-Stall unit 👇\n${FOTO_PREFIX}2026/05/6bano.png` },
-      { tipo: "Interior", texto: FOTO_INTERIOR_456 },
+      { tipo: "Exterior", texto: `Here's our 6-Stall unit 👇\n${fotos("6-stall/hero.png")}` },
+      { tipo: "Interior", texto: `Here's the interior 👇\n${fotos("6-stall/int-1.jpg", "6-stall/int-2.jpg")}` },
       { tipo: "Paleta de colores", texto: FOTO_PALETA },
-    ],
-  },
-  {
-    label: "Render / vista general",
-    assets: [
-      { tipo: "Render", texto: `Here's a look at our restroom trailers 👇\n${FOTO_PREFIX}2026/05/ChatGPT-Image-21-may-2026-12_16_51-p.m.png` },
     ],
   },
 ];
