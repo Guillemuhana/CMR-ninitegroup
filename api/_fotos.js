@@ -106,6 +106,12 @@ export const MEDIA = {
     video: media("ada-2/video-1.mp4", "ada-2/video-2.mp4"),
     paleta: PALETA,
   },
+  "5-stall": {
+    nombre: "5-Stall",
+    exterior: foto("5-stall/hero.jpg"),
+    detalle: DETALLE,
+    paleta: PALETA,
+  },
   "6-stall": {
     nombre: "6-Stall",
     exterior: foto("6-stall/hero.png"),

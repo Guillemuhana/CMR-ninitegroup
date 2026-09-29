@@ -49,6 +49,7 @@ const ALIAS_MODELO = {
   "2stall": "2-stall", "2 stall": "2-stall", "2-stalls": "2-stall", "dos": "2-stall",
   "3stall": "3-stall", "3 stall": "3-stall", "3-stalls": "3-stall", "tres": "3-stall",
   "4stall": "4-stall", "4 stall": "4-stall", "4-stalls": "4-stall", "cuatro": "4-stall",
+  "5stall": "5-stall", "5 stall": "5-stall", "5-stalls": "5-stall", "cinco": "5-stall",
   "ada": "ada-2", "ada+2": "ada-2", "ada 2": "ada-2", "ada-plus-2": "ada-2", "ada2": "ada-2",
 };
 
