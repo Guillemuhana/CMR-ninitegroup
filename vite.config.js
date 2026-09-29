@@ -22,7 +22,7 @@ export default defineConfig({
         // Las cotizaciones y la landing pública no son parte del CRM: son
         // páginas sueltas para un cliente o un visitante. Sin esto, el service
         // worker las precacheaba en el dispositivo de cada vendedor.
-        globIgnores: ["**/cotizacion/**", "**/business/**"],
+        globIgnores: ["**/cotizacion/**", "**/business/**", "**/media/**"],
       },
       manifest: {
         name: "NINIT Group · CRM",

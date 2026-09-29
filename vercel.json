@@ -16,7 +16,7 @@
     { "source": "/api/meta-evento", "destination": "/api/push?accion=meta" },
     { "source": "/api/lead", "destination": "/api/push?accion=lead" },
     { "source": "/api/business-chat", "destination": "/api/push?accion=chat" },
-    { "source": "/((?!api/|cotizacion/|business/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|cotizacion/|business/|media/).*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/reporte-diario.js": { "maxDuration": 60 },

@@ -258,12 +258,12 @@ PLANOS (floor plans):
 - 3-Stall → https://ninit-crm.vercel.app/cotizacion/img/3-stall/crm-floorplan.jpg
 - 4-Stall → https://ninit-crm.vercel.app/cotizacion/img/4-stall/floorplan.jpg
 VIDEOS:
-- 2-Stall → https://ninit-crm.vercel.app/business/media/2-stall/video-1.mp4 · https://ninit-crm.vercel.app/business/media/2-stall/video-2.mp4
-- 3-Stall → https://ninit-crm.vercel.app/business/media/3-stall/video-1.mp4
-- 4-Stall → https://ninit-crm.vercel.app/business/media/4-stall/video-1.mp4
+- 2-Stall → https://ninit-crm.vercel.app/media/2-stall/video-1.mp4 · https://ninit-crm.vercel.app/media/2-stall/video-2.mp4
+- 3-Stall → https://ninit-crm.vercel.app/media/3-stall/video-1.mp4
+- 4-Stall → https://ninit-crm.vercel.app/media/4-stall/video-1.mp4
 MÁS FOTOS:
-- 2-Stall → https://ninit-crm.vercel.app/business/media/2-stall/principal.jpeg · https://ninit-crm.vercel.app/business/media/2-stall/exterior.png · https://ninit-crm.vercel.app/business/media/2-stall/foto-1.jpeg
-- 3-Stall → https://ninit-crm.vercel.app/business/media/3-stall/foto-1.jpeg · https://ninit-crm.vercel.app/business/media/3-stall/foto-2.jpeg · https://ninit-crm.vercel.app/business/media/3-stall/foto-3.jpeg · https://ninit-crm.vercel.app/business/media/3-stall/foto-4.jpeg
+- 2-Stall → https://ninit-crm.vercel.app/media/2-stall/principal.jpeg · https://ninit-crm.vercel.app/media/2-stall/exterior.png · https://ninit-crm.vercel.app/media/2-stall/foto-1.jpeg
+- 3-Stall → https://ninit-crm.vercel.app/media/3-stall/foto-1.jpeg · https://ninit-crm.vercel.app/media/3-stall/foto-2.jpeg · https://ninit-crm.vercel.app/media/3-stall/foto-3.jpeg · https://ninit-crm.vercel.app/media/3-stall/foto-4.jpeg
 ACABADOS / PALETA (los mismos 10 en todos los modelos): https://ninit-crm.vercel.app/cotizacion/img/finishes/01-pure-white.jpg … https://ninit-crm.vercel.app/cotizacion/img/finishes/10-pure-black.jpg
 Usá SOLO estos links. No inventes otras URLs de imágenes. En el chat el vendedor tiene un botón "Fotos" → elige el modelo → elige Exterior / Interior / Plano / Video / Equipamiento / Paleta.
 Features estándar: A/C, luces LED, inodoros con descarga, lavamanos, espejos, tanques de agua limpia/residual, sistema de bomba de agua, freno eléctrico, escalones plegables, gatos estabilizadores, pasamanos. No abrumar con detalle técnico salvo que lo pidan.
@@ -2866,10 +2866,10 @@ const AV_ACCION = {
 // servidas por Vercel desde el dominio del CRM. NO de ninitgroup.com: ese
 // hosting se queda sin cuota ("509 Bandwidth Limit Exceeded") y el cliente
 // recibía links rotos. Tienen que ser URLs absolutas porque las baja Meta.
-// Los videos y las fotos sueltas de cada unidad viven en public/business/media
+// Los videos y las fotos sueltas de cada unidad viven en public/media
 // (nombres sin espacios ni eñes, para que el link sea estable y sirva en n8n).
 const FOTO_PREFIX = "https://ninit-crm.vercel.app/cotizacion/img/";
-const MEDIA_PREFIX = "https://ninit-crm.vercel.app/business/media/";
+const MEDIA_PREFIX = "https://ninit-crm.vercel.app/media/";
 const fotos = (...rutas) => rutas.map((r) => FOTO_PREFIX + r).join("\n");
 const media = (...rutas) => rutas.map((r) => MEDIA_PREFIX + r).join("\n");
 
