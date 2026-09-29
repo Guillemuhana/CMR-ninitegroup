@@ -32,7 +32,7 @@ const TAG_FORM = "[LEAD_FORM]";
 // Mismo mecanismo que TAG_FORM: el modelo escribe una marca, el servidor la
 // lee, la valida y la recorta antes de que el texto llegue al visitante.
 //
-// El material sale de api/_fotos.js: los links oficiales de ninitgroup.com,
+// El material sale de api/_fotos.js: archivos del CRM servidos por Vercel,
 // los MISMOS que el vendedor manda desde el botón "Fotos" del CRM. Que la web
 // pública y el vendedor muestren lo mismo no es un detalle — el cliente ve
 // las dos cosas y cualquier diferencia se nota.

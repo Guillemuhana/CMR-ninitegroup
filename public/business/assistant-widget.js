@@ -510,7 +510,7 @@
 
 	var esVideo = function (u) { return /\.(mp4|webm|mov)(\?.*)?$/i.test(String(u || "")); };
 
-	/* El catálogo mezcla links absolutos (ninitgroup.com) con archivos de la
+	/* El catálogo mezcla links absolutos (ninit-crm.vercel.app) con archivos de la
 	   propia landing ("img/3-stall.jpg"). Los relativos NO se pueden dejar
 	   tal cual: el navegador los resolvería contra la página, y en /es/
 	   buscaría /es/img/3-stall.jpg, que no existe. Se resuelven contra la

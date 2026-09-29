@@ -14,7 +14,8 @@ import assert from "node:assert/strict";
 import { bloqueCRM, _test } from "../api/_web/calificar.js";
 import { intentosIA, adaptarCuerpo } from "../api/_ia.js";
 import { extraerFotos } from "../api/_web/chat.js";
-import { MEDIA, mediaDe, tiposDe, modelosDisponibles } from "../api/_fotos.js";
+import { existsSync } from "node:fs";
+import { MEDIA, TIPOS as TIPOS_TODOS, mediaDe, tiposDe, modelosDisponibles } from "../api/_fotos.js";
 
 const { normalizar, entrada } = _test;
 
@@ -183,25 +184,21 @@ test("extraerFotos: saca la marca y resuelve el material", () => {
 });
 
 test("extraerFotos: el tipo pedido se respeta", () => {
-  conEnv({ MEDIA_REMOTA: "1" }, () => {
-    assert.equal(extraerFotos("[FOTO:3-stall:interior]").fotos[0].tipo, "interior");
-    assert.equal(extraerFotos("[FOTO:2-stall:video]").fotos[0].tipo, "video");
-    assert.equal(extraerFotos("[FOTO:3-stall:plano]").fotos[0].tipo, "plano");
-  });
+  assert.equal(extraerFotos("[FOTO:3-stall:interior]").fotos[0].tipo, "interior");
+  assert.equal(extraerFotos("[FOTO:2-stall:video]").fotos[0].tipo, "video");
+  assert.equal(extraerFotos("[FOTO:3-stall:plano]").fotos[0].tipo, "plano");
 });
 
 test("extraerFotos: sinónimos del tipo, que es lo que el modelo escribe de verdad", () => {
-  conEnv({ MEDIA_REMOTA: "1" }, () => {
-    assert.equal(extraerFotos("[FOTO:3-stall:inside]").fotos[0].tipo, "interior");
-    assert.equal(extraerFotos("[FOTO:3-stall:adentro]").fotos[0].tipo, "interior");
-    assert.equal(extraerFotos("[FOTO:3-stall:colores]").fotos[0].tipo, "paleta");
-  });
+  assert.equal(extraerFotos("[FOTO:3-stall:inside]").fotos[0].tipo, "interior");
+  assert.equal(extraerFotos("[FOTO:3-stall:adentro]").fotos[0].tipo, "interior");
+  assert.equal(extraerFotos("[FOTO:3-stall:colores]").fotos[0].tipo, "paleta");
 });
 
 test("extraerFotos: un tipo que ese modelo no tiene cae a exterior, no a nada", () => {
-  // El 4-Stall no tiene video. Mostrar la unidad y que el texto lo aclare es
+  // El 6-Stall no tiene video. Mostrar la unidad y que el texto lo aclare es
   // mucho mejor que contestar con las manos vacías.
-  const r = extraerFotos("[FOTO:4-stall:video]");
+  const r = extraerFotos("[FOTO:6-stall:video]");
   assert.equal(r.fotos[0].tipo, "exterior");
   assert.ok(r.fotos[0].urls.length > 0);
 });
@@ -225,10 +222,8 @@ test("extraerFotos: no repite modelo+tipo y corta en dos bloques", () => {
 });
 
 test("extraerFotos: el mismo modelo con dos tipos distintos SÍ puede ir junto", () => {
-  conEnv({ MEDIA_REMOTA: "1" }, () => {
-    const r = extraerFotos("[FOTO:3-stall:exterior] [FOTO:3-stall:interior]");
-    assert.deepEqual(r.fotos.map((f) => f.tipo), ["exterior", "interior"]);
-  });
+  const r = extraerFotos("[FOTO:3-stall:exterior] [FOTO:3-stall:interior]");
+  assert.deepEqual(r.fotos.map((f) => f.tipo), ["exterior", "interior"]);
 });
 
 test("extraerFotos: sin marcas devuelve el texto igual", () => {
@@ -246,71 +241,57 @@ test("mediaDe: nunca devuelve más de lo que entra en un chat", () => {
 });
 
 test("el catálogo no tiene URLs inventadas", () => {
-  conEnv({ MEDIA_REMOTA: "1" }, () => {
-    for (const slug of Object.keys(MEDIA)) {
-      assert.ok(tiposDe(slug).includes("exterior"), slug + " tiene que tener exterior");
-      for (const tipo of tiposDe(slug)) {
-        for (const url of MEDIA[slug][tipo]) {
-          // O es un archivo de la propia landing, o es un link oficial.
-          assert.match(url, /^(img\/|https:\/\/ninitgroup\.com\/wp-content\/uploads\/)/, slug + "/" + tipo);
-        }
+  // O es un archivo de la propia landing, o es un archivo del CRM servido por
+  // Vercel. En los dos casos el archivo tiene que existir en public/.
+  const BASE = "https://ninit-crm.vercel.app/";
+  for (const slug of Object.keys(MEDIA)) {
+    assert.ok(tiposDe(slug).includes("exterior"), slug + " tiene que tener exterior");
+    for (const tipo of tiposDe(slug)) {
+      for (const url of MEDIA[slug][tipo]) {
+        assert.match(url, /^(img\/|https:\/\/ninit-crm\.vercel\.app\/(cotizacion\/img|media)\/)/, slug + "/" + tipo);
+        const archivo = url.startsWith(BASE)
+          ? new URL("../public/" + url.slice(BASE.length), import.meta.url)
+          : new URL("../public/business/" + url, import.meta.url);
+        assert.ok(existsSync(archivo), "no existe " + url);
       }
     }
-  });
+  }
 });
 
-/* ── El interruptor del material remoto ────────────────────────────────────
-   ninitgroup.com se queda sin cuota de transferencia y devuelve 509: el
+/* ── Nada depende de ninitgroup.com ────────────────────────────────────────
+   Ese WordPress se queda sin cuota de transferencia y devuelve 509/500: el
    22/09/2026 los 37 archivos estaban caídos. Una landing pública no puede
-   mostrarle un recuadro roto a un prospecto, así que por defecto sólo se
-   sirve lo que está en el mismo hosting que la página. */
+   mostrarle un recuadro roto a un prospecto, así que todo el material vive
+   en el mismo hosting que el CRM. */
 
-test("con el material remoto apagado, sólo se sirven archivos de la landing", () => {
-  conEnv({ MEDIA_REMOTA: undefined }, () => {
-    const r = extraerFotos("[FOTO:3-stall]");
-    assert.equal(r.fotos.length, 1);
-    assert.ok(r.fotos[0].urls.every((u) => u.startsWith("img/")),
-      "nada que dependa de WordPress");
-  });
+test("ninguna URL del catálogo apunta a ninitgroup.com", () => {
+  for (const slug of Object.keys(MEDIA)) {
+    for (const tipo of TIPOS_TODOS) {
+      for (const url of MEDIA[slug][tipo] || []) {
+        assert.ok(!/ninitgroup\.com/i.test(url), slug + "/" + tipo + ": " + url);
+      }
+    }
+  }
 });
 
-test("apagado, pedir un video devuelve el exterior y NUNCA una lista vacía", () => {
-  conEnv({ MEDIA_REMOTA: undefined }, () => {
-    const r = extraerFotos("[FOTO:3-stall:video]");
-    assert.equal(r.fotos[0].tipo, "exterior");
-    assert.ok(r.fotos[0].urls.length > 0);
-  });
-});
-
-test("apagado, la IA no ve modelos que no puede mostrar", () => {
-  conEnv({ MEDIA_REMOTA: undefined }, () => {
-    // El 6-Stall sólo tiene exterior en WordPress. Interior y equipamiento
-    // son casi iguales en toda la línea, así que con eso solo no se puede
-    // mostrar de verdad: se exige exterior para ofrecerlo.
-    assert.ok(!modelosDisponibles().includes("6-stall"));
-    // Lo que SÍ se puede sin WordPress: exterior, interior y equipamiento,
-    // todo servido por la propia landing.
-    assert.deepEqual(tiposDe("3-stall"), ["exterior", "interior", "detalle"]);
-    assert.ok(!tiposDe("3-stall").includes("video"), "el video vive en WordPress");
-  });
-  conEnv({ MEDIA_REMOTA: "1" }, () => {
-    assert.ok(modelosDisponibles().includes("6-stall"));
-    assert.ok(tiposDe("3-stall").includes("video"));
-  });
+test("todos los modelos se pueden ofrecer, con video donde lo hay", () => {
+  assert.ok(modelosDisponibles().includes("6-stall"));
+  assert.ok(tiposDe("3-stall").includes("video"));
+  const r = extraerFotos("[FOTO:3-stall:video]");
+  assert.equal(r.fotos[0].tipo, "video");
+  assert.ok(r.fotos[0].urls.length > 0);
 });
 
 test("el interior genérico se marca como tal, y el propio no", () => {
-  conEnv({ MEDIA_REMOTA: undefined }, () => {
-    // Mostrar una foto cualquiera bajo el título "3-Stall · Interior" es
-    // decirle al cliente que está viendo SU unidad. El pie tiene que aclararlo.
-    assert.equal(mediaDe("3-stall", "interior").generico, true);
-    // Del 2-Stall sí tenemos una toma propia (img/int/5.jpg).
-    const dos = mediaDe("2-stall", "interior");
-    assert.equal(dos.generico, false);
-    assert.equal(dos.urls[0], "img/int/5.jpg");
-    // El equipamiento es el mismo en toda la línea, siempre genérico.
-    assert.equal(mediaDe("2-stall", "detalle").generico, true);
-  });
+  // Mostrar una foto cualquiera bajo el título "3-Stall · Interior" es
+  // decirle al cliente que está viendo SU unidad. El pie tiene que aclararlo.
+  assert.equal(mediaDe("3-stall", "interior").generico, true);
+  // Del 2-Stall sí tenemos una toma propia (img/int/5.jpg).
+  const dos = mediaDe("2-stall", "interior");
+  assert.equal(dos.generico, false);
+  assert.equal(dos.urls[0], "img/int/5.jpg");
+  // El equipamiento es el mismo en toda la línea, siempre genérico.
+  assert.equal(mediaDe("2-stall", "detalle").generico, true);
 });
 
 test("adaptarCuerpo: a Groq se le sigue mandando max_tokens y el freno de razonamiento", () => {

@@ -123,9 +123,9 @@ export const modelos = {
 
     // Fotos reales y actualizadas de la unidad: son las mismas que el vendedor
     // le manda al cliente por chat con el botón "Fotos" (FOTOS_MODELOS en
-    // src/App.jsx, hospedadas en ninitgroup.com/wp-content/uploads). Se guardan
-    // acá en public/ en vez de linkear a ninitgroup.com porque el PDF firmado
-    // las lee del disco (api/_cotizacion/pdf.js) y el WordPress hoy da 500.
+    // src/App.jsx). Se guardan acá en public/ porque el PDF firmado las lee del
+    // disco (api/_cotizacion/pdf.js); nada se linkea a ninitgroup.com, cuyo
+    // WordPress se cae (509/500).
     // Al cambiar las fotos del chat, volver a bajarlas a estos archivos.
     // Miniatura liviana para el selector (la foto grande pesa de más en el
     // celular). Se generan con: npx sharp-cli -i <foto> -o thumbs/<modelo>.jpg resize 420
