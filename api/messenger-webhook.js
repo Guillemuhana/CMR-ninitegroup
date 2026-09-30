@@ -160,6 +160,18 @@ export default async function handler(req, res) {
         // Contacto que ya existía y ahora llega clickeando un anuncio.
         if (existingContact?.id && atribucion) await guardarAtribucion(supabase, contactoId, atribucion);
 
+        // Meta reentrega el mismo evento cuando el webhook tarda en contestar
+        // (y el mensaje del formulario de anuncios suele llegar dos veces).
+        // Si el mismo texto ya entró para este contacto hace poco, es un eco.
+        if (existingContact?.id) {
+          const desde = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+          const { data: repetido } = await supabase
+            .from("mensajes").select("id")
+            .eq("contacto_id", contactoId).eq("direccion", "in").eq("contenido", contenido)
+            .gte("created_at", desde).limit(1);
+          if (repetido?.length) continue;
+        }
+
         const { error: msgError } = await supabase.from("mensajes").insert({
           contacto_id: contactoId,
           direccion: "in",
