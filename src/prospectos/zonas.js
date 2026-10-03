@@ -43,6 +43,19 @@ export const ZONAS = [
   ] },
   { grupo: "Argentina", lista: [
     "Córdoba, Argentina",
+    "Centro, Córdoba, Argentina", "Nueva Córdoba, Córdoba, Argentina", "Güemes, Córdoba, Argentina",
+    "Alberdi, Córdoba, Argentina", "Alto Alberdi, Córdoba, Argentina", "Villa Páez, Córdoba, Argentina",
+    "Cofico, Córdoba, Argentina", "Alta Córdoba, Córdoba, Argentina", "General Bustos, Córdoba, Argentina",
+    "General Paz, Córdoba, Argentina", "Juniors, Córdoba, Argentina", "Pueyrredón, Córdoba, Argentina",
+    "San Vicente, Córdoba, Argentina", "Barrio Maipú, Córdoba, Argentina", "Empalme, Córdoba, Argentina",
+    "Yofre, Córdoba, Argentina", "Cerro de las Rosas, Córdoba, Argentina", "Urca, Córdoba, Argentina",
+    "Villa Belgrano, Córdoba, Argentina", "Argüello, Córdoba, Argentina", "Villa Allende, Córdoba, Argentina",
+    "Poeta Lugones, Córdoba, Argentina", "Marqués de Sobremonte, Córdoba, Argentina",
+    "Los Boulevares, Córdoba, Argentina", "Villa El Libertador, Córdoba, Argentina",
+    "Jardín, Córdoba, Argentina", "Parque Vélez Sarsfield, Córdoba, Argentina",
+    "Observatorio, Córdoba, Argentina", "Bella Vista, Córdoba, Argentina",
+    "San Martín, Córdoba, Argentina", "Providencia, Córdoba, Argentina",
+    "Quebrada de las Rosas, Córdoba, Argentina", "Villa Warcalde, Córdoba, Argentina",
   ] },
 ];
 

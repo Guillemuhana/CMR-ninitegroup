@@ -5,6 +5,7 @@ import {
   puntuarBase, prepararLista, aplicarIA,
 } from "../api/_prospectos/buscar.js";
 import { RUBROS, rubroDe } from "../api/_prospectos/rubros.js";
+import { ZONAS } from "../src/prospectos/zonas.js";
 
 const lugarGoogle = (id, extra = {}) => ({
   id, displayName: { text: `Negocio ${id}` }, formattedAddress: "1 Main St, Miami, FL 33132, USA",
@@ -42,6 +43,12 @@ test("la consulta usa la versión en inglés del rubro y valida largos", () => {
   const cordoba = prepararBusqueda({ busqueda: "Talleres mecánicos", zona: "Córdoba, Argentina" });
   assert.equal(cordoba.pais, "AR");
   assert.equal(cordoba.consulta, "taller mecánico in Córdoba, Argentina");
+  const barrio = prepararBusqueda({ busqueda: "Talleres mecánicos", zona: "Nueva Córdoba, Córdoba, Argentina" });
+  assert.equal(barrio.pais, "AR");
+  assert.equal(barrio.consulta, "taller mecánico in Nueva Córdoba, Córdoba, Argentina");
+  const barriosCordoba = ZONAS.find((g) => g.grupo === "Argentina").lista;
+  assert.ok(barriosCordoba.includes("Nueva Córdoba, Córdoba, Argentina"));
+  assert.ok(barriosCordoba.includes("Alta Córdoba, Córdoba, Argentina"));
 });
 
 test("Google: sólo negocios de USA y operativos", () => {

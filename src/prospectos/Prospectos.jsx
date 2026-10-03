@@ -193,7 +193,7 @@ const PASOS = [
   { icono: Search, titulo: "1. Elegí qué buscar",
     texto: "Tocá una categoría (Talleres mecánicos, Hoteles y resorts, Venues de bodas…) o escribí cualquier otra en español o inglés." },
   { icono: MapPin, titulo: "2. Elegí la zona",
-    texto: "Arranca en Miami, FL. Tocá el campo para ver localidades de Estados Unidos y Córdoba, Argentina, o escribí una ciudad, provincia, estado o código postal. Después tocá Buscar." },
+    texto: "Arranca en Miami, FL. Tocá el campo para ver localidades de Estados Unidos y barrios de Córdoba, Argentina, o escribí una ciudad, barrio, provincia, estado o código postal. Después tocá Buscar." },
   { icono: Target, titulo: "3. Leé el puntaje",
     texto: "Cada negocio trae un puntaje de 0 a 100 y una prioridad (ALTA, MEDIA, BAJA): indica qué tanto encaja con Nini T Group, no que ya quiera comprar. Abajo aparecen la unidad y el paquete sugeridos, y el enfoque para la primera llamada." },
   { icono: Mail, titulo: "4. Filtrá",
