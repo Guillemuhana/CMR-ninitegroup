@@ -41,6 +41,9 @@ export const ZONAS = [
     "Baltimore, MD", "Virginia Beach, VA", "Chicago, IL", "Detroit, MI", "Columbus, OH", "Indianapolis, IN",
     "Minneapolis, MN", "Kansas City, MO", "St. Louis, MO", "Oklahoma City, OK",
   ] },
+  { grupo: "Argentina", lista: [
+    "Córdoba, Argentina",
+  ] },
 ];
 
 /** Todas las zonas en orden, sin repetir, para el desplegable. */

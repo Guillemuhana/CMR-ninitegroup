@@ -23,6 +23,8 @@ test("rubros: reconoce español, inglés y los accesos rápidos", () => {
   assert.equal(rubroDe("Resort in Naples")?.id, "hoteles");
   assert.equal(rubroDe("salones de bodas")?.id, "bodas");
   assert.equal(rubroDe("Porta potty rentals")?.id, "banos");
+  assert.equal(rubroDe("Talleres mecánicos")?.id, "talleres-mecanicos");
+  assert.deepEqual(rubroDe("mecánica automotriz")?.osm, ["shop=car_repair", "craft=car_repair"]);
   assert.equal(rubroDe("RV park")?.id, "campings");
   for (const r of RUBROS) assert.equal(rubroDe(r.etiqueta)?.id, r.id);
   assert.equal(rubroDe("dentistas"), null);
@@ -37,6 +39,9 @@ test("la consulta usa la versión en inglés del rubro y valida largos", () => {
   assert.equal(prepararBusqueda({ busqueda: {}, zona: "Miami" }), null);
   assert.equal(prepararBusqueda({ busqueda: "x", zona: " " }), null);
   assert.equal(prepararBusqueda({ busqueda: "x".repeat(161), zona: "Miami" }), null);
+  const cordoba = prepararBusqueda({ busqueda: "Talleres mecánicos", zona: "Córdoba, Argentina" });
+  assert.equal(cordoba.pais, "AR");
+  assert.equal(cordoba.consulta, "taller mecánico in Córdoba, Argentina");
 });
 
 test("Google: sólo negocios de USA y operativos", () => {
@@ -46,6 +51,16 @@ test("Google: sólo negocios de USA y operativos", () => {
   assert.equal(n.direccion, "1 Main St, Miami, FL 33132");
   assert.equal(desdeGoogle(lugarGoogle("b", { businessStatus: "CLOSED_PERMANENTLY" })), null);
   assert.equal(desdeGoogle(lugarGoogle("c", { addressComponents: [{ types: ["country"], shortText: "MX" }], formattedAddress: "Cancún, Mexico" })), null);
+  const argentina = desdeGoogle(lugarGoogle("ar", {
+    formattedAddress: "Av. Colón 100, Córdoba, Argentina",
+    addressComponents: [
+      { types: ["locality"], longText: "Córdoba" },
+      { types: ["administrative_area_level_1"], shortText: "Córdoba" },
+      { types: ["country"], shortText: "AR" },
+    ],
+  }), "AR");
+  assert.equal(argentina.pais, "AR");
+  assert.equal(argentina.direccion, "Av. Colón 100, Córdoba");
 });
 
 test("OpenStreetMap: busca por etiqueta del rubro o por texto y lee los datos", () => {
@@ -61,6 +76,14 @@ test("OpenStreetMap: busca por etiqueta del rubro o por texto y lee los datos", 
   assert.equal(r.place_id, "osm:node/7");
   assert.equal(r.tipo_negocio, "caravan site");
   assert.equal(r.ciudad, "Orlando, Florida");
+  const argentina = desdeOSM({
+    osm_type: "node", osm_id: 8, lat: "-31.4", lon: "-64.2", name: "Taller",
+    address: { country_code: "ar", city: "Córdoba", state: "Córdoba" },
+  }, "AR");
+  assert.equal(argentina.pais, "AR");
+  assert.equal(desdeOSM({
+    osm_type: "node", osm_id: 9, name: "Fuera de Argentina", address: { country_code: "us" },
+  }, "AR"), null);
   assert.equal(desdeOSM({ osm_type: "way", osm_id: 1, name: "" }), null);
   assert.equal(desdeOSM({ osm_type: "way", osm_id: 2, name: "X", address: { country_code: "mx" } }), null);
 });
@@ -147,6 +170,32 @@ test("con clave de Google busca ahí, pagina y la clave no sale al cliente", asy
   assert.ok(!JSON.stringify(s.res.body).includes("g-secret"));
 });
 
+test("busca talleres en Córdoba, Argentina con la región y el idioma correctos", async () => {
+  const s = escenario({
+    env: { GOOGLE_PLACES_API_KEY: "g-secret" },
+    red: { "places.googleapis.com": { body: (init) => {
+      const consulta = JSON.parse(init.body);
+      assert.equal(consulta.regionCode, "AR");
+      assert.equal(consulta.languageCode, "es");
+      assert.equal(consulta.textQuery, "taller mecánico in Córdoba, Argentina");
+      return { places: [lugarGoogle("ar", {
+        formattedAddress: "Av. Colón 100, Córdoba, Argentina",
+        addressComponents: [
+          { types: ["locality"], longText: "Córdoba" },
+          { types: ["administrative_area_level_1"], shortText: "Córdoba" },
+          { types: ["country"], shortText: "AR" },
+        ],
+      })] };
+    } } },
+  });
+  s.req.body = { busqueda: "Talleres mecánicos", zona: "Córdoba, Argentina" };
+  await s.handler(s.req, s.res);
+  assert.equal(s.res.codigo, 200);
+  assert.equal(s.res.body.resultados[0].nombre, "Negocio ar");
+  assert.equal(s.res.body.resultados[0].pais, "AR");
+  assert.equal(s.res.body.rubro.id, "talleres-mecanicos");
+});
+
 test("sin clave cae a OpenStreetMap; zona desconocida da un error claro", async () => {
   const ok = escenario({ red: { "nominatim": { body: (init, url) => url.includes("viewbox")
     ? [{ osm_type: "node", osm_id: 1, lat: "25.8", lon: "-80.2", name: "Barn Venue", type: "events_venue", address: { country_code: "us" } }]
@@ -160,6 +209,29 @@ test("sin clave cae a OpenStreetMap; zona desconocida da un error claro", async 
   await mal.handler(mal.req, mal.res);
   assert.equal(mal.res.codigo, 400);
   assert.equal(mal.llamadas.length, 1);
+});
+
+test("OpenStreetMap busca talleres en Córdoba con filtro de país y etiquetas mecánicas", async () => {
+  const s = escenario({
+    red: { "nominatim": { body: (init, url) => {
+      const params = new URL(url).searchParams;
+      assert.equal(params.get("countrycodes"), "ar");
+      if (params.has("viewbox")) {
+        return [{
+          osm_type: "node", osm_id: 77, lat: "-31.4", lon: "-64.2", name: "Taller Córdoba",
+          address: { country_code: "ar", city: "Córdoba", state: "Córdoba" },
+        }];
+      }
+      return [{ lat: "-31.4", lon: "-64.2", boundingbox: ["-31.5", "-31.3", "-64.3", "-64.1"] }];
+    } } },
+    espera: 0,
+  });
+  s.req.body = { busqueda: "Talleres mecánicos", zona: "Córdoba, Argentina" };
+  await s.handler(s.req, s.res);
+  assert.equal(s.res.codigo, 200);
+  assert.equal(s.res.body.resultados[0].nombre, "Taller Córdoba");
+  const urls = s.llamadas.slice(1).map(([url]) => new URL(url).searchParams);
+  assert.deepEqual(urls.map((params) => params.get("q")), ["[shop=car_repair]", "[craft=car_repair]"]);
 });
 
 test("la IA enriquece; si falla, los resultados salen igual por reglas", async () => {

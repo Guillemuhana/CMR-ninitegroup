@@ -1,4 +1,4 @@
-// Buscador de clientes potenciales en Estados Unidos para NTG.
+// Buscador de clientes potenciales en Estados Unidos y Córdoba, Argentina para NTG.
 //
 // Vive en una carpeta con "_": no gasta ninguna de las 12 funciones del plan
 // Hobby. Lo despacha api/push.js (?accion=prospectos, rewrite /api/prospectos).
@@ -53,16 +53,20 @@ const texto = (v, max = 400) => (typeof v === "string" ? v.trim().slice(0, max) 
 const acotar = (n, min, max) => Math.max(min, Math.min(max, n));
 const restante = (vence) => vence - Date.now();
 
+function paisDeZona(zona) {
+  const normalizada = zona.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return /\bargentina\b|\bcordoba\b/.test(normalizada) ? "AR" : "US";
+}
+
 /** Valida lo que manda la pantalla y resuelve el rubro. null si no sirve. */
 export function prepararBusqueda(body) {
   const busqueda = texto(body?.busqueda, 500);
   const zona = texto(body?.zona, 500);
   if (!busqueda || !zona || busqueda.length > 160 || zona.length > 160) return null;
   const rubro = rubroDe(busqueda);
+  const pais = paisDeZona(zona);
   return {
-    busqueda, zona, rubro,
-    // Google entiende mejor la consulta en inglés: si el rubro es conocido
-    // se usa la versión probada, si no, lo que escribieron tal cual.
+    busqueda, zona, rubro, pais,
     consulta: `${rubro ? rubro.query : busqueda} in ${zona}`,
   };
 }
@@ -73,18 +77,21 @@ function componente(p, tipo) {
   return (p.addressComponents || []).find((c) => (c.types || []).includes(tipo));
 }
 
-export function desdeGoogle(p) {
+export function desdeGoogle(p, paisEsperado = "US") {
   if (!p?.id || !p.displayName?.text) return null;
   if (p.businessStatus && p.businessStatus !== "OPERATIONAL") return null;
-  const pais = componente(p, "country")?.shortText || (/\bUSA$/.test(p.formattedAddress || "") ? "US" : "");
-  if (pais !== "US") return null;
+  const pais = componente(p, "country")?.shortText ||
+    (/\b(?:USA|United States)$/i.test(p.formattedAddress || "") ? "US" :
+      (/\bArgentina$/i.test(p.formattedAddress || "") ? "AR" : ""));
+  if (pais !== paisEsperado) return null;
   const ciudad = componente(p, "locality")?.longText || componente(p, "sublocality")?.longText || "";
   const estado = componente(p, "administrative_area_level_1")?.shortText || "";
   return {
     place_id: `g:${p.id}`,
     nombre: texto(p.displayName.text, 200),
-    direccion: texto(p.formattedAddress).replace(/,\s*USA$/, ""),
+    direccion: texto(p.formattedAddress).replace(/,\s*(?:USA|United States|Argentina)$/i, ""),
     ciudad: [ciudad, estado].filter(Boolean).join(", "),
+    pais,
     telefono: texto(p.nationalPhoneNumber, 40),
     email: "",
     sitio_web: texto(p.websiteUri, 300),
@@ -106,7 +113,13 @@ async function buscarGoogle(consulta, { key, solicitar, vence }) {
       method: "POST",
       signal: AbortSignal.timeout(8000),
       headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key, "X-Goog-FieldMask": CAMPOS_GOOGLE },
-      body: JSON.stringify({ textQuery: consulta.consulta, regionCode: "US", languageCode: "en", pageSize: 20, ...(pageToken ? { pageToken } : {}) }),
+      body: JSON.stringify({
+        textQuery: consulta.consulta,
+        regionCode: consulta.pais,
+        languageCode: consulta.pais === "AR" ? "es" : "en",
+        pageSize: 20,
+        ...(pageToken ? { pageToken } : {}),
+      }),
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
@@ -122,7 +135,7 @@ async function buscarGoogle(consulta, { key, solicitar, vence }) {
     pageToken = data.nextPageToken;
     if (!pageToken) break;
   }
-  return lugares.map(desdeGoogle).filter(Boolean);
+  return lugares.map((lugar) => desdeGoogle(lugar, consulta.pais)).filter(Boolean);
 }
 
 // ── OpenStreetMap ────────────────────────────────────────────
@@ -149,12 +162,13 @@ export function consultasOSM({ rubro, busqueda }) {
   return lista.map((q) => (q.includes("=") ? `[${q}]` : q));
 }
 
-export function desdeOSM(el) {
+export function desdeOSM(el, paisEsperado = "US") {
   const t = el?.extratags || {};
   const a = el?.address || {};
   const nombre = texto(el?.name || el?.namedetails?.name, 200);
   if (!nombre || !el?.osm_id) return null;
-  if (a.country_code && a.country_code !== "us") return null;
+  const pais = (a.country_code || paisEsperado.toLowerCase()).toUpperCase();
+  if (pais !== paisEsperado) return null;
   const lat = Number(el.lat), lon = Number(el.lon);
   const calle = [a.house_number, a.road].filter(Boolean).join(" ");
   const ciudad = [a.city || a.town || a.village || a.hamlet || a.county, a.state].filter(Boolean).join(", ");
@@ -163,6 +177,7 @@ export function desdeOSM(el) {
     nombre,
     direccion: [calle, ciudad, a.postcode].filter(Boolean).join(", "),
     ciudad,
+    pais,
     telefono: texto(t.phone || t["contact:phone"], 40),
     email: texto(t.email || t["contact:email"], 120),
     sitio_web: texto(t.website || t["contact:website"] || t.url, 300),
@@ -178,11 +193,11 @@ export function desdeOSM(el) {
 // Nominatim pide no pasar de un pedido por segundo.
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function nominatim(params, { solicitar }) {
-  const q = new URLSearchParams({ format: "jsonv2", countrycodes: "us", ...params });
+async function nominatim(params, { solicitar, pais = "US" }) {
+  const q = new URLSearchParams({ format: "jsonv2", countrycodes: pais.toLowerCase(), ...params });
   const r = await solicitar(`${NOMINATIM_URL}?${q}`, {
     signal: AbortSignal.timeout(7000),
-    headers: { "User-Agent": USER_AGENT, "Accept-Language": "en" },
+    headers: { "User-Agent": USER_AGENT, "Accept-Language": pais === "AR" ? "es" : "en" },
   });
   if (r.status === 429 || r.status === 403) throw new ErrorBusqueda(429, "OpenStreetMap limitó las búsquedas por ahora. Probá en un minuto (o configurá Google Places).");
   if (!r.ok) throw new ErrorBusqueda(502, "OpenStreetMap no respondió. Probá de nuevo en un momento.");
@@ -191,8 +206,9 @@ async function nominatim(params, { solicitar }) {
 }
 
 async function buscarOSM(consulta, { solicitar, vence, espera = 1000 }) {
-  const [zona] = await nominatim({ q: consulta.zona, limit: "1" }, { solicitar });
-  if (!zona) throw new ErrorBusqueda(400, "No encontramos esa zona en Estados Unidos. Probá con ciudad y estado (ej. Orlando, FL) o un ZIP.");
+  const opciones = { solicitar, pais: consulta.pais };
+  const [zona] = await nominatim({ q: consulta.zona, limit: "1" }, opciones);
+  if (!zona) throw new ErrorBusqueda(400, "No encontramos esa zona en Estados Unidos o Argentina. Probá con una ciudad más específica.");
 
   const lat = Number(zona.lat), lon = Number(zona.lon);
   const viewbox = recuadro(lat, lon, radioZona(zona.boundingbox));
@@ -202,11 +218,11 @@ async function buscarOSM(consulta, { solicitar, vence, espera = 1000 }) {
     await pausa(espera);
     const lote = await nominatim(
       { q, viewbox, bounded: "1", limit: String(MAX_RESULTADOS), extratags: "1", addressdetails: "1" },
-      { solicitar }
+      opciones
     ).catch((e) => (encontrados.length ? [] : Promise.reject(e)));
     encontrados.push(...lote);
   }
-  return encontrados.map(desdeOSM).filter(Boolean);
+  return encontrados.map((lugar) => desdeOSM(lugar, consulta.pais)).filter(Boolean);
 }
 
 // ── Puntaje ──────────────────────────────────────────────────
@@ -231,7 +247,7 @@ function completarConReglas(n, rubroBusqueda) {
   const lead_score = puntuarBase(n, rubro);
   return {
     ...n,
-    pais: "US",
+    pais: n.pais || "US",
     rubro: rubro?.etiqueta || "",
     lead_score,
     prioridad: prioridadDe(lead_score),
@@ -245,7 +261,7 @@ function completarConReglas(n, rubroBusqueda) {
 }
 
 function promptIA() {
-  return `Sos el analista de prospección de NINI T-GROUP (NTG). Te paso negocios reales de Estados Unidos que salieron de un buscador de mapas. Para cada uno estimás qué tan buen comprador potencial es y le preparás al vendedor el ángulo para la primera llamada.
+  return `Sos el analista de prospección de NINI T-GROUP (NTG). Te paso negocios reales de la zona indicada que salieron de un buscador de mapas. Para cada uno estimás qué tan buen comprador potencial es y le preparás al vendedor el ángulo para la primera llamada.
 
 ${FICHA_BUSINESS}
 
@@ -254,6 +270,7 @@ QUIÉN COMPRA (de más a menos afinidad)
 · Hoy PAGA alquiler de baños seguido: venues de bodas al aire libre, hoteles/resorts con eventos en jardín o playa, campings y RV parks, fairgrounds, viñedos y granjas de eventos, golf.
 · Contrata o deriva: organizadores de eventos, catering, constructoras.
 Bajan: cadenas grandes con compras corporativas lejos del local, negocios chicos sin espacio exterior ni eventos, sucursales sin decisión local.
+Talleres mecánicos: no se presume que necesiten un trailer; mantené el score bajo y dejá unidad/paquete sin sugerir si los datos no muestran una necesidad real.
 Descartá (score menor a 20 y "alerta"): competencia que vende o fabrica restroom trailers, resultados que no son un negocio o no tienen nada que ver.
 Unidades según público: 2-Stall ~100-150 personas · 3-Stall ~150-250 · 4-Stall ~250-300 · ADA+2 cuando piden accesibilidad.
 
@@ -414,7 +431,7 @@ export function crearHandler({ env = process.env, cliente = createClient, solici
     }
 
     const consulta = prepararBusqueda(req.body);
-    if (!consulta) return res.status(400).json({ error: "Ingresá un rubro y una ciudad, estado o ZIP de USA (máximo 160 caracteres cada uno)." });
+    if (!consulta) return res.status(400).json({ error: "Ingresá un rubro y una ciudad o región de Estados Unidos o Argentina (máximo 160 caracteres cada uno)." });
 
     const vence = Date.now() + PRESUPUESTO_MS;
     try {

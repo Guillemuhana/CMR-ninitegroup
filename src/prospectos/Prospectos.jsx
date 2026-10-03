@@ -191,9 +191,9 @@ function CroquisRuta({ paradas }) {
 // cómo funciona algo de acá, se actualiza también CLIENTES-POTENCIALES.md.
 const PASOS = [
   { icono: Search, titulo: "1. Elegí qué buscar",
-    texto: "Tocá uno de los rubros (Hoteles y resorts, Venues de bodas, Alquiler para eventos, Baños portátiles…) o escribí cualquier otro, en español o inglés." },
+    texto: "Tocá una categoría (Talleres mecánicos, Hoteles y resorts, Venues de bodas…) o escribí cualquier otra en español o inglés." },
   { icono: MapPin, titulo: "2. Elegí la zona",
-    texto: "Arranca en Miami, FL. Tocá el campo para ver otras localidades de Florida, Texas, California y el resto de USA, o escribí cualquier ciudad, condado, estado o ZIP. Después tocá Buscar." },
+    texto: "Arranca en Miami, FL. Tocá el campo para ver localidades de Estados Unidos y Córdoba, Argentina, o escribí una ciudad, provincia, estado o código postal. Después tocá Buscar." },
   { icono: Target, titulo: "3. Leé el puntaje",
     texto: "Cada negocio trae un puntaje de 0 a 100 y una prioridad (ALTA, MEDIA, BAJA): indica qué tanto encaja con Nini T Group, no que ya quiera comprar. Abajo aparecen la unidad y el paquete sugeridos, y el enfoque para la primera llamada." },
   { icono: Mail, titulo: "4. Filtrá",
@@ -216,8 +216,8 @@ const MOTOR = [
     texto: "Los negocios salen de la misma base que Google Maps: reales, abiertos hoy, con dirección, teléfono, web, reseñas y ubicación exacta. Nada de listas viejas compradas ni datos inventados. Si algún día se quita la clave de Google, busca en OpenStreetMap, gratis pero con menos datos." },
   { icono: Sparkles, titulo: "Inteligencia artificial con la ficha de NTG",
     texto: "OpenAI (con Groq de respaldo) lee cada negocio junto con la ficha comercial de Nini T Group: qué vendemos, las unidades, los paquetes Starter / Business Launch / Managed y lo que nunca se puede prometer. Con eso puntúa, sugiere la unidad y escribe el enfoque y los mensajes." },
-  { icono: Target, titulo: "Rubros pensados para vender trailers",
-    texto: "Cada rubro tiene su puntaje base según qué tan buen comprador es: primero los que ya alquilan para eventos (le suman una línea de más valor), después los que hoy pagan alquiler de baños cada fin de semana (bodas, hoteles, campings, ferias). La IA ajusta ese puntaje negocio por negocio." },
+  { icono: Target, titulo: "Categorías y afinidad con NTG",
+    texto: "Cada categoría tiene un puntaje base según su relación con los trailers de NTG. En talleres mecánicos, la afinidad queda por validar: la búsqueda los encuentra, pero no se presupone que necesiten un trailer. La IA ajusta el puntaje negocio por negocio." },
   { icono: Route, titulo: "Recorrido ordenado por cercanía",
     texto: "Con las coordenadas reales de cada negocio arma la ruta sin zigzags y la abre en Google Maps, partida en tramos si son muchas paradas." },
 ];
@@ -316,7 +316,7 @@ function ZonaSelector({ valor, onCambiar, onEnter }) {
     <div className="campo campo-zona">
       <MapPin size={16} />
       <input value={valor} role="combobox" aria-expanded={abierto} aria-label="Ciudad, estado o ZIP"
-        placeholder="Ciudad, estado o ZIP de Estados Unidos"
+        placeholder="Ciudad, provincia/estado o código postal"
         onFocus={(e) => { setFiltroZona(""); setAbierto(true); e.target.select(); }}
         onChange={(e) => { onCambiar(e.target.value); setFiltroZona(e.target.value); setAbierto(true); }}
         onBlur={() => setTimeout(() => setAbierto(false), 120)}
@@ -868,7 +868,7 @@ export default function Prospectos() {
           <button className="btn-ayuda" onClick={() => setAyuda(true)}><BookOpen size={15} /> Cómo usar</button>
         </div>
         <h1>Encontrá y ordená tus <em>clientes potenciales</em></h1>
-        <p>Encontrá hoteles, venues de bodas, empresas de eventos, campings y más en cualquier zona de Estados Unidos. La IA puntúa cada negocio según su potencial para Nini T Group, te redacta el email o WhatsApp de presentación y arma la hoja de ruta para visitarlos.</p>
+        <p>Encontrá hoteles, venues de bodas, empresas de eventos, talleres mecánicos y más en Estados Unidos o Córdoba, Argentina. La IA puntúa cada negocio según su potencial para Nini T Group, te redacta el email o WhatsApp de presentación y arma la hoja de ruta para visitarlos.</p>
 
         <div className="panel-busqueda">
           <label className="campo">
@@ -884,7 +884,7 @@ export default function Prospectos() {
         </div>
 
         <div className="rubros">
-          <span>Rubros para NTG</span>
+          <span>Categorías para buscar</span>
           {RUBROS.map((r) => (
             <button key={r.id} className="rubro" data-activo={busqueda === r.etiqueta ? 1 : 0} onClick={() => setBusqueda(r.etiqueta)}
               title={r.angulo}>{r.etiqueta}</button>

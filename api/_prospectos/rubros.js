@@ -182,6 +182,19 @@ export const RUBROS = [
     angulo: "Ya vende el servicio completo del evento: sumar baños de calidad es una línea más para facturar.",
     pitch: "You already deliver the full event experience: quality restroom trailers could be one more line you offer your clients.",
   },
+  {
+    id: "talleres-mecanicos",
+    etiqueta: "Talleres mecánicos",
+    query: "taller mecánico",
+    claves: ["taller mecanico", "talleres mecanicos", "mecanica automotriz", "auto repair", "car repair", "mechanic"],
+    osm: ["shop=car_repair", "craft=car_repair"],
+    base: 35,
+    perfil: "Afinidad por validar",
+    paquete: "Por validar",
+    unidad: "Por validar",
+    angulo: "Confirmar si el negocio organiza eventos o necesita baños móviles antes de evaluar una propuesta.",
+    pitch: "Before discussing a restroom trailer, confirm whether your business organizes events or needs mobile restrooms.",
+  },
 ];
 
 const sinTildes = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
