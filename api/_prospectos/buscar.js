@@ -33,8 +33,8 @@ const USER_AGENT = "NiniTGroupCRM/1.0 (https://ninitgroup.com)";
 
 // api/push.js tiene 30 s en vercel.json: se deja margen para contestar.
 const PRESUPUESTO_MS = 25000;
-const PAGINAS_GOOGLE = 2;       // 20 por página → hasta 40 negocios
-const MAX_RESULTADOS = 40;
+const PAGINAS_GOOGLE = 3;       // 20 por página → hasta 60; se muestran como máximo 50
+const MAX_RESULTADOS = 50;
 const MAX_IA = 30;              // los mejores por reglas pasan por la IA
 const LOTE_IA = 15;
 
@@ -56,6 +56,21 @@ const restante = (vence) => vence - Date.now();
 function paisDeZona(zona) {
   const normalizada = zona.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   return /\bargentina\b|\bcordoba\b/.test(normalizada) ? "AR" : "US";
+}
+
+const ANCLAS_ZONAS_CORDOBA = {
+  "zona norte, cordoba, argentina": "Argüello, Córdoba, Argentina",
+  "zona sur, cordoba, argentina": "Villa El Libertador, Córdoba, Argentina",
+  "zona este, cordoba, argentina": "San Vicente, Córdoba, Argentina",
+  "zona oeste, cordoba, argentina": "Alto Alberdi, Córdoba, Argentina",
+  "zona centro, cordoba, argentina": "Centro, Córdoba, Argentina",
+};
+
+const normalizarZona = (zona) => zona.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** Un barrio conocido permite ubicar las zonas cardinales también en OSM. */
+export function zonaParaOSM(zona) {
+  return ANCLAS_ZONAS_CORDOBA[normalizarZona(zona)] || zona;
 }
 
 /** Valida lo que manda la pantalla y resuelve el rubro. null si no sirve. */
@@ -207,11 +222,13 @@ async function nominatim(params, { solicitar, pais = "US" }) {
 
 async function buscarOSM(consulta, { solicitar, vence, espera = 1000 }) {
   const opciones = { solicitar, pais: consulta.pais };
-  const [zona] = await nominatim({ q: consulta.zona, limit: "1" }, opciones);
+  const zonaOSM = zonaParaOSM(consulta.zona);
+  const [zona] = await nominatim({ q: zonaOSM, limit: "1" }, opciones);
   if (!zona) throw new ErrorBusqueda(400, "No encontramos esa zona en Estados Unidos o Argentina. Probá con una ciudad más específica.");
 
   const lat = Number(zona.lat), lon = Number(zona.lon);
-  const viewbox = recuadro(lat, lon, radioZona(zona.boundingbox));
+  const radio = zonaOSM === consulta.zona ? radioZona(zona.boundingbox) : 7500;
+  const viewbox = recuadro(lat, lon, radio);
   const encontrados = [];
   for (const q of consultasOSM(consulta)) {
     if (restante(vence) < 9000) break;   // se guarda tiempo para la IA

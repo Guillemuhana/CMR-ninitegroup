@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  crearHandler, prepararBusqueda, desdeGoogle, desdeOSM, consultasOSM, radioZona, recuadro,
+  crearHandler, prepararBusqueda, desdeGoogle, desdeOSM, consultasOSM, radioZona, recuadro, zonaParaOSM,
   puntuarBase, prepararLista, aplicarIA,
 } from "../api/_prospectos/buscar.js";
 import { RUBROS, rubroDe } from "../api/_prospectos/rubros.js";
@@ -46,9 +46,13 @@ test("la consulta usa la versión en inglés del rubro y valida largos", () => {
   const barrio = prepararBusqueda({ busqueda: "Talleres mecánicos", zona: "Nueva Córdoba, Córdoba, Argentina" });
   assert.equal(barrio.pais, "AR");
   assert.equal(barrio.consulta, "taller mecánico in Nueva Córdoba, Córdoba, Argentina");
-  const barriosCordoba = ZONAS.find((g) => g.grupo === "Argentina").lista;
+  const barriosCordoba = ZONAS.find((g) => g.grupo === "Barrios de Córdoba").lista;
+  const zonasCordoba = ZONAS.find((g) => g.grupo === "Córdoba por zona").lista;
   assert.ok(barriosCordoba.includes("Nueva Córdoba, Córdoba, Argentina"));
   assert.ok(barriosCordoba.includes("Alta Córdoba, Córdoba, Argentina"));
+  assert.ok(zonasCordoba.includes("Zona Sur, Córdoba, Argentina"));
+  assert.ok(zonasCordoba.includes("Zona Norte, Córdoba, Argentina"));
+  assert.equal(zonaParaOSM("Zona Sur, Córdoba, Argentina"), "Villa El Libertador, Córdoba, Argentina");
 });
 
 test("Google: sólo negocios de USA y operativos", () => {
@@ -177,6 +181,24 @@ test("con clave de Google busca ahí, pagina y la clave no sale al cliente", asy
   assert.ok(!JSON.stringify(s.res.body).includes("g-secret"));
 });
 
+test("Google trae hasta 50 resultados usando tres páginas", async () => {
+  const s = escenario({
+    env: { GOOGLE_PLACES_API_KEY: "g-secret" },
+    red: { "places.googleapis.com": { body: (init) => {
+      const body = JSON.parse(init.body);
+      const pagina = body.pageToken === "p3" ? 3 : body.pageToken === "p2" ? 2 : 1;
+      return {
+        places: Array.from({ length: pagina === 3 ? 20 : 20 }, (_, i) => lugarGoogle(`p${pagina}-${i}`)),
+        ...(pagina < 3 ? { nextPageToken: `p${pagina + 1}` } : {}),
+      };
+    } } },
+  });
+  await s.handler(s.req, s.res);
+  assert.equal(s.res.codigo, 200);
+  assert.equal(s.llamadas.length, 3);
+  assert.equal(s.res.body.resultados.length, 50);
+});
+
 test("busca talleres en Córdoba, Argentina con la región y el idioma correctos", async () => {
   const s = escenario({
     env: { GOOGLE_PLACES_API_KEY: "g-secret" },
@@ -239,6 +261,28 @@ test("OpenStreetMap busca talleres en Córdoba con filtro de país y etiquetas m
   assert.equal(s.res.body.resultados[0].nombre, "Taller Córdoba");
   const urls = s.llamadas.slice(1).map(([url]) => new URL(url).searchParams);
   assert.deepEqual(urls.map((params) => params.get("q")), ["[shop=car_repair]", "[craft=car_repair]"]);
+});
+
+test("OpenStreetMap traduce una zona rápida de Córdoba a un barrio ubicable", async () => {
+  const s = escenario({
+    red: { "nominatim": { body: (init, url) => {
+      const params = new URL(url).searchParams;
+      assert.equal(params.get("countrycodes"), "ar");
+      if (!params.has("viewbox")) {
+        assert.equal(params.get("q"), "Villa El Libertador, Córdoba, Argentina");
+        return [{ lat: "-31.47", lon: "-64.22", boundingbox: ["-31.48", "-31.46", "-64.23", "-64.21"] }];
+      }
+      return [{
+        osm_type: "node", osm_id: 78, lat: "-31.47", lon: "-64.22", name: "Taller Sur",
+        address: { country_code: "ar", city: "Córdoba", state: "Córdoba" },
+      }];
+    } } },
+    espera: 0,
+  });
+  s.req.body = { busqueda: "Talleres mecánicos", zona: "Zona Sur, Córdoba, Argentina" };
+  await s.handler(s.req, s.res);
+  assert.equal(s.res.codigo, 200);
+  assert.equal(s.res.body.resultados[0].nombre, "Taller Sur");
 });
 
 test("la IA enriquece; si falla, los resultados salen igual por reglas", async () => {

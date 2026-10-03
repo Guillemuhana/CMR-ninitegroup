@@ -41,7 +41,12 @@ export const ZONAS = [
     "Baltimore, MD", "Virginia Beach, VA", "Chicago, IL", "Detroit, MI", "Columbus, OH", "Indianapolis, IN",
     "Minneapolis, MN", "Kansas City, MO", "St. Louis, MO", "Oklahoma City, OK",
   ] },
-  { grupo: "Argentina", lista: [
+  { grupo: "Córdoba por zona", lista: [
+    "Zona Norte, Córdoba, Argentina", "Zona Sur, Córdoba, Argentina",
+    "Zona Este, Córdoba, Argentina", "Zona Oeste, Córdoba, Argentina",
+    "Zona Centro, Córdoba, Argentina",
+  ] },
+  { grupo: "Barrios de Córdoba", lista: [
     "Córdoba, Argentina",
     "Centro, Córdoba, Argentina", "Nueva Córdoba, Córdoba, Argentina", "Güemes, Córdoba, Argentina",
     "Alberdi, Córdoba, Argentina", "Alto Alberdi, Córdoba, Argentina", "Villa Páez, Córdoba, Argentina",

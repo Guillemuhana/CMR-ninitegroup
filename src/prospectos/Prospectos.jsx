@@ -193,7 +193,7 @@ const PASOS = [
   { icono: Search, titulo: "1. Elegí qué buscar",
     texto: "Tocá una categoría (Talleres mecánicos, Hoteles y resorts, Venues de bodas…) o escribí cualquier otra en español o inglés." },
   { icono: MapPin, titulo: "2. Elegí la zona",
-    texto: "Arranca en Miami, FL. Tocá el campo para ver localidades de Estados Unidos y barrios de Córdoba, Argentina, o escribí una ciudad, barrio, provincia, estado o código postal. Después tocá Buscar." },
+    texto: "Arranca en Miami, FL. Tocá el campo para elegir Zona Norte, Sur, Este, Oeste o Centro de Córdoba, o seleccioná un barrio. También podés escribir cualquier zona manualmente." },
   { icono: Target, titulo: "3. Leé el puntaje",
     texto: "Cada negocio trae un puntaje de 0 a 100 y una prioridad (ALTA, MEDIA, BAJA): indica qué tanto encaja con Nini T Group, no que ya quiera comprar. Abajo aparecen la unidad y el paquete sugeridos, y el enfoque para la primera llamada." },
   { icono: Mail, titulo: "4. Filtrá",
@@ -223,7 +223,7 @@ const MOTOR = [
 ];
 
 const VENTAJAS = [
-  "En unos segundos te trae hasta 40 negocios de cualquier zona de USA, ya puntuados y con teléfono en casi todos.",
+  "En unos segundos te trae hasta 50 negocios de la zona elegida, ya puntuados y con teléfono en casi todos.",
   "No es una lista: te dice a quién llamar primero y con qué frase abrir la conversación.",
   "El email y el WhatsApp salen personalizados para cada negocio, en inglés, respetando la ficha de NTG.",
   "Si la IA falla, la búsqueda sale igual con el puntaje por rubro: nunca te quedás sin resultados.",
